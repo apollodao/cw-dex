@@ -159,11 +159,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw-asset"
+version = "2.1.0"
+source = "git+https://github.com/apollodao/cw-asset.git#b1d04d85d7981f5bcfddc8d60f4e6b97f561bd15"
+dependencies = [
+ "cosmwasm-std",
+ "cw-storage-plus",
+ "cw20",
+ "schemars",
+ "serde",
+]
+
+[[package]]
 name = "cw-dex"
 version = "0.0.1"
 dependencies = [
  "apollo-proto-rust",
  "cosmwasm-std",
+ "cw-asset",
  "cw-storage-plus",
  "cw20",
  "cw20-base",
