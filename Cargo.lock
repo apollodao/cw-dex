@@ -11,8 +11,20 @@ checksum = "bb07d2053ccdbe10e2af2995a2f116c1330396493dc1269f6a91d0ae82e19704"
 [[package]]
 name = "apollo-proto-rust"
 version = "0.1.0"
-source = "git+https://github.com/apollodao/apollo-proto-rust?branch=master#297a605c7fc5e5faf976ab4b16b8fe92c6484a24"
+source = "git+https://github.com/apollodao/apollo-proto-rust?branch=master#c2abb225c2d6ebb39dfd2992bafe00cb8c6736e9"
 dependencies = [
+ "cosmwasm-std",
+ "prost",
+ "prost-types",
+ "serde",
+]
+
+[[package]]
+name = "apollo-proto-rust"
+version = "0.1.0"
+source = "git+https://github.com/apollodao/apollo-proto-rust?rev=7ff193c00fb63357d686c859eac89b40667050b5#7ff193c00fb63357d686c859eac89b40667050b5"
+dependencies = [
+ "cosmwasm-std",
  "prost",
  "prost-types",
  "serde",
@@ -161,20 +173,23 @@ dependencies = [
 [[package]]
 name = "cw-asset"
 version = "2.1.0"
-source = "git+https://github.com/apollodao/cw-asset.git#b1d04d85d7981f5bcfddc8d60f4e6b97f561bd15"
+source = "git+https://github.com/apollodao/cw-asset.git?branch=dev/tokenideas#f4863e4880f1b4f853102c16fa1e756bf935cce5"
 dependencies = [
+ "apollo-proto-rust 0.1.0 (git+https://github.com/apollodao/apollo-proto-rust?rev=7ff193c00fb63357d686c859eac89b40667050b5)",
  "cosmwasm-std",
  "cw-storage-plus",
  "cw20",
+ "cw20-base",
  "schemars",
  "serde",
+ "thiserror",
 ]
 
 [[package]]
 name = "cw-dex"
 version = "0.0.1"
 dependencies = [
- "apollo-proto-rust",
+ "apollo-proto-rust 0.1.0 (git+https://github.com/apollodao/apollo-proto-rust?branch=master)",
  "cosmwasm-std",
  "cw-asset",
  "cw-storage-plus",
@@ -574,9 +589,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.138"
+version = "1.0.139"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1578c6245786b9d168c5447eeacfb96856573ca56c9d68fdcf394be134882a47"
+checksum = "0171ebb889e45aa68b44aee0859b3eede84c6f5f5c228e6f140c0b2a0a46cad6"
 dependencies = [
  "serde_derive",
 ]
@@ -592,9 +607,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.138"
+version = "1.0.139"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "023e9b1467aef8a10fb88f25611870ada9800ef7e22afce356bb0d2387b6f27c"
+checksum = "dc1d3230c1de7932af58ad8ffbe1d784bd55efd5a9d84ac24f69c72d83543dfb"
 dependencies = [
  "proc-macro2",
  "quote",
