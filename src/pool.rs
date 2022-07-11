@@ -1,5 +1,5 @@
 use cosmwasm_std::{Addr, CosmosMsg};
-use cw_asset::{Asset, AssetInfo, AssetList};
+use cw_asset::{Asset, AssetList};
 
 use crate::CwDexError;
 

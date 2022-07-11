@@ -1,3 +1,5 @@
+use std::num::TryFromIntError;
+
 use cosmwasm_std::StdError;
 use thiserror::Error;
 
@@ -8,6 +10,9 @@ use thiserror::Error;
 pub enum CwDexError {
     #[error("{0}")]
     Std(#[from] StdError),
+
+    #[error("{0}")]
+    TryFromIntError(#[from] TryFromIntError),
 
     /// Invalid Reply ID Error
     #[error("invalid output asset")]
