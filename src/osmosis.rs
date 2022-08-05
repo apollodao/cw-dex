@@ -1,5 +1,4 @@
 use std::convert::{TryFrom, TryInto};
-use std::option;
 use std::time::Duration;
 
 use apollo_proto_rust::osmosis::gamm::v1beta1::{
@@ -11,14 +10,10 @@ use apollo_proto_rust::osmosis::superfluid::{
 };
 use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
-use cosmwasm_std::{
-    Addr, Coin, CosmosMsg, Empty, QuerierWrapper, QueryRequest, Response, StdError, StdResult,
-    Uint128,
-};
+use cosmwasm_std::{Addr, Coin, CosmosMsg, Empty, Response, StdError, StdResult, Uint128};
 use cw_asset::osmosis::OsmosisCoin;
 use cw_asset::{Asset, AssetInfo, AssetList};
 use schemars::JsonSchema;
-use serde::de::IntoDeserializer;
 use serde::{Deserialize, Serialize};
 
 use crate::{CwDexError, Pool, Staking};
@@ -50,17 +45,16 @@ impl Pool<OsmosisProvideLiquidityOptions, OsmosisWithdrawLiquidityOptions, Osmos
     fn provide_liquidity(
         &self,
         assets: AssetList,
-        provide_liquidity_options: Option<OsmosisProvideLiquidityOptions>,
+        provide_liquidity_options: Option<OsmosisProvideLiquidityOptions>, // TODO: Make non optional?
     ) -> Result<CosmosMsg, CwDexError> {
         let coins = assets
             .into_iter()
             .map(|asset| OsmosisCoin::try_from(asset.clone()))
             .collect::<StdResult<Vec<OsmosisCoin>>>()?;
 
-        let options = match provide_liquidity_options {
-            Some(options) => Ok(options),
-            None => Err(CwDexError::Std(StdError::generic_err("osmosis error: no sender"))),
-        }?;
+        let options = provide_liquidity_options.ok_or(CwDexError::Std(StdError::generic_err(
+            "osmosis error: provide liquidity options",
+        )))?;
 
         let join_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::JoinPool.to_string(),
@@ -81,12 +75,11 @@ impl Pool<OsmosisProvideLiquidityOptions, OsmosisWithdrawLiquidityOptions, Osmos
     fn withdraw_liquidity(
         &self,
         asset: Asset,
-        withdraw_liquidity_optioins: Option<OsmosisWithdrawLiquidityOptions>,
+        withdraw_liquidity_options: Option<OsmosisWithdrawLiquidityOptions>, // TODO: Make non optional?
     ) -> Result<CosmosMsg, CwDexError> {
-        let options = match withdraw_liquidity_optioins {
-            Some(options) => Ok(options),
-            None => Err(CwDexError::Std(StdError::generic_err("osmosis error: no sender"))),
-        }?;
+        let options = withdraw_liquidity_options.ok_or(CwDexError::Std(StdError::generic_err(
+            "osmosis error: no withdraw liquidity options",
+        )))?;
 
         let exit_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::ExitPool.to_string(),
@@ -109,7 +102,7 @@ impl Pool<OsmosisProvideLiquidityOptions, OsmosisWithdrawLiquidityOptions, Osmos
         &self,
         offer: Asset,
         ask: Asset,
-        swap_options: Option<OsmosisSwapOptions>,
+        swap_options: Option<OsmosisSwapOptions>, // TODO: Make non optional?
     ) -> Result<CosmosMsg, CwDexError> {
         let out_denom = match ask.info {
             AssetInfo::Cw20(_) => Err(CwDexError::InvalidOutAsset {}),
@@ -117,7 +110,7 @@ impl Pool<OsmosisProvideLiquidityOptions, OsmosisWithdrawLiquidityOptions, Osmos
         }?;
 
         let sender = swap_options
-            .ok_or(CwDexError::Std(StdError::generic_err("osmosis error: no sender")))?
+            .ok_or(CwDexError::Std(StdError::generic_err("osmosis error: no swap options")))?
             .sender
             .to_string();
 
