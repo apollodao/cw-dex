@@ -2,7 +2,7 @@ use std::convert::{TryFrom, TryInto};
 use std::time::Duration;
 
 use apollo_proto_rust::osmosis::gamm::v1beta1::{
-    MsgExitPool, MsgJoinPool, MsgSwapExactAmountIn, SwapAmountInRoute,
+    MsgExitPool, MsgJoinPool, MsgJoinSwapExternAmountIn, MsgSwapExactAmountIn, SwapAmountInRoute,
 };
 use apollo_proto_rust::osmosis::lockup::{MsgBeginUnlocking, MsgLockTokens};
 use apollo_proto_rust::osmosis::superfluid::{
@@ -11,7 +11,6 @@ use apollo_proto_rust::osmosis::superfluid::{
 use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
 use cosmwasm_std::{Addr, Coin, CosmosMsg, Empty, Response, StdError, StdResult, Uint128};
-use cw_asset::osmosis::OsmosisCoin;
 use cw_asset::{Asset, AssetInfo, AssetList};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -32,7 +31,7 @@ pub struct OsmosisProvideLiquidityOptions {
 
 pub struct OsmosisWithdrawLiquidityOptions {
     sender: Addr,
-    token_out_mins: Vec<OsmosisCoin>,
+    token_out_mins: Vec<Coin>,
 }
 
 pub struct OsmosisSwapOptions {
@@ -47,26 +46,37 @@ impl Pool<OsmosisProvideLiquidityOptions, OsmosisWithdrawLiquidityOptions, Osmos
         assets: AssetList,
         provide_liquidity_options: Option<OsmosisProvideLiquidityOptions>, // TODO: Make non optional?
     ) -> Result<CosmosMsg, CwDexError> {
-        let coins = assets
-            .into_iter()
-            .map(|asset| OsmosisCoin::try_from(asset.clone()))
-            .collect::<StdResult<Vec<OsmosisCoin>>>()?;
+        let coins =
+            assets.into_iter().map(|a| Coin::try_from(a)).collect::<StdResult<Vec<Coin>>>()?;
 
         let options = provide_liquidity_options.ok_or(CwDexError::Std(StdError::generic_err(
             "osmosis error: provide liquidity options",
         )))?;
 
-        let join_msg = CosmosMsg::Stargate {
-            type_url: OsmosisTypeURLs::JoinPool.to_string(),
-            value: encode(MsgJoinPool {
-                pool_id: self.pool_id,
-                sender: options.sender.to_string(),
-                share_out_amount: options.share_out_amount.to_string(),
-                token_in_maxs: coins
-                    .iter()
-                    .map(|coin| coin.0.clone().into())
-                    .collect::<Vec<apollo_proto_rust::cosmos::base::v1beta1::Coin>>(),
-            }),
+        let join_msg = if coins.len() == 1 {
+            let coin_in = coins[0].clone();
+            CosmosMsg::Stargate {
+                type_url: OsmosisTypeURLs::JoinSwapExternAmountIn.to_string(),
+                value: encode(MsgJoinSwapExternAmountIn {
+                    sender: options.sender.to_string(),
+                    pool_id: self.pool_id,
+                    token_in: Some(coin_in.into()),
+                    share_out_min_amount: options.share_out_amount.to_string(),
+                }),
+            }
+        } else {
+            CosmosMsg::Stargate {
+                type_url: OsmosisTypeURLs::JoinPool.to_string(),
+                value: encode(MsgJoinPool {
+                    pool_id: self.pool_id,
+                    sender: options.sender.to_string(),
+                    share_out_amount: options.share_out_amount.to_string(),
+                    token_in_maxs: coins
+                        .into_iter()
+                        .map(|coin| coin.into())
+                        .collect::<Vec<apollo_proto_rust::cosmos::base::v1beta1::Coin>>(),
+                }),
+            }
         };
 
         Ok(join_msg)
@@ -89,8 +99,8 @@ impl Pool<OsmosisProvideLiquidityOptions, OsmosisWithdrawLiquidityOptions, Osmos
                 share_in_amount: asset.amount.to_string(),
                 token_out_mins: options
                     .token_out_mins
-                    .iter()
-                    .map(|coin| coin.0.clone().into())
+                    .into_iter()
+                    .map(|coin| coin.into())
                     .collect::<Vec<apollo_proto_rust::cosmos::base::v1beta1::Coin>>(),
             }),
         };
