@@ -15,4 +15,5 @@ pub trait Pool<O = Empty, A = Asset> {
         withdraw_liquidity_optioins: O,
     ) -> Result<CosmosMsg, CwDexError>;
     fn swap(&self, offer: A, ask: A, swap_options: O) -> Result<CosmosMsg, CwDexError>;
+    fn get_pool_assets(&self) -> Result<Vec<A>, CwDexError>;
 }

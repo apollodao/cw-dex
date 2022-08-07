@@ -11,6 +11,8 @@ use apollo_proto_rust::osmosis::superfluid::{
 use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
 use cosmwasm_std::{Addr, Coin, CosmosMsg, Response, StdError, StdResult, Uint128};
+use cw_asset::osmosis::OsmosisDenom;
+use cw_asset::AssetInfoBase;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -19,6 +21,7 @@ use crate::{CwDexError, Pool, Staking};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OsmosisPool {
     pool_id: u64,
+    assets: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -26,6 +29,10 @@ pub struct OsmosisOptions {
     sender: Addr,
     share_out_amount: Option<Uint128>,
     token_out_mins: Option<Vec<Coin>>,
+}
+
+pub struct OsmosisAssets {
+    pub assets: Vec<AssetInfoBase<OsmosisDenom>>,
 }
 
 impl Pool<OsmosisOptions, Coin> for OsmosisPool {
@@ -112,6 +119,17 @@ impl Pool<OsmosisOptions, Coin> for OsmosisPool {
         };
 
         Ok(swap_msg)
+    }
+
+    fn get_pool_assets(&self) -> Result<Vec<Coin>, CwDexError> {
+        Ok(self
+            .assets
+            .iter()
+            .map(|asset| Coin {
+                denom: asset.clone(),
+                amount: Uint128::zero(),
+            })
+            .collect())
     }
 }
 
