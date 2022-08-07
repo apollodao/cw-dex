@@ -10,11 +10,12 @@ use apollo_proto_rust::osmosis::superfluid::{
 };
 use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
-use cosmwasm_std::{Addr, Coin, CosmosMsg, Response, StdError, StdResult, Uint128};
+use cosmwasm_std::{Addr, Coin, CosmosMsg, Empty, Response, StdError, StdResult, Uint128};
 use cw_asset::osmosis::OsmosisDenom;
-use cw_asset::AssetInfoBase;
+use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::convert::TryInto;
 
 use crate::{CwDexError, Pool, Staking};
 
