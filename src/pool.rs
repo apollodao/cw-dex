@@ -3,7 +3,7 @@ use cw_asset::Asset;
 
 use crate::CwDexError;
 
-pub trait Pool<O = Empty, A = Asset> {
+pub trait Pool<O = Empty, A = Asset>: Clone {
     fn provide_liquidity(
         &self,
         assets: Vec<A>,
