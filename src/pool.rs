@@ -1,23 +1,18 @@
-use cosmwasm_std::CosmosMsg;
-use cw_asset::{Asset, AssetList};
+use cosmwasm_std::{CosmosMsg, Empty};
+use cw_asset::Asset;
 
 use crate::CwDexError;
 
-pub trait Pool<P, W, S> {
+pub trait Pool<O = Empty, A = Asset> {
     fn provide_liquidity(
         &self,
-        assets: AssetList,
-        provide_liquidity_options: Option<P>,
+        assets: Vec<A>,
+        provide_liquidity_options: O,
     ) -> Result<CosmosMsg, CwDexError>;
     fn withdraw_liquidity(
         &self,
-        asset: Asset,
-        withdraw_liquidity_optioins: Option<W>,
+        asset: A,
+        withdraw_liquidity_optioins: O,
     ) -> Result<CosmosMsg, CwDexError>;
-    fn swap(
-        &self,
-        offer: Asset,
-        ask: Asset,
-        swap_options: Option<S>,
-    ) -> Result<CosmosMsg, CwDexError>;
+    fn swap(&self, offer: A, ask: A, swap_options: O) -> Result<CosmosMsg, CwDexError>;
 }
