@@ -1,9 +1,14 @@
 use cosmwasm_std::{CosmosMsg, Empty};
 use cw_asset::Asset;
+use serde::{de::DeserializeOwned, Serialize};
 
 use crate::CwDexError;
 
-pub trait Pool<O = Empty, A = Asset>: Clone {
+pub trait Pool<O = Empty, A = Asset>: Clone + Serialize + DeserializeOwned
+where
+    O: Clone + Serialize + DeserializeOwned,
+    A: Clone + Serialize + DeserializeOwned,
+{
     fn provide_liquidity(
         &self,
         assets: Vec<A>,
