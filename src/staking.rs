@@ -4,11 +4,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use crate::CwDexError;
 
-pub trait Staking<O = Empty, A = Asset>: Clone + Serialize + DeserializeOwned
-where
-    O: Clone + Serialize + DeserializeOwned,
-    A: Clone + Serialize + DeserializeOwned,
-{
+pub trait Staking<O = Empty, A = Asset>: Clone + Serialize + DeserializeOwned {
     fn stake(&self, asset: A, options: O) -> Result<Response, CwDexError>;
     fn unstake(&self, asset: A, options: O) -> Result<Response, CwDexError>;
     fn claim_rewards(&self, options: O) -> Result<Response, CwDexError>;

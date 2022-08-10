@@ -4,11 +4,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use crate::CwDexError;
 
-pub trait Pool<O = Empty, A = Asset>: Clone + Serialize + DeserializeOwned
-where
-    O: Clone + Serialize + DeserializeOwned,
-    A: Clone + Serialize + DeserializeOwned,
-{
+pub trait Pool<O = Empty, A = Asset>: Clone + Serialize + DeserializeOwned {
     fn provide_liquidity(
         &self,
         assets: Vec<A>,
