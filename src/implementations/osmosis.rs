@@ -29,6 +29,7 @@ pub struct OsmosisOptions {
     sender: Addr,
     share_out_amount: Option<Uint128>,
     token_out_mins: Option<Vec<Coin>>,
+    lockup_id: Option<u64>,
 }
 
 pub struct OsmosisAssets {
@@ -154,20 +155,14 @@ impl OsmosisStaking {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct OsmosisStakingOptions {
-    owner: Addr,
-    lockup_id: Option<u64>,
-}
-
-impl Staking<OsmosisStakingOptions, Coin> for OsmosisStaking {
-    fn stake(&self, asset: Coin, options: OsmosisStakingOptions) -> Result<Response, CwDexError> {
+impl Staking<OsmosisOptions, Coin> for OsmosisStaking {
+    fn stake(&self, asset: Coin, options: OsmosisOptions) -> Result<Response, CwDexError> {
         let duration = Duration::from_nanos(self.lockup_duration);
 
         let stake_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::BondLP.to_string(),
             value: encode(MsgLockTokens {
-                owner: options.owner.to_string(),
+                owner: options.sender.to_string(),
                 duration: Some(apollo_proto_rust::google::protobuf::Duration {
                     seconds: i64::try_from(duration.as_secs())?,
                     nanos: duration.subsec_nanos() as i32,
@@ -179,7 +174,7 @@ impl Staking<OsmosisStakingOptions, Coin> for OsmosisStaking {
         Ok(Response::new().add_message(stake_msg))
     }
 
-    fn unstake(&self, asset: Coin, options: OsmosisStakingOptions) -> Result<Response, CwDexError> {
+    fn unstake(&self, asset: Coin, options: OsmosisOptions) -> Result<Response, CwDexError> {
         let id = options
             .lockup_id
             .ok_or(CwDexError::Std(StdError::generic_err("Osmosis: lockup_id not provided")))?;
@@ -187,7 +182,7 @@ impl Staking<OsmosisStakingOptions, Coin> for OsmosisStaking {
         let unstake_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::UnBondLP.to_string(),
             value: encode(MsgBeginUnlocking {
-                owner: options.owner.to_string(),
+                owner: options.sender.to_string(),
                 id,
                 coins: vec![asset.into()],
             }),
@@ -196,7 +191,7 @@ impl Staking<OsmosisStakingOptions, Coin> for OsmosisStaking {
         Ok(Response::new().add_message(unstake_msg))
     }
 
-    fn claim_rewards(&self, _stake_info: OsmosisStakingOptions) -> Result<Response, CwDexError> {
+    fn claim_rewards(&self, _stake_info: OsmosisOptions) -> Result<Response, CwDexError> {
         // Rewards are automatically distributed to stakers every epoch.
         Ok(Response::new())
     }
@@ -208,12 +203,12 @@ pub struct OsmosisSuperfluidStaking {
     validator_address: Addr,
 }
 
-impl Staking<OsmosisStakingOptions, Coin> for OsmosisSuperfluidStaking {
-    fn stake(&self, asset: Coin, options: OsmosisStakingOptions) -> Result<Response, CwDexError> {
+impl Staking<OsmosisOptions, Coin> for OsmosisSuperfluidStaking {
+    fn stake(&self, asset: Coin, options: OsmosisOptions) -> Result<Response, CwDexError> {
         let stake_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::SuperfluidBondLP.to_string(),
             value: encode(MsgLockAndSuperfluidDelegate {
-                sender: options.owner.to_string(),
+                sender: options.sender.to_string(),
                 coins: vec![asset.into()],
                 val_addr: self.validator_address.to_string(),
             }),
@@ -222,11 +217,7 @@ impl Staking<OsmosisStakingOptions, Coin> for OsmosisSuperfluidStaking {
         Ok(Response::new().add_message(stake_msg))
     }
 
-    fn unstake(
-        &self,
-        _asset: Coin,
-        options: OsmosisStakingOptions,
-    ) -> Result<Response, CwDexError> {
+    fn unstake(&self, _asset: Coin, options: OsmosisOptions) -> Result<Response, CwDexError> {
         let lock_id = options
             .lockup_id
             .ok_or(CwDexError::Std(StdError::generic_err("Osmosis: lockup_id not provided")))?;
@@ -234,7 +225,7 @@ impl Staking<OsmosisStakingOptions, Coin> for OsmosisSuperfluidStaking {
         let unstake_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::SuperfluidUnBondLP.to_string(),
             value: encode(MsgSuperfluidUnbondLock {
-                sender: options.owner.to_string(),
+                sender: options.sender.to_string(),
                 lock_id,
             }),
         };
@@ -242,7 +233,7 @@ impl Staking<OsmosisStakingOptions, Coin> for OsmosisSuperfluidStaking {
         Ok(Response::new().add_message(unstake_msg))
     }
 
-    fn claim_rewards(&self, _claim_options: OsmosisStakingOptions) -> Result<Response, CwDexError> {
+    fn claim_rewards(&self, _claim_options: OsmosisOptions) -> Result<Response, CwDexError> {
         // Rewards are automatically distributed to stakers every epoch.
         Ok(Response::new())
     }
