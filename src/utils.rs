@@ -1,8 +1,8 @@
-use cosmwasm_std::{Deps, StdError, StdResult, Uint128};
+use cosmwasm_std::{Coin, Decimal, Deps, StdError, StdResult, Uint128};
 use cw_asset::{Asset, AssetList, AssetListUnchecked};
 use osmo_bindings::{OsmosisQuerier, OsmosisQuery};
 
-pub fn get_join_pool_shares(
+pub fn get_join_pool_shares_osmosis(
     deps: Deps<OsmosisQuery>,
     pool_id: u64,
     assets: AssetList,
@@ -41,4 +41,81 @@ pub fn get_join_pool_shares(
     }
 
     Ok(Uint128::zero())
+}
+
+pub fn get_exit_pool_amounts_osmosis(
+    deps: Deps<OsmosisQuery>,
+    pool_id: u64,
+    exit_share_amount: Uint128,
+    exit_fee: Decimal, // TODO: queriable?
+) -> StdResult<Vec<Coin>> {
+    let osmosis_querier = OsmosisQuerier::new(&deps.querier);
+    let pool_state = osmosis_querier.query_pool_state(pool_id)?;
+
+    // totalShares := pool.GetTotalShares()
+    // if exitingShares.GTE(totalShares) {
+    // 	return sdk.Coins{}, sdkerrors.Wrapf(types.ErrLimitMaxAmount, errMsgFormatSharesLargerThanMax, exitingShares, totalShares)
+    // }
+
+    let total_shares = pool_state.shares.amount;
+    if exit_share_amount >= total_shares {
+        return Err(StdError::generic_err("exit share amount must be less than total shares"));
+    }
+
+    // // refundedShares = exitingShares * (1 - exit fee)
+    // // with 0 exit fee optimization
+    // var refundedShares sdk.Dec
+    // if !exitFee.IsZero() {
+    // 	// exitingShares * (1 - exit fee)
+    // 	oneSubExitFee := sdk.OneDec().SubMut(exitFee)
+    // 	refundedShares = oneSubExitFee.MulIntMut(exitingShares)
+    // } else {
+    // 	refundedShares = exitingShares.ToDec()
+    // }
+
+    let refunded_shares: Decimal;
+    if !exit_fee.is_zero() {
+        refunded_shares =
+            Decimal::from_ratio(exit_share_amount, 1u128).checked_mul(Decimal::one() - exit_fee)?;
+    } else {
+        refunded_shares = Decimal::from_ratio(exit_share_amount, 1u128);
+    }
+
+    // shareOutRatio := refundedShares.QuoInt(totalShares)
+
+    let share_out_ratio = refunded_shares.checked_mul(Decimal::from_ratio(1u128, total_shares))?;
+
+    // // exitedCoins = shareOutRatio * pool liquidity
+    // exitedCoins := sdk.Coins{}
+    // poolLiquidity := pool.GetTotalPoolLiquidity(ctx)
+    // for _, asset := range poolLiquidity {
+    // 	// round down here, due to not wanting to over-exit
+    // 	exitAmt := shareOutRatio.MulInt(asset.Amount).TruncateInt()
+    // 	if exitAmt.LTE(sdk.ZeroInt()) {
+    // 		continue
+    // 	}
+    // 	if exitAmt.GTE(asset.Amount) {
+    // 		return sdk.Coins{}, errors.New("too many shares out")
+    // 	}
+    // 	exitedCoins = exitedCoins.Add(sdk.NewCoin(asset.Denom, exitAmt))
+    // }
+
+    let mut exited_coins: Vec<Coin> = vec![];
+    for pool_asset in pool_state.assets {
+        let exit_amount = share_out_ratio * pool_asset.amount;
+        if exit_amount.is_zero() {
+            continue;
+        }
+        if exit_amount >= pool_asset.amount {
+            return Err(StdError::generic_err("too many shares out"));
+        }
+        exited_coins.push(Coin {
+            denom: pool_asset.denom,
+            amount: exit_amount,
+        });
+    }
+
+    // return exitedCoins, nil
+
+    Ok(exited_coins)
 }
