@@ -1,11 +1,11 @@
+use cosmwasm_std::CustomQuery;
 use cosmwasm_std::{CosmosMsg, Deps, MessageInfo};
-use cosmwasm_std::{CustomQuery, Empty};
 use cw_asset::Asset;
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::CwDexError;
 
-pub trait Pool<Q: CustomQuery, O = Empty, A = Asset>: Clone + Serialize + DeserializeOwned {
+pub trait Pool<Q: CustomQuery, A = Asset>: Clone + Serialize + DeserializeOwned {
     fn provide_liquidity(
         &self,
         deps: Deps<Q>,

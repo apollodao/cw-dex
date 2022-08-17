@@ -34,8 +34,6 @@ pub struct OsmosisPool {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OsmosisOptions {
     sender: Addr,
-    share_out_amount: Option<Uint128>,
-    token_out_mins: Option<Vec<Coin>>,
     lockup_id: Option<u64>,
 }
 
@@ -43,7 +41,7 @@ pub struct OsmosisAssets {
     pub assets: Vec<AssetInfoBase<OsmosisDenom>>,
 }
 
-impl Pool<OsmosisQuery, OsmosisOptions, Coin> for OsmosisPool {
+impl Pool<OsmosisQuery, Coin> for OsmosisPool {
     fn provide_liquidity(
         &self,
         deps: Deps<OsmosisQuery>,
