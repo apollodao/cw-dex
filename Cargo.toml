@@ -1,23 +1,24 @@
 [package]
-name = "cw-dex"
-description = "Helper library for interacting with Cosmos dexes"
-version = "0.0.1"
 authors = ["Apollo Devs"]
+description = "Helper library for interacting with Cosmos dexes"
 edition = "2018"
 license = "GPL-3.0-or-later"
+name = "cw-dex"
 repository = "https://github.com/mars-protocol/cw-asset"
+version = "0.0.1"
 
 [features]
 default = ["osmosis"]
 osmosis = []
 
 [dependencies]
-apollo-proto-rust = { branch = "master", git = "https://github.com/apollodao/apollo-proto-rust" }
-cosmwasm-std = { version="1.0", features = ["stargate"] }
+apollo-proto-rust = {branch = "master", git = "https://github.com/apollodao/apollo-proto-rust"}
+cosmwasm-std = {version = "1.0", features = ["stargate"]}
+cw-asset = {git = "https://github.com/apollodao/cw-asset.git", branch = "dev/tokenideas"}
+cw-storage-plus = "0.13"
 cw20 = "0.13"
 cw20-base = "0.13"
-cw-storage-plus = "0.13"
+osmo-bindings = {git = "https://github.com/apollodao/bindings.git"}
 schemars = "0.8.1"
-serde = { version = "1.0.137", default-features = false, features = ["derive"] }
+serde = {version = "1.0.103", default-features = false, features = ["derive"]}
 thiserror = {version = "1.0.31"}
-cw-asset = { git = "https://github.com/apollodao/cw-asset.git", branch = "dev/tokenideas"}

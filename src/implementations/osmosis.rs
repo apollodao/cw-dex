@@ -10,25 +10,32 @@ use apollo_proto_rust::osmosis::superfluid::{
 };
 use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
-use cosmwasm_std::{Addr, Coin, CosmosMsg, Response, StdError, StdResult, Uint128};
+use cosmwasm_std::{
+    Addr, Coin, CosmosMsg, Decimal, Deps, Empty, MessageInfo, Response, StdError, StdResult,
+    Uint128,
+};
 use cw_asset::osmosis::OsmosisDenom;
-use cw_asset::AssetInfoBase;
+use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
+use osmo_bindings::{OsmosisQuerier, OsmosisQuery};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::convert::TryInto;
 
+use crate::utils::{
+    calculate_exit_pool_amounts_osmosis, calculate_join_pool_shares_osmosis, vec_into,
+};
 use crate::{CwDexError, Pool, Staking};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OsmosisPool {
     pool_id: u64,
     assets: Vec<String>,
+    exit_fee: Decimal, // TODO: queriable? remove?
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OsmosisOptions {
     sender: Addr,
-    share_out_amount: Option<Uint128>,
-    token_out_mins: Option<Vec<Coin>>,
     lockup_id: Option<u64>,
 }
 
@@ -36,25 +43,24 @@ pub struct OsmosisAssets {
     pub assets: Vec<AssetInfoBase<OsmosisDenom>>,
 }
 
-impl Pool<OsmosisOptions, Coin> for OsmosisPool {
+impl Pool<OsmosisQuery, Coin> for OsmosisPool {
     fn provide_liquidity(
         &self,
+        deps: Deps<OsmosisQuery>,
+        info: &MessageInfo,
         assets: Vec<Coin>,
-        options: OsmosisOptions,
     ) -> Result<CosmosMsg, CwDexError> {
-        let share_out_amount = options.share_out_amount.ok_or(CwDexError::Std(
-            StdError::generic_err("Osmosis error: share_out_amount not provided."),
-        ))?;
+        let shares_out = calculate_join_pool_shares_osmosis(deps, self.pool_id, (&assets).into())?;
 
         let join_msg = if assets.len() == 1 {
             let coin_in = assets[0].clone();
             CosmosMsg::Stargate {
                 type_url: OsmosisTypeURLs::JoinSwapExternAmountIn.to_string(),
                 value: encode(MsgJoinSwapExternAmountIn {
-                    sender: options.sender.to_string(),
+                    sender: info.sender.to_string(),
                     pool_id: self.pool_id,
                     token_in: Some(coin_in.into()),
-                    share_out_min_amount: share_out_amount.to_string(),
+                    share_out_min_amount: shares_out.amount.to_string(),
                 }),
             }
         } else {
@@ -62,8 +68,8 @@ impl Pool<OsmosisOptions, Coin> for OsmosisPool {
                 type_url: OsmosisTypeURLs::JoinPool.to_string(),
                 value: encode(MsgJoinPool {
                     pool_id: self.pool_id,
-                    sender: options.sender.to_string(),
-                    share_out_amount: share_out_amount.to_string(),
+                    sender: info.sender.to_string(),
+                    share_out_amount: shares_out.amount.to_string(),
                     token_in_maxs: assets
                         .into_iter()
                         .map(|coin| coin.into())
@@ -77,39 +83,31 @@ impl Pool<OsmosisOptions, Coin> for OsmosisPool {
 
     fn withdraw_liquidity(
         &self,
+        deps: Deps<OsmosisQuery>,
+        info: &MessageInfo,
         asset: Coin,
-        options: OsmosisOptions,
     ) -> Result<CosmosMsg, CwDexError> {
-        let token_out_mins = options.token_out_mins.ok_or(CwDexError::Std(
-            StdError::generic_err("Osmosis error: token_out_mins not provided."),
-        ))?;
+        let token_out_mins =
+            calculate_exit_pool_amounts_osmosis(deps, self.pool_id, asset.amount, self.exit_fee)?;
 
         let exit_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::ExitPool.to_string(),
             value: encode(MsgExitPool {
-                sender: options.sender.to_string(),
+                sender: info.sender.to_string(),
                 pool_id: self.pool_id,
                 share_in_amount: asset.amount.to_string(),
-                token_out_mins: token_out_mins
-                    .into_iter()
-                    .map(|coin| coin.into())
-                    .collect::<Vec<apollo_proto_rust::cosmos::base::v1beta1::Coin>>(),
+                token_out_mins: vec_into(token_out_mins),
             }),
         };
 
         Ok(exit_msg)
     }
 
-    fn swap(
-        &self,
-        offer: Coin,
-        ask: Coin,
-        options: OsmosisOptions,
-    ) -> Result<CosmosMsg, CwDexError> {
+    fn swap(&self, info: &MessageInfo, offer: Coin, ask: Coin) -> Result<CosmosMsg, CwDexError> {
         let swap_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::SwapExactAmountIn.to_string(),
             value: encode(MsgSwapExactAmountIn {
-                sender: options.sender.to_string(),
+                sender: info.sender.to_string(),
                 routes: vec![SwapAmountInRoute {
                     pool_id: self.pool_id,
                     token_out_denom: ask.denom,
@@ -131,6 +129,22 @@ impl Pool<OsmosisOptions, Coin> for OsmosisPool {
                 amount: Uint128::zero(),
             })
             .collect())
+    }
+
+    fn simulate_provide_liquidity(
+        &self,
+        deps: Deps<OsmosisQuery>,
+        asset: Vec<Coin>,
+    ) -> Result<Coin, CwDexError> {
+        Ok(calculate_join_pool_shares_osmosis(deps, self.pool_id, (&asset).into())?)
+    }
+
+    fn simulate_withdraw_liquidity(
+        &self,
+        deps: Deps<OsmosisQuery>,
+        asset: Coin,
+    ) -> Result<Vec<Coin>, CwDexError> {
+        Ok(calculate_exit_pool_amounts_osmosis(deps, self.pool_id, asset.amount, self.exit_fee)?)
     }
 }
 
