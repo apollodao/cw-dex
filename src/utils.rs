@@ -53,6 +53,7 @@ pub fn get_exit_pool_amounts_osmosis(
     exit_share_amount: Uint128,
     exit_fee: Decimal, // TODO: queriable?
 ) -> StdResult<Vec<Coin>> {
+    // TODO: Remove go code comments after review
     let osmosis_querier = OsmosisQuerier::new(&deps.querier);
     let pool_state = osmosis_querier.query_pool_state(pool_id)?;
 
@@ -122,4 +123,8 @@ pub fn get_exit_pool_amounts_osmosis(
     // return exitedCoins, nil
 
     Ok(exited_coins)
+}
+
+pub(crate) fn vec_into<A, B: Into<A>>(v: Vec<B>) -> Vec<A> {
+    v.into_iter().map(|x| x.into()).collect()
 }

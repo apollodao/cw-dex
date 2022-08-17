@@ -10,19 +10,25 @@ use apollo_proto_rust::osmosis::superfluid::{
 };
 use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
-use cosmwasm_std::{Addr, Coin, CosmosMsg, Empty, Response, StdError, StdResult, Uint128};
+use cosmwasm_std::{
+    Addr, Coin, CosmosMsg, Decimal, Deps, Empty, MessageInfo, Response, StdError, StdResult,
+    Uint128,
+};
 use cw_asset::osmosis::OsmosisDenom;
 use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
+use osmo_bindings::{OsmosisQuerier, OsmosisQuery};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 
+use crate::utils::{get_exit_pool_amounts_osmosis, vec_into};
 use crate::{CwDexError, Pool, Staking};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OsmosisPool {
     pool_id: u64,
     assets: Vec<String>,
+    exit_fee: Decimal, // TODO: queriable? remove?
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -37,7 +43,7 @@ pub struct OsmosisAssets {
     pub assets: Vec<AssetInfoBase<OsmosisDenom>>,
 }
 
-impl Pool<OsmosisOptions, Coin> for OsmosisPool {
+impl Pool<OsmosisQuery, OsmosisOptions, Coin> for OsmosisPool {
     fn provide_liquidity(
         &self,
         assets: Vec<Coin>,
@@ -78,23 +84,20 @@ impl Pool<OsmosisOptions, Coin> for OsmosisPool {
 
     fn withdraw_liquidity(
         &self,
+        deps: Deps<OsmosisQuery>,
+        info: &MessageInfo,
         asset: Coin,
-        options: OsmosisOptions,
     ) -> Result<CosmosMsg, CwDexError> {
-        let token_out_mins = options.token_out_mins.ok_or(CwDexError::Std(
-            StdError::generic_err("Osmosis error: token_out_mins not provided."),
-        ))?;
+        let token_out_mins =
+            get_exit_pool_amounts_osmosis(deps, self.pool_id, asset.amount, self.exit_fee)?;
 
         let exit_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::ExitPool.to_string(),
             value: encode(MsgExitPool {
-                sender: options.sender.to_string(),
+                sender: info.sender.to_string(),
                 pool_id: self.pool_id,
                 share_in_amount: asset.amount.to_string(),
-                token_out_mins: token_out_mins
-                    .into_iter()
-                    .map(|coin| coin.into())
-                    .collect::<Vec<apollo_proto_rust::cosmos::base::v1beta1::Coin>>(),
+                token_out_mins: vec_into(token_out_mins),
             }),
         };
 
