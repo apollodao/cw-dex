@@ -43,6 +43,10 @@ pub fn get_join_pool_shares_osmosis(
     Ok(Uint128::zero())
 }
 
+/// Calculates the [[`Coin`]] amounts that will be returned when withdrawing `exit_share_amount` LP shares from the pool
+/// with pool id `pool_id` on Osmosis. The implementation is a translation of the calculations performed in the Go code
+/// of the GAMM module. See
+/// https://github.com/osmosis-labs/osmosis/blob/91c7830d7d195aad53378d60b24224a67e70fd7f/x/gamm/pool-models/internal/cfmm_common/lp.go#L16
 pub fn get_exit_pool_amounts_osmosis(
     deps: Deps<OsmosisQuery>,
     pool_id: u64,
