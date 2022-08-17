@@ -6,7 +6,7 @@ pub fn calculate_join_pool_shares_osmosis(
     deps: Deps<OsmosisQuery>,
     pool_id: u64,
     assets: AssetList,
-) -> StdResult<Uint128> {
+) -> StdResult<Coin> {
     let osmosis_querier = OsmosisQuerier::new(&deps.querier);
     let pool_state = osmosis_querier.query_pool_state(pool_id)?;
 
@@ -36,11 +36,18 @@ pub fn calculate_join_pool_shares_osmosis(
         if shares_out_est_1 != shares_out_est_2 {
             return Err(StdError::generic_err("assets being added to pool must be equal in value"));
         } else {
-            return Ok(shares_out_est_1);
+            return Ok(Coin {
+                denom: pool_state.shares.denom,
+                amount: shares_out_est_1,
+            });
         }
     }
 
-    Ok(Uint128::zero())
+    // TODO: Probably should remove this?
+    Ok(Coin {
+        denom: pool_state.shares.denom,
+        amount: Uint128::zero(),
+    })
 }
 
 /// Calculates the [[`Coin`]] amounts that will be returned when withdrawing `exit_share_amount` LP shares from the pool

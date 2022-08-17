@@ -1,5 +1,5 @@
+use cosmwasm_std::CustomQuery;
 use cosmwasm_std::{CosmosMsg, Deps, MessageInfo};
-use cosmwasm_std::{CustomQuery, Uint128};
 use cw_asset::Asset;
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -25,7 +25,7 @@ pub trait Pool<Q: CustomQuery, A = Asset>: Clone + Serialize + DeserializeOwned 
         deps: Deps<Q>,
         info: &MessageInfo,
         asset: Vec<A>,
-    ) -> Result<Uint128, CwDexError>;
+    ) -> Result<A, CwDexError>;
     fn simulate_withdraw_liquidity(
         &self,
         deps: Deps<Q>,

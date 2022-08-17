@@ -50,8 +50,7 @@ impl Pool<OsmosisQuery, Coin> for OsmosisPool {
         info: &MessageInfo,
         assets: Vec<Coin>,
     ) -> Result<CosmosMsg, CwDexError> {
-        let share_out_amount =
-            calculate_join_pool_shares_osmosis(deps, self.pool_id, (&assets).into())?;
+        let shares_out = calculate_join_pool_shares_osmosis(deps, self.pool_id, (&assets).into())?;
 
         let join_msg = if assets.len() == 1 {
             let coin_in = assets[0].clone();
@@ -61,7 +60,7 @@ impl Pool<OsmosisQuery, Coin> for OsmosisPool {
                     sender: info.sender.to_string(),
                     pool_id: self.pool_id,
                     token_in: Some(coin_in.into()),
-                    share_out_min_amount: share_out_amount.to_string(),
+                    share_out_min_amount: shares_out.amount.to_string(),
                 }),
             }
         } else {
@@ -70,7 +69,7 @@ impl Pool<OsmosisQuery, Coin> for OsmosisPool {
                 value: encode(MsgJoinPool {
                     pool_id: self.pool_id,
                     sender: info.sender.to_string(),
-                    share_out_amount: share_out_amount.to_string(),
+                    share_out_amount: shares_out.amount.to_string(),
                     token_in_maxs: assets
                         .into_iter()
                         .map(|coin| coin.into())
@@ -137,7 +136,7 @@ impl Pool<OsmosisQuery, Coin> for OsmosisPool {
         deps: Deps<OsmosisQuery>,
         _info: &MessageInfo,
         asset: Vec<Coin>,
-    ) -> Result<Uint128, CwDexError> {
+    ) -> Result<Coin, CwDexError> {
         Ok(calculate_join_pool_shares_osmosis(deps, self.pool_id, (&asset).into())?)
     }
 
