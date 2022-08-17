@@ -21,7 +21,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 
-use crate::utils::{get_exit_pool_amounts_osmosis, vec_into};
+use crate::utils::{get_exit_pool_amounts_osmosis, get_join_pool_shares_osmosis, vec_into};
 use crate::{CwDexError, Pool, Staking};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -46,19 +46,18 @@ pub struct OsmosisAssets {
 impl Pool<OsmosisQuery, OsmosisOptions, Coin> for OsmosisPool {
     fn provide_liquidity(
         &self,
+        deps: Deps<OsmosisQuery>,
+        info: &MessageInfo,
         assets: Vec<Coin>,
-        options: OsmosisOptions,
     ) -> Result<CosmosMsg, CwDexError> {
-        let share_out_amount = options.share_out_amount.ok_or(CwDexError::Std(
-            StdError::generic_err("Osmosis error: share_out_amount not provided."),
-        ))?;
+        let share_out_amount = get_join_pool_shares_osmosis(deps, self.pool_id, (&assets).into())?;
 
         let join_msg = if assets.len() == 1 {
             let coin_in = assets[0].clone();
             CosmosMsg::Stargate {
                 type_url: OsmosisTypeURLs::JoinSwapExternAmountIn.to_string(),
                 value: encode(MsgJoinSwapExternAmountIn {
-                    sender: options.sender.to_string(),
+                    sender: info.sender.to_string(),
                     pool_id: self.pool_id,
                     token_in: Some(coin_in.into()),
                     share_out_min_amount: share_out_amount.to_string(),
@@ -69,7 +68,7 @@ impl Pool<OsmosisQuery, OsmosisOptions, Coin> for OsmosisPool {
                 type_url: OsmosisTypeURLs::JoinPool.to_string(),
                 value: encode(MsgJoinPool {
                     pool_id: self.pool_id,
-                    sender: options.sender.to_string(),
+                    sender: info.sender.to_string(),
                     share_out_amount: share_out_amount.to_string(),
                     token_in_maxs: assets
                         .into_iter()

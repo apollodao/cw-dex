@@ -8,8 +8,9 @@ use crate::CwDexError;
 pub trait Pool<Q: CustomQuery, O = Empty, A = Asset>: Clone + Serialize + DeserializeOwned {
     fn provide_liquidity(
         &self,
+        deps: Deps<Q>,
+        info: &MessageInfo,
         assets: Vec<A>,
-        provide_liquidity_options: O,
     ) -> Result<CosmosMsg, CwDexError>;
     fn withdraw_liquidity(
         &self,
