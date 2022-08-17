@@ -2,7 +2,7 @@ use cosmwasm_std::{Coin, Decimal, Deps, StdError, StdResult, Uint128};
 use cw_asset::{Asset, AssetList, AssetListUnchecked};
 use osmo_bindings::{OsmosisQuerier, OsmosisQuery};
 
-pub fn get_join_pool_shares_osmosis(
+pub fn calculate_join_pool_shares_osmosis(
     deps: Deps<OsmosisQuery>,
     pool_id: u64,
     assets: AssetList,
@@ -47,7 +47,7 @@ pub fn get_join_pool_shares_osmosis(
 /// with pool id `pool_id` on Osmosis. The implementation is a translation of the calculations performed in the Go code
 /// of the GAMM module. See
 /// https://github.com/osmosis-labs/osmosis/blob/91c7830d7d195aad53378d60b24224a67e70fd7f/x/gamm/pool-models/internal/cfmm_common/lp.go#L16
-pub fn get_exit_pool_amounts_osmosis(
+pub fn calculate_exit_pool_amounts_osmosis(
     deps: Deps<OsmosisQuery>,
     pool_id: u64,
     exit_share_amount: Uint128,

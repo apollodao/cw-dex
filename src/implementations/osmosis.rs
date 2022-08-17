@@ -21,7 +21,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 
-use crate::utils::{get_exit_pool_amounts_osmosis, get_join_pool_shares_osmosis, vec_into};
+use crate::utils::{
+    calculate_exit_pool_amounts_osmosis, calculate_join_pool_shares_osmosis, vec_into,
+};
 use crate::{CwDexError, Pool, Staking};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -48,7 +50,8 @@ impl Pool<OsmosisQuery, Coin> for OsmosisPool {
         info: &MessageInfo,
         assets: Vec<Coin>,
     ) -> Result<CosmosMsg, CwDexError> {
-        let share_out_amount = get_join_pool_shares_osmosis(deps, self.pool_id, (&assets).into())?;
+        let share_out_amount =
+            calculate_join_pool_shares_osmosis(deps, self.pool_id, (&assets).into())?;
 
         let join_msg = if assets.len() == 1 {
             let coin_in = assets[0].clone();
@@ -86,7 +89,7 @@ impl Pool<OsmosisQuery, Coin> for OsmosisPool {
         asset: Coin,
     ) -> Result<CosmosMsg, CwDexError> {
         let token_out_mins =
-            get_exit_pool_amounts_osmosis(deps, self.pool_id, asset.amount, self.exit_fee)?;
+            calculate_exit_pool_amounts_osmosis(deps, self.pool_id, asset.amount, self.exit_fee)?;
 
         let exit_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::ExitPool.to_string(),
@@ -127,6 +130,24 @@ impl Pool<OsmosisQuery, Coin> for OsmosisPool {
                 amount: Uint128::zero(),
             })
             .collect())
+    }
+
+    fn simulate_provide_liquidity(
+        &self,
+        deps: Deps<OsmosisQuery>,
+        _info: &MessageInfo,
+        asset: Vec<Coin>,
+    ) -> Result<Uint128, CwDexError> {
+        Ok(calculate_join_pool_shares_osmosis(deps, self.pool_id, (&asset).into())?)
+    }
+
+    fn simulate_withdraw_liquidity(
+        &self,
+        deps: Deps<OsmosisQuery>,
+        _info: &MessageInfo,
+        asset: Coin,
+    ) -> Result<Vec<Coin>, CwDexError> {
+        Ok(calculate_exit_pool_amounts_osmosis(deps, self.pool_id, asset.amount, self.exit_fee)?)
     }
 }
 
