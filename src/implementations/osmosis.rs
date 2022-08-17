@@ -134,7 +134,6 @@ impl Pool<OsmosisQuery, Coin> for OsmosisPool {
     fn simulate_provide_liquidity(
         &self,
         deps: Deps<OsmosisQuery>,
-        _info: &MessageInfo,
         asset: Vec<Coin>,
     ) -> Result<Coin, CwDexError> {
         Ok(calculate_join_pool_shares_osmosis(deps, self.pool_id, (&asset).into())?)
@@ -143,7 +142,6 @@ impl Pool<OsmosisQuery, Coin> for OsmosisPool {
     fn simulate_withdraw_liquidity(
         &self,
         deps: Deps<OsmosisQuery>,
-        _info: &MessageInfo,
         asset: Coin,
     ) -> Result<Vec<Coin>, CwDexError> {
         Ok(calculate_exit_pool_amounts_osmosis(deps, self.pool_id, asset.amount, self.exit_fee)?)
