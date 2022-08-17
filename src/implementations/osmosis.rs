@@ -103,16 +103,11 @@ impl Pool<OsmosisQuery, OsmosisOptions, Coin> for OsmosisPool {
         Ok(exit_msg)
     }
 
-    fn swap(
-        &self,
-        offer: Coin,
-        ask: Coin,
-        options: OsmosisOptions,
-    ) -> Result<CosmosMsg, CwDexError> {
+    fn swap(&self, info: &MessageInfo, offer: Coin, ask: Coin) -> Result<CosmosMsg, CwDexError> {
         let swap_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::SwapExactAmountIn.to_string(),
             value: encode(MsgSwapExactAmountIn {
-                sender: options.sender.to_string(),
+                sender: info.sender.to_string(),
                 routes: vec![SwapAmountInRoute {
                     pool_id: self.pool_id,
                     token_out_denom: ask.denom,

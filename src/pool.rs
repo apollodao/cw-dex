@@ -18,6 +18,6 @@ pub trait Pool<Q: CustomQuery, O = Empty, A = Asset>: Clone + Serialize + Deseri
         info: &MessageInfo,
         asset: A,
     ) -> Result<CosmosMsg, CwDexError>;
-    fn swap(&self, offer: A, ask: A, swap_options: O) -> Result<CosmosMsg, CwDexError>;
+    fn swap(&self, info: &MessageInfo, offer: A, ask: A) -> Result<CosmosMsg, CwDexError>;
     fn get_pool_assets(&self) -> Result<Vec<A>, CwDexError>;
 }
