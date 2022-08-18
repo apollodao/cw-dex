@@ -31,6 +31,12 @@ pub struct OsmosisPool {
     pool_id: u64,
     assets: Vec<String>,
     exit_fee: Decimal, // TODO: queriable? remove?
+    swap_fee: Decimal,
+    total_weight: Uint128,
+    normalized_weight: Decimal,
+    // calcPoolOutGivenSingleIn - see here. Since all pools we are adding are 50/50, no need to store TotalWeight or the pool asset's weight
+    // We should query this once Stargate queries are available
+    // https://github.com/osmosis-labs/osmosis/blob/df2c511b04bf9e5783d91fe4f28a3761c0ff2019/x/gamm/pool-models/balancer/pool.go#L632
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -50,7 +56,14 @@ impl Pool<OsmosisQuery, Coin> for OsmosisPool {
         info: &MessageInfo,
         assets: Vec<Coin>,
     ) -> Result<CosmosMsg, CwDexError> {
-        let shares_out = calculate_join_pool_shares_osmosis(deps, self.pool_id, (&assets).into())?;
+        let shares_out = calculate_join_pool_shares_osmosis(
+            deps,
+            self.pool_id,
+            (&assets).into(),
+            self.total_weight,
+            self.normalized_weight,
+            self.swap_fee,
+        )?;
 
         let join_msg = if assets.len() == 1 {
             let coin_in = assets[0].clone();
@@ -86,9 +99,18 @@ impl Pool<OsmosisQuery, Coin> for OsmosisPool {
         deps: Deps<OsmosisQuery>,
         info: &MessageInfo,
         asset: Coin,
+        asset_to_withdraw: Option<Coin>,
     ) -> Result<CosmosMsg, CwDexError> {
-        let token_out_mins =
-            calculate_exit_pool_amounts_osmosis(deps, self.pool_id, asset.amount, self.exit_fee)?;
+        let token_out_mins = calculate_exit_pool_amounts_osmosis(
+            deps,
+            self.pool_id,
+            asset.amount,
+            self.exit_fee,
+            self.swap_fee,
+            self.normalized_weight,
+            self.total_weight,
+            asset_to_withdraw,
+        )?;
 
         let exit_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::ExitPool.to_string(),
@@ -136,15 +158,32 @@ impl Pool<OsmosisQuery, Coin> for OsmosisPool {
         deps: Deps<OsmosisQuery>,
         asset: Vec<Coin>,
     ) -> Result<Coin, CwDexError> {
-        Ok(calculate_join_pool_shares_osmosis(deps, self.pool_id, (&asset).into())?)
+        Ok(calculate_join_pool_shares_osmosis(
+            deps,
+            self.pool_id,
+            (&asset).into(),
+            self.total_weight,
+            self.normalized_weight,
+            self.swap_fee,
+        )?)
     }
 
     fn simulate_withdraw_liquidity(
         &self,
         deps: Deps<OsmosisQuery>,
         asset: Coin,
+        asset_to_withdraw: Option<Coin>,
     ) -> Result<Vec<Coin>, CwDexError> {
-        Ok(calculate_exit_pool_amounts_osmosis(deps, self.pool_id, asset.amount, self.exit_fee)?)
+        Ok(calculate_exit_pool_amounts_osmosis(
+            deps,
+            self.pool_id,
+            asset.amount,
+            self.exit_fee,
+            self.swap_fee,
+            self.normalized_weight,
+            self.total_weight,
+            asset_to_withdraw,
+        )?)
     }
 }
 

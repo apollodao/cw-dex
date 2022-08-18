@@ -1,3 +1,5 @@
+use std::{convert::TryInto, ops::Sub, str::FromStr};
+
 use cosmwasm_std::{Coin, Decimal, Deps, StdError, StdResult, Uint128};
 use cw_asset::{Asset, AssetList, AssetListUnchecked};
 use osmo_bindings::{OsmosisQuerier, OsmosisQuery};
@@ -6,11 +8,29 @@ pub fn calculate_join_pool_shares_osmosis(
     deps: Deps<OsmosisQuery>,
     pool_id: u64,
     assets: AssetList,
+    total_weight: Uint128,
+    normalized_weight: Decimal,
+    swap_fee: Decimal,
 ) -> StdResult<Coin> {
     let osmosis_querier = OsmosisQuerier::new(&deps.querier);
     let pool_state = osmosis_querier.query_pool_state(pool_id)?;
 
     if assets.len() == 1 {
+        let token_in = &assets[0];
+        let total_shares = pool_state.shares.amount;
+        let provided_asset_1_pool_balance =
+            pool_state.denom_pool_balance(&token_in.info.to_string());
+
+        let token_in_amount_after_fee =
+            token_in.amount * (Decimal::one() - normalized_weight).checked_mul(swap_fee)?;
+        let k_dydx = provided_asset_1_pool_balance.checked_add(token_in_amount_after_fee)?;
+        let k = solve_constant_function_invariant(
+            provided_asset_1_pool_balance.checked_add(token_in_amount_after_fee)?,
+            provided_asset_1_pool_balance,
+            normalized_weight,
+            total_shares,
+            Decimal::zero() - Decimal::one(),
+        )?;
         // Here we should add the calculation for JoinSwapExactAmountIN
     }
     if assets.len() == 2 {
@@ -59,6 +79,10 @@ pub fn calculate_exit_pool_amounts_osmosis(
     pool_id: u64,
     exit_share_amount: Uint128,
     exit_fee: Decimal, // TODO: queriable?
+    swap_fee: Decimal,
+    normalized_weight: Decimal,
+    total_weight: Uint128,
+    token_out: Option<Coin>,
 ) -> StdResult<Vec<Coin>> {
     // TODO: Remove go code comments after review
     let osmosis_querier = OsmosisQuerier::new(&deps.querier);
@@ -72,6 +96,48 @@ pub fn calculate_exit_pool_amounts_osmosis(
     let total_shares = pool_state.shares.amount;
     if exit_share_amount >= total_shares {
         return Err(StdError::generic_err("exit share amount must be less than total shares"));
+    }
+
+    if let Some(token_out) = token_out {
+        if !pool_state.has_denom(&token_out.denom) {
+            return Err(StdError::generic_err("request asset to withdraw is not in the pool"));
+        }
+
+        // tokenAmountOutFeeIncluded := tokenAmountOut.Quo(feeRatio(normalizedTokenWeightOut, swapFee))
+
+        // // delta poolSupply is positive(total pool shares decreases)
+        // // pool weight is always 1
+        // sharesIn := solveConstantFunctionInvariant(tokenBalanceOut.Sub(tokenAmountOutFeeIncluded), tokenBalanceOut, normalizedTokenWeightOut, totalPoolSharesSupply, sdk.OneDec())
+
+        // // charge exit fee on the pool token side
+        // // pAi = pAiAfterExitFee/(1-exitFee)
+        // sharesInFeeIncluded := sharesIn.Quo(sdk.OneDec().Sub(exitFee))
+
+        let pool_asset_out = pool_state.denom_pool_balance(&token_out.denom);
+
+        let token_amount_out_fee_included: Uint128 = Uint128::new(1)
+            * (Decimal::new(token_out.amount)
+                / (Decimal::one() - ((Decimal::one() - normalized_weight) * swap_fee)));
+
+        let shares_in = solve_constant_function_invariant(
+            token_out.amount.checked_sub(token_amount_out_fee_included)?,
+            token_out.amount,
+            normalized_weight,
+            total_shares,
+            Decimal::one(),
+        )?;
+
+        let shares_in_fee_included =
+            Uint128::new(1) * (Decimal::new(shares_in) / (Decimal::one() - exit_fee));
+
+        if shares_in_fee_included > exit_share_amount {
+            return Err(StdError::generic_err("too many shares out"));
+        };
+
+        return Ok(vec![Coin {
+            denom: token_out.denom,
+            amount: shares_in_fee_included,
+        }]);
     }
 
     // // refundedShares = exitingShares * (1 - exit fee)
@@ -134,4 +200,20 @@ pub fn calculate_exit_pool_amounts_osmosis(
 
 pub(crate) fn vec_into<A, B: Into<A>>(v: Vec<B>) -> Vec<A> {
     v.into_iter().map(|x| x.into()).collect()
+}
+
+fn solve_constant_function_invariant(
+    token_balance_fixed_before: Uint128,
+    token_balance_fixed_after: Uint128,
+    token_weight_fixed: Decimal,
+    token_balance_unknown_before: Uint128,
+    token_weight_unknown: Decimal,
+) -> StdResult<Uint128> {
+    let weight_ratio =
+        ((token_weight_fixed - token_weight_unknown) * Uint128::new(1)).u128() as u32;
+    let y = token_balance_fixed_before.checked_div(token_balance_fixed_after)?;
+    let y_to_weight_ratio = y.pow(weight_ratio);
+    let paranthetical: Decimal = Decimal::one() - Decimal::new(y_to_weight_ratio);
+    let amount_y = token_balance_unknown_before * paranthetical;
+    Ok(amount_y)
 }
