@@ -202,6 +202,18 @@ pub(crate) fn vec_into<A, B: Into<A>>(v: Vec<B>) -> Vec<A> {
     v.into_iter().map(|x| x.into()).collect()
 }
 
+// // weightRatio = (weightX/weightY)
+// weightRatio := tokenWeightFixed.Quo(tokenWeightUnknown)
+
+// // y = balanceXBefore/balanceXAfter
+// y := tokenBalanceFixedBefore.Quo(tokenBalanceFixedAfter)
+
+// // amountY = balanceY * (1 - (y ^ weightRatio))
+// yToWeightRatio := osmomath.Pow(y, weightRatio)
+// paranthetical := sdk.OneDec().Sub(yToWeightRatio)
+// amountY := tokenBalanceUnknownBefore.Mul(paranthetical)
+// return amountY
+
 fn solve_constant_function_invariant(
     token_balance_fixed_before: Uint128,
     token_balance_fixed_after: Uint128,
