@@ -43,7 +43,7 @@ pub fn calculate_join_pool_shares_osmosis(
 
         let token_in_amount_after_fee =
             token_in.amount * (Decimal::one() - normalized_weight).checked_mul(swap_fee)?;
-        let pool_amount_out = solve_constant_function_invariant(
+        let pool_amount_out = osmosis_solve_constant_function_invariant(
             provided_asset_1_pool_balance.checked_add(token_in_amount_after_fee)?,
             provided_asset_1_pool_balance,
             normalized_weight,
@@ -143,7 +143,7 @@ pub fn calculate_exit_pool_amounts_osmosis(
             * (Decimal::new(token_out.amount)
                 / (Decimal::one() - ((Decimal::one() - normalized_weight) * swap_fee)));
 
-        let shares_in = solve_constant_function_invariant(
+        let shares_in = osmosis_solve_constant_function_invariant(
             token_out.amount.checked_sub(token_amount_out_fee_included)?,
             token_out.amount,
             normalized_weight,
@@ -240,38 +240,188 @@ pub(crate) fn vec_into<A, B: Into<A>>(v: Vec<B>) -> Vec<A> {
 
 /// Translation of the solveConstantFunctionInvariant function in the osmosis go code.
 /// The y_to_weight_ratio calculation is a workaround that works only for dual pools with
-/// even weight of the two assets.
-fn solve_constant_function_invariant(
+/// even weight of the two assets. Go function in osmosis code can be found here:
+/// https://github.com/osmosis-labs/osmosis/blob/main/x/gamm/pool-models/balancer/amm.go#L94
+fn osmosis_solve_constant_function_invariant(
     token_balance_fixed_before: Uint128,
     token_balance_fixed_after: Uint128,
     token_weight_fixed: Decimal,
     token_balance_unknown_before: Uint128,
     token_weight_unknown: Decimal,
-    exiting: bool,
 ) -> StdResult<Uint128> {
-    if token_weight_fixed != Decimal::from_ratio(1u128, 2u128) {
-        return Err(StdError::generic_err(
-            "token weight fixed must be 0.5 for single sided entry and exit",
-        ));
+    // // weightRatio = (weightX/weightY)
+    // weightRatio := tokenWeightFixed.Quo(tokenWeightUnknown)
+    let weight_ratio = token_weight_fixed / token_weight_unknown;
+
+    // // y = balanceXBefore/balanceXAfter
+    // y := tokenBalanceFixedBefore.Quo(tokenBalanceFixedAfter)
+    let y = Decimal::from_ratio(token_balance_fixed_before, token_balance_fixed_after);
+
+    // // amountY = balanceY * (1 - (y ^ weightRatio))
+    // yToWeightRatio := osmomath.Pow(y, weightRatio)
+    // paranthetical := sdk.OneDec().Sub(yToWeightRatio)
+    // amountY := tokenBalanceUnknownBefore.Mul(paranthetical)
+    // return amountY
+    let y_to_weight_ratio = osmosis_pow(y, weight_ratio)?;
+    let paranthetical = Decimal::one() - y_to_weight_ratio;
+    let amount_y = token_balance_unknown_before * paranthetical;
+    return Ok(amount_y);
+}
+
+fn osmosis_pow(base: Decimal, exp: Decimal) -> StdResult<Decimal> {
+    if base >= Decimal::from_ratio(2u128, 1u128) {
+        return Err(StdError::generic_err("base must be lesser than two"));
     }
 
-    // let y = token_balance_fixed_before.checked_div(token_balance_fixed_after)?;
-    let y = Decimal::from_ratio(token_balance_fixed_before, token_balance_fixed_after);
-    // let y_to_weight_ratio = y.pow(weight_ratio);
+    // // We will use an approximation algorithm to compute the power.
+    // // Since computing an integer power is easy, we split up the exponent into
+    // // an integer component and a fractional component.
+    // integer := exp.TruncateDec()
+    // fractional := exp.Sub(integer)
+    let integer = exp * Uint128::from(1u128);
+    let fractional: Decimal = exp - Decimal::from_ratio(integer, 1u128);
 
-    // Workaround that only works for dual pools with even weight of the two assets.
-    // Gets around the issue of the weight ratio being negative.
-    // weight_ratio = token_weight_fixed - token_weight_unknown
-    // For an evenly weighted dual pool the token_weight_fixed is 0.5. When exiting the pool
-    // this function is called with token_weight_unknown = 1 => weight_ratio = 0.5 - 1 = -0.5.
-    // When entering the pool this function is called with token_weight_unknown = -1 => weight_ratio = 0.5 - (-1) = 1.5.
-    let y_to_weight_ratio = if exiting {
-        Decimal::one() / y.sqrt() // = y ^ weight_ratio (when weight_ratio = -0.5)
+    // integerPow := base.Power(uint64(integer.TruncateInt64()))
+    let integer_pow = base.checked_pow(integer.u128() as u32)?;
+
+    // if fractional.IsZero() {
+    // 	return integerPow
+    // }
+    if fractional.is_zero() {
+        return Ok(integer_pow);
+    }
+
+    // fractionalPow := PowApprox(base, fractional, powPrecision)
+    let fractional_pow = osmosis_pow_approx(base, fractional, Decimal::from_ratio(1u128, 1u128));
+
+    // return integerPow.Mul(fractionalPow)
+    return Ok(integer_pow.checked_mul(fractional_pow)?);
+}
+
+// Contract: 0 < base <= 2
+// 0 <= exp < 1.
+fn osmosis_pow_approx(base: Decimal, exp: Decimal, precision: Decimal) -> Decimal {
+    if exp.is_zero() {
+        return Decimal::one();
+    }
+
+    // Common case optimization
+    // Optimize for it being equal to one-half
+    if exp == Decimal::from_ratio(1u128, 2u128) {
+        return base.sqrt();
+    }
+    // TODO: Make an approx-equal function, and then check if exp * 3 = 1, and do a check accordingly
+
+    // We compute this via taking the maclaurin series of (1 + x)^a
+    // where x = base - 1.
+    // The maclaurin series of (1 + x)^a = sum_{k=0}^{infty} binom(a, k) x^k
+    // Binom(a, k) takes the natural continuation on the first parameter, namely that
+    // Binom(a, k) = N/D, where D = k!, and N = a(a-1)(a-2)...(a-k+1)
+    // Next we show that the absolute value of each term is less than the last term.
+    // Note that the change in term n's value vs term n + 1 is a multiplicative factor of
+    // v_n = x(a - n) / (n+1)
+    // So if |v_n| < 1, we know that each term has a lesser impact on the result than the last.
+    // For our bounds on |x| < 1, |a| < 1,
+    // it suffices to see for what n is |v_n| < 1,
+    // in the worst parameterization of x = 1, a = -1.
+    // v_n = |(-1 + epsilon - n) / (n+1)|
+    // So |v_n| is always less than 1, as n ranges over the integers.
+    //
+    // Note that term_n of the expansion is 1 * prod_{i=0}^{n-1} v_i
+    // The error if we stop the expansion at term_n is:
+    // error_n = sum_{k=n+1}^{infty} term_k
+    // At this point we further restrict a >= 0, so 0 <= a < 1.
+    // Now we take the _INCORRECT_ assumption that if term_n < p, then
+    // error_n < p.
+    // This assumption is obviously wrong.
+    // However our usages of this function don't use the full domain.
+    // With a > 0, |x| << 1, and p sufficiently low, perhaps this actually is true.
+
+    // TODO: Check with our parameterization
+    // TODO: If theres a bug, balancer is also wrong here :thonk:
+
+    // base = base.Clone()
+    // x, xneg := AbsDifferenceWithSign(base, one)
+    // term := sdk.OneDec()
+    // sum := sdk.OneDec()
+    // negative := false
+    let (x, x_neg) = osmosis_abs_difference_with_sign(base, Decimal::one());
+    let mut term = Decimal::one();
+    let mut sum = Decimal::one();
+    let mut negative = false;
+
+    // a := exp.Clone()
+    // bigK := sdk.NewDec(0)
+    let mut a = exp.clone();
+    let mut big_k = Decimal::zero();
+
+    // for i := int64(1); term.GTE(precision); i++ {
+    let mut i: i64 = 0;
+    loop {
+        i += 1;
+        if term >= precision {
+            break;
+        }
+
+        // // At each iteration, we need two values, i and i-1.
+        // // To avoid expensive big.Int allocation, we reuse bigK variable.
+        // // On this line, bigK == i-1.
+        // c, cneg := AbsDifferenceWithSign(a, bigK)
+        let (c, c_neg) = osmosis_abs_difference_with_sign(a, big_k);
+
+        // // On this line, bigK == i.
+        // bigK.Set(sdk.NewDec(i))
+        // term.MulMut(c).MulMut(x).QuoMut(bigK)
+        big_k = Decimal::from_ratio(i as u128, 1u128);
+        term *= c * x / big_k;
+
+        // // a is mutated on absDifferenceWithSign, reset
+        // a.Set(exp)
+
+        // a is never mutated in our implementation. i think we can remove it and use exp directly.
+        a = exp;
+
+        // if term.isZero() {
+        //     break;
+        // }
+        if term.is_zero() {
+            break;
+        }
+
+        // if xneg {
+        //     negative = !negative
+        // }
+        if x_neg {
+            negative = !negative;
+        }
+
+        // if cneg {
+        //     negative = !negative
+        // }
+        if c_neg {
+            negative = !negative;
+        }
+
+        // if negative {
+        //     sum.SubMut(term)
+        // } else {
+        //     sum.AddMut(term)
+        // }
+        if negative {
+            sum -= term;
+        } else {
+            sum += term;
+        }
+    }
+    return sum;
+}
+
+// AbsDifferenceWithSign returns | a - b |, (a - b).sign()
+// a is mutated and returned.
+fn osmosis_abs_difference_with_sign(a: Decimal, b: Decimal) -> (Decimal, bool) {
+    if a >= b {
+        (a - b, false)
     } else {
-        y * y.sqrt() // = y ^ weight_ratio (when weight_ratio = 1.5)
-    };
-
-    let paranthetical: Decimal = Decimal::one() - Decimal::new(y_to_weight_ratio);
-    let amount_y = token_balance_unknown_before * paranthetical;
-    Ok(amount_y)
+        (b - a, true)
+    }
 }
