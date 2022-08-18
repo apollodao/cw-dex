@@ -21,9 +21,10 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 
-use crate::utils::{
-    calculate_exit_pool_amounts_osmosis, calculate_join_pool_shares_osmosis, vec_into,
+use crate::osmosis::osmosis_math::{
+    calculate_exit_pool_amounts_osmosis, calculate_join_pool_shares_osmosis,
 };
+use crate::utils::vec_into;
 use crate::{CwDexError, Pool, Staking};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
