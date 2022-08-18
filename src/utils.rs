@@ -238,17 +238,39 @@ pub(crate) fn vec_into<A, B: Into<A>>(v: Vec<B>) -> Vec<A> {
 // amountY := tokenBalanceUnknownBefore.Mul(paranthetical)
 // return amountY
 
+/// Translation of the solveConstantFunctionInvariant function in the osmosis go code.
+/// The y_to_weight_ratio calculation is a workaround that works only for dual pools with
+/// even weight of the two assets.
 fn solve_constant_function_invariant(
     token_balance_fixed_before: Uint128,
     token_balance_fixed_after: Uint128,
     token_weight_fixed: Decimal,
     token_balance_unknown_before: Uint128,
     token_weight_unknown: Decimal,
+    exiting: bool,
 ) -> StdResult<Uint128> {
-    let weight_ratio =
-        ((token_weight_fixed - token_weight_unknown) * Uint128::new(1)).u128() as u32;
-    let y = token_balance_fixed_before.checked_div(token_balance_fixed_after)?;
-    let y_to_weight_ratio = y.pow(weight_ratio);
+    if token_weight_fixed != Decimal::from_ratio(1u128, 2u128) {
+        return Err(StdError::generic_err(
+            "token weight fixed must be 0.5 for single sided entry and exit",
+        ));
+    }
+
+    // let y = token_balance_fixed_before.checked_div(token_balance_fixed_after)?;
+    let y = Decimal::from_ratio(token_balance_fixed_before, token_balance_fixed_after);
+    // let y_to_weight_ratio = y.pow(weight_ratio);
+
+    // Workaround that only works for dual pools with even weight of the two assets.
+    // Gets around the issue of the weight ratio being negative.
+    // weight_ratio = token_weight_fixed - token_weight_unknown
+    // For an evenly weighted dual pool the token_weight_fixed is 0.5. When exiting the pool
+    // this function is called with token_weight_unknown = 1 => weight_ratio = 0.5 - 1 = -0.5.
+    // When entering the pool this function is called with token_weight_unknown = -1 => weight_ratio = 0.5 - (-1) = 1.5.
+    let y_to_weight_ratio = if exiting {
+        Decimal::one() / y.sqrt() // = y ^ weight_ratio (when weight_ratio = -0.5)
+    } else {
+        y * y.sqrt() // = y ^ weight_ratio (when weight_ratio = 1.5)
+    };
+
     let paranthetical: Decimal = Decimal::one() - Decimal::new(y_to_weight_ratio);
     let amount_y = token_balance_unknown_before * paranthetical;
     Ok(amount_y)
