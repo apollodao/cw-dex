@@ -16,6 +16,26 @@ pub fn calculate_join_pool_shares_osmosis(
     let pool_state = osmosis_querier.query_pool_state(pool_id)?;
 
     if assets.len() == 1 {
+        // deduct swapfee on the in asset.
+        // We don't charge swap fee on the token amount that we imagine as unswapped (the normalized weight).
+        // So effective_swapfee = swapfee * (1 - normalized_token_weight)
+        // tokenAmountInAfterFee := tokenAmountIn.Mul(feeRatio(normalizedTokenWeightIn, swapFee))
+        // To figure out the number of shares we add, first notice that in balancer we can treat
+        // the number of shares as linearly related to the `k` value function. This is due to the normalization.
+        // e.g.
+        // if x^.5 y^.5 = k, then we `n` x the liquidity to `(nx)^.5 (ny)^.5 = nk = k'`
+        // We generalize this linear relation to do the liquidity add for the not-all-asset case.
+        // Suppose we increase the supply of x by x', so we want to solve for `k'/k`.
+        // This is `(x + x')^{weight} * old_terms / (x^{weight} * old_terms) = (x + x')^{weight} / (x^{weight})`
+        // The number of new shares we need to make is then `old_shares * ((k'/k) - 1)`
+        // Whats very cool, is that this turns out to be the exact same `solveConstantFunctionInvariant` code
+        // with the answer's sign reversed.
+        // poolAmountOut := solveConstantFunctionInvariant(
+        // 	tokenBalanceIn.Add(tokenAmountInAfterFee),
+        // 	tokenBalanceIn,
+        // 	normalizedTokenWeightIn,
+        // 	poolShares,
+        // 	sdk.OneDec()).Neg()
         let token_in = &assets[0];
         let total_shares = pool_state.shares.amount;
         let provided_asset_1_pool_balance =
@@ -23,14 +43,18 @@ pub fn calculate_join_pool_shares_osmosis(
 
         let token_in_amount_after_fee =
             token_in.amount * (Decimal::one() - normalized_weight).checked_mul(swap_fee)?;
-        let k_dydx = provided_asset_1_pool_balance.checked_add(token_in_amount_after_fee)?;
-        let k = solve_constant_function_invariant(
+        let pool_amount_out = solve_constant_function_invariant(
             provided_asset_1_pool_balance.checked_add(token_in_amount_after_fee)?,
             provided_asset_1_pool_balance,
             normalized_weight,
             total_shares,
+            //This will result in runtime error, need redo function
             Decimal::zero() - Decimal::one(),
         )?;
+        return Ok(Coin {
+            denom: token_in.info.to_string(),
+            amount: pool_amount_out,
+        });
         // Here we should add the calculation for JoinSwapExactAmountIN
     }
     if assets.len() == 2 {
