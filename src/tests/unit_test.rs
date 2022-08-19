@@ -5,7 +5,7 @@ mod tests {
     use cosmwasm_std::{Decimal, Uint128};
     use test_case::test_case;
 
-    #[test_case(1, vec!["uosmo".to_string(), "uatom".to_string()], Decimal::from_ratio(1u8,50u8), Decimal::from_ratio(1u8,500u8),1, 0.5;"test_join_pool_calculation_single_sided")]
+    #[test_case(1, vec!["uosmo".to_string(), "uatom".to_string()], Decimal::from_ratio(1u8,50u8), Decimal::from_ratio(1u8,500u8), 1, 0.5;"test_join_pool_calculation_single_sided")]
     fn test_join_pool_calculation_single_sided(
         pool_id: u64,
         assets: Vec<String>,
