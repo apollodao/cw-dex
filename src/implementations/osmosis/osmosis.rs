@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 
 use crate::osmosis::osmosis_math::{
-    calculate_exit_pool_amounts_osmosis, calculate_join_pool_shares_osmosis,
+    osmosis_calculate_exit_pool_amounts, osmosis_calculate_join_pool_shares,
 };
 use crate::utils::vec_into;
 use crate::{CwDexError, Pool, Staking};
@@ -57,10 +57,10 @@ impl Pool<OsmosisQuery, Coin> for OsmosisPool {
         info: &MessageInfo,
         assets: Vec<Coin>,
     ) -> Result<CosmosMsg, CwDexError> {
-        let shares_out = calculate_join_pool_shares_osmosis(
+        let shares_out = osmosis_calculate_join_pool_shares(
             deps,
             self.pool_id,
-            (&assets).into(),
+            assets.clone(),
             self.total_weight,
             self.normalized_weight,
             self.swap_fee,
@@ -102,7 +102,7 @@ impl Pool<OsmosisQuery, Coin> for OsmosisPool {
         asset: Coin,
         asset_to_withdraw: Option<Coin>,
     ) -> Result<CosmosMsg, CwDexError> {
-        let token_out_mins = calculate_exit_pool_amounts_osmosis(
+        let token_out_mins = osmosis_calculate_exit_pool_amounts(
             deps,
             self.pool_id,
             asset.amount,
@@ -157,12 +157,12 @@ impl Pool<OsmosisQuery, Coin> for OsmosisPool {
     fn simulate_provide_liquidity(
         &self,
         deps: Deps<OsmosisQuery>,
-        asset: Vec<Coin>,
+        assets: Vec<Coin>,
     ) -> Result<Coin, CwDexError> {
-        Ok(calculate_join_pool_shares_osmosis(
+        Ok(osmosis_calculate_join_pool_shares(
             deps,
             self.pool_id,
-            (&asset).into(),
+            assets,
             self.total_weight,
             self.normalized_weight,
             self.swap_fee,
@@ -175,7 +175,7 @@ impl Pool<OsmosisQuery, Coin> for OsmosisPool {
         asset: Coin,
         asset_to_withdraw: Option<Coin>,
     ) -> Result<Vec<Coin>, CwDexError> {
-        Ok(calculate_exit_pool_amounts_osmosis(
+        Ok(osmosis_calculate_exit_pool_amounts(
             deps,
             self.pool_id,
             asset.amount,
