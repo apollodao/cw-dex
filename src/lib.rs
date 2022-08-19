@@ -7,3 +7,6 @@ pub use error::*;
 pub use implementations::*;
 pub use pool::*;
 pub use staking::*;
+
+#[cfg(test)]
+pub mod tests;
