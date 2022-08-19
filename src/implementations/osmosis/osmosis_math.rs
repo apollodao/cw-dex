@@ -33,33 +33,16 @@ pub fn osmosis_calculate_join_pool_shares(
         });
     }
     if assets.len() == 2 {
-        let provided_asset_1 = &assets[0];
-        let provided_asset_2 = &assets[1];
-        let provided_asset_1_pool_balance =
-            pool_state.denom_pool_balance(&&provided_asset_1.denom.to_string());
-        let provided_asset_2_pool_balance =
-            pool_state.denom_pool_balance(&&provided_asset_2.denom.to_string());
-        let total_shares = pool_state.shares.amount;
-        let shares_out_est_1 = provided_asset_1
-            .amount
-            .checked_mul(total_shares)?
-            .checked_div(provided_asset_1_pool_balance)?;
+        let shares_out_amount = calc_join_pool_shares_double_sided(
+            assets,
+            pool_state.assets,
+            pool_state.shares.amount,
+        )?;
 
-        let shares_out_est_2 = provided_asset_2
-            .amount
-            .checked_mul(total_shares)?
-            .checked_div(provided_asset_2_pool_balance)?;
-
-        //Different estimations will be returned if pool assets are not equal in value
-
-        if shares_out_est_1 != shares_out_est_2 {
-            return Err(StdError::generic_err("assets being added to pool must be equal in value"));
-        } else {
-            return Ok(Coin {
-                denom: pool_state.shares.denom,
-                amount: shares_out_est_1,
-            });
-        }
+        return Ok(Coin {
+            denom: pool_state.shares.denom,
+            amount: shares_out_amount,
+        });
     }
 
     Err(StdError::generic_err("only 1 or 2 assets can be added to pool"))
@@ -90,6 +73,34 @@ pub fn osmosis_calculate_join_pool_shares(
 // 		sdk.OneDec()).Neg()
 // 	return poolAmountOut
 // }
+
+fn calc_join_pool_shares_double_sided(
+    provided_assets: Vec<Coin>,
+    pool_assets: Vec<Coin>,
+    total_shares: Uint128,
+) -> StdResult<Uint128> {
+    let provided_asset_1 = &provided_assets[0];
+    let provided_asset_2 = &provided_assets[1];
+    let provided_asset_1_pool_balance =
+        pool_assets.iter().find(|c| c.denom == provided_asset_1.denom.to_string()).unwrap().amount;
+    let provided_asset_2_pool_balance =
+        pool_assets.iter().find(|c| c.denom == provided_asset_2.denom.to_string()).unwrap().amount;
+    let shares_out_est_1 = provided_asset_1
+        .amount
+        .checked_mul(total_shares)?
+        .checked_div(provided_asset_1_pool_balance)?;
+
+    let shares_out_est_2 = provided_asset_2
+        .amount
+        .checked_mul(total_shares)?
+        .checked_div(provided_asset_2_pool_balance)?;
+
+    if shares_out_est_1 != shares_out_est_2 {
+        Err(StdError::generic_err("assets being added to pool must be equal in value"))
+    } else {
+        Ok(shares_out_est_1)
+    }
+}
 
 // feeRatio returns the fee ratio that is defined as follows:
 // 1 - ((1 - normalizedTokenWeightOut) * swapFee)
@@ -486,138 +497,46 @@ mod tests {
 
     #[test]
     fn test_osmosis_calculate_join_pool_shares_single_sided() {
-        for test_case in calc_single_asset_join_test_cases {
-            let token_in = test_case.tokens_in[0];
+        let one_trillion: u128 = 1e12 as u128;
+        let default_osmo_pool_asset: PoolAsset = PoolAsset {
+            token: Coin::new(one_trillion, "uosmo"),
+            weight: Uint128::new(100),
+        };
+        let default_atom_pool_asset: PoolAsset = PoolAsset {
+            token: Coin::new(one_trillion, "uatom"),
+            weight: Uint128::new(100),
+        };
+        let one_trillion_even_pool_assets: Vec<PoolAsset> =
+            vec![default_osmo_pool_asset.clone(), default_atom_pool_asset.clone()];
 
-            // Get the PoolAsset for the provided asset
-            let provided_asset_pool =
-                test_case.pool_assets.iter().find(|a| a.token.denom == token_in.denom).unwrap();
-
-            // Calculate the normalized weight for the provided asset
-            let total_weight: Uint128 = test_case.pool_assets.iter().map(|a| a.weight).sum();
-            let normalized_weight = Decimal::from_ratio(provided_asset_pool.weight, total_weight);
-
-            // Call function to calc single sided joining
-            let actual = calc_join_pool_shares_single_sided(
-                &test_case.tokens_in[0],
-                existing_pool_shares,
-                provided_asset_pool.token.amount,
-                normalized_weight,
-                test_case.swap_fee,
-            )
-            .unwrap();
-
-            assert_eq!(actual, test_case.expect_shares);
-        }
-    }
-
-    struct PoolAsset {
-        token: Coin,
-        weight: Uint128,
-    }
-    struct CalcJoinSharesTestCase {
-        name: String,
-        swap_fee: Decimal,
-        pool_assets: Vec<PoolAsset>,
-        tokens_in: Vec<Coin>,
-        expect_shares: Uint128,
-    }
-
-    const one_trillion: u128 = 1e12 as u128;
-    const default_osmo_pool_asset: PoolAsset = PoolAsset {
-        token: Coin::new(one_trillion, "uosmo"),
-        weight: Uint128::new(100),
-    };
-    const default_atom_pool_asset: PoolAsset = PoolAsset {
-        token: Coin::new(one_trillion, "uatom"),
-        weight: Uint128::new(100),
-    };
-    const one_trillion_even_pool_assets: Vec<PoolAsset> =
-        vec![default_osmo_pool_asset, default_atom_pool_asset];
-
-    const existing_pool_shares: Uint128 = Uint128::new(100_000_000_000_000_000_000);
-    const calc_single_asset_join_test_cases: Vec<CalcJoinSharesTestCase> = vec![
-        CalcJoinSharesTestCase {
-            // Expected output from Balancer paper (https://balancer.fi/whitepaper.pdf) using equation (25) on page 10:
-            // P_issued = P_supply * ((1 + (A_t / B_t))^W_t - 1)
-            //
-            // 2_499_999_968_750 = 1e20 * (( 1 + (50,000 / 1e12))^0.5 - 1)
-            //
-            // where:
-            // 	P_supply = initial pool supply = 1e20
-            //	A_t = amount of deposited asset = 50,000
-            //	B_t = existing balance of deposited asset in the pool prior to deposit = 1,000,000,000,000
-            //	W_t = normalized weight of deposited asset in pool = 0.5 (equally weighted two-asset pool)
-            // Plugging all of this in, we get:
-            // 	Full solution: https://www.wolframalpha.com/input?i=100000000000000000000*%28%281+%2B+%2850000%2F1000000000000%29%29%5E0.5+-+1%29
-            // 	Simplified:  P_issued = 2,499,999,968,750
+        let existing_pool_shares: Uint128 = Uint128::new(100_000_000_000_000_000_000);
+        let calc_single_asset_join_test_cases: Vec<CalcJoinSharesTestCase> = vec![
+        CalcJoinSharesTestCase { 
             name:         "single tokens_in - equal weights with zero swap fee".to_string(),
             swap_fee:      Decimal::zero(),
-            pool_assets:   one_trillion_even_pool_assets,
+            pool_assets:   one_trillion_even_pool_assets.clone(),
             tokens_in:     vec![Coin::new(50_000, "uosmo")],
             expect_shares: Uint128::new(2_499_999_968_750),
         },
         CalcJoinSharesTestCase {
-            // Expected output from Balancer paper (https://balancer.fi/whitepaper.pdf) using equation (25) on page 10:
-            // P_issued = P_supply * ((1 + (A_t * swapFeeRatio  / B_t))^W_t - 1)
-            //
-            // 2_487_500_000_000 = 1e20 * (( 1 + (50,000 * (1 - (1 - 0.5) * 0.01) / 1e12))^0.5 - 1)
-            //
-            // where:
-            // 	P_supply = initial pool supply = 1e20
-            //	A_t = amount of deposited asset = 50,000
-            //	B_t = existing balance of deposited asset in the pool prior to deposit = 1,000,000,000,000
-            //	W_t = normalized weight of deposited asset in pool = 0.5 (equally weighted two-asset pool)
-            // 	swapFeeRatio = (1 - (1 - W_t) * swap_fee)
-            // Plugging all of this in, we get:
-            // 	Full solution: https://www.wolframalpha.com/input?i=100+*10%5E18*%28%281+%2B+%2850000*%281+-+%281-0.5%29+*+0.01%29%2F1000000000000%29%29%5E0.5+-+1%29
-            // 	Simplified:  P_issued = 2_487_500_000_000
             name:         "single tokens_in - equal weights with 0.01 swap fee".to_string(),
             swap_fee:      Decimal::from_str("0.01").unwrap(),
-            pool_assets:   one_trillion_even_pool_assets,
+            pool_assets:   one_trillion_even_pool_assets.clone(),
             tokens_in:     vec![Coin::new(50_000, "uosmo")],
             expect_shares: Uint128::new(2_487_500_000_000),
         },
         CalcJoinSharesTestCase {
-            // Expected output from Balancer paper (https://balancer.fi/whitepaper.pdf) using equation (25) on page 10:
-            // P_issued = P_supply * ((1 + (A_t * swapFeeRatio  / B_t))^W_t - 1)
-            //
-            // 1_262_500_000_000 = 1e20 * (( 1 + (50,000 * (1 - (1 - 0.5) * 0.99) / 1e12))^0.5 - 1)
-            //
-            // where:
-            // 	P_supply = initial pool supply = 1e20
-            //	A_t = amount of deposited asset = 50,000
-            //	B_t = existing balance of deposited asset in the pool prior to deposit = 1,000,000,000,000
-            //	W_t = normalized weight of deposited asset in pool = 0.5 (equal weights)
-            // 	swapFeeRatio = (1 - (1 - W_t) * swap_fee)
-            // Plugging all of this in, we get:
-            // 	Full solution: https://www.wolframalpha.com/input?i=%28100+*+10%5E18+%29*+%28%28+1+%2B+%2850%2C000+*+%281+-+%281+-+0.5%29+*+0.99%29+%2F+1000000000000%29%29%5E0.5+-+1%29
-            // 	Simplified:  P_issued = 1_262_500_000_000
             name:         "single tokens_in - equal weights with 0.99 swap fee".to_string(),
             swap_fee:      Decimal::from_str("0.99").unwrap(),
-            pool_assets:   one_trillion_even_pool_assets,
+            pool_assets:   one_trillion_even_pool_assets.clone(),
             tokens_in:     vec![Coin::new(50_000, "uosmo")],
             expect_shares: Uint128::new(1_262_500_000_000),
         },
         CalcJoinSharesTestCase {
-            // Expected output from Balancer paper (https://balancer.fi/whitepaper.pdf) using equation (25) on page 10:
-            // P_issued = P_supply * ((1 + (A_t * swapFeeRatio  / B_t))^W_t - 1)
-            //
-            // 321_875_000_000 = 1e20 * (( 1 + (50,000 * (1 - (1 - 0.25) * 0.99) / 1e12))^0.25 - 1)
-            //
-            // where:
-            // 	P_supply = initial pool supply = 1e20
-            //	A_t = amount of deposited asset = 50,000
-            //	B_t = existing balance of deposited asset in the pool prior to deposit = 1,000,000,000,000
-            //	W_t = normalized weight of deposited asset in pool = 0.25 (asset A, uosmo, has weight 1/4 of uatom)
-            // 	swapFeeRatio = (1 - (1 - W_t) * swap_fee)
-            // Plugging all of this in, we get:
-            // 	Full solution: https://www.wolframalpha.com/input?i=%28100+*+10%5E18+%29*+%28%28+1+%2B+%2850%2C000+*+%281+-+%281+-+0.25%29+*+0.99%29+%2F+1000000000000%29%29%5E0.25+-+1%29
-            // 	Simplified:  P_issued = 321_875_000_000
             name:    "single tokens_in - unequal weights with 0.99 swap fee".to_string(),
             swap_fee: Decimal::from_str("0.99").unwrap(),
             pool_assets: vec![
-                default_osmo_pool_asset,
+                default_osmo_pool_asset.clone(),
                 PoolAsset {
                     token:  Coin::new(one_trillion, "uatom"),
                     weight: Uint128::new(300),
@@ -627,19 +546,6 @@ mod tests {
             expect_shares: Uint128::new(321_875_000_000),
         },
         CalcJoinSharesTestCase {
-            // Expected output from Balancer paper (https://balancer.fi/whitepaper.pdf) using equation (25) on page 10:
-            // P_issued = P_supply * ((1 + (A_t / B_t))^W_t - 1)
-            //
-            // 4_159_722_200_000 = 1e20 * (( 1 + (50,000 / 1e12))^0.83 - 1)
-            //
-            // where:
-            // 	P_supply = initial pool supply = 1e20
-            //	A_t = amount of deposited asset = 50,000
-            //	B_t = existing balance of deposited asset in the pool prior to deposit = 1,000,000,000,000
-            //	W_t = normalized weight of deposited asset in pool = 500 / (500 + 100) approx = 0.83
-            // Plugging all of this in, we get:
-            // 	Full solution: https://www.wolframalpha.com/input?i=100+*10%5E18*%28%281+%2B+%2850000*%281+-+%281-%28500+%2F+%28100+%2B+500%29%29%29+*+0%29%2F1000000000000%29%29%5E%28500+%2F+%28100+%2B+500%29%29+-+1%29
-            // 	Simplified:  P_issued = 4_159_722_200_000
             name:    "single asset - token in weight is greater than the other token, with zero swap fee".to_string(),
             swap_fee: Decimal::zero(),
             pool_assets: vec![
@@ -647,25 +553,12 @@ mod tests {
                     token:  Coin::new(one_trillion, "uosmo"),
                     weight: Uint128::new(500),
                 },
-                default_atom_pool_asset,
+                default_atom_pool_asset.clone(),
             ],
             tokens_in:     vec![Coin::new(50_000, "uosmo")],
             expect_shares: Uint128::new(4_166_666_649_306),
         },
         CalcJoinSharesTestCase {
-            // Expected output from Balancer paper (https://balancer.fi/whitepaper.pdf) using equation (25) on page 10:
-            // P_issued = P_supply * ((1 + (A_t / B_t))^W_t - 1)
-            //
-            // 4_159_722_200_000 = 1e20 * (( 1 + (50,000 * (1 - (1 - 0.83) * 0.01) / 1e12))^0.83 - 1)
-            //
-            // where:
-            // 	P_supply = initial pool supply = 1e20
-            //	A_t = amount of deposited asset = 50,000
-            //	B_t = existing balance of deposited asset in the pool prior to deposit = 1e12
-            //	W_t = normalized weight of deposited asset in pool = 500 / (500 + 100) approx = 0.83
-            // Plugging all of this in, we get:
-            // 	Full solution: https://www.wolframalpha.com/input?i=100+*10%5E18*%28%281+%2B+%2850000*%281+-+%281-%28500+%2F+%28100+%2B+500%29%29%29+*+0.01%29%2F1000000000000%29%29%5E%28500+%2F+%28100+%2B+500%29%29+-+1%29
-            // 	Simplified:  P_issued = 4_159_722_200_000
             name:    "single asset - token in weight is greater than the other token, with non-zero swap fee".to_string(),
             swap_fee: Decimal::from_str("0.01").unwrap(),
             pool_assets: vec![
@@ -673,25 +566,12 @@ mod tests {
                     token:  Coin::new(one_trillion, "uosmo"),
                     weight: Uint128::new(500),
                 },
-                default_atom_pool_asset,
+                default_atom_pool_asset.clone(),
             ],
             tokens_in:     vec![Coin::new(50_000, "uosmo")],
             expect_shares: Uint128::new(4_159_722_200_000),
         },
         CalcJoinSharesTestCase {
-            // Expected output from Balancer paper (https://balancer.fi/whitepaper.pdf) using equation (25) on page 10:
-            // P_issued = P_supply * ((1 + (A_t / B_t))^W_t - 1)
-            //
-            // 833_333_315_972 = 1e20 * (( 1 + (50,000 / 1e12))^0.167 - 1)
-            //
-            // where:
-            // 	P_supply = initial pool supply = 1e20
-            //	A_t = amount of deposited asset = 50,000
-            //	B_t = existing balance of deposited asset in the pool prior to deposit = 1,000,000,000,000
-            //	W_t = normalized weight of deposited asset in pool = 200 / (200 + 1000) approx = 0.167
-            // Plugging all of this in, we get:
-            // 	Full solution: https://www.wolframalpha.com/input?i=100+*10%5E18*%28%281+%2B+%2850000*%281+-+%281-%28200+%2F+%28200+%2B+1000%29%29%29+*+0%29%2F1000000000000%29%29%5E%28200+%2F+%28200+%2B+1000%29%29+-+1%29
-            // 	Simplified:  P_issued = 833_333_315_972
             name:    "single asset - token in weight is smaller than the other token, with zero swap fee".to_string(),
             swap_fee: Decimal::from_str("0").unwrap(),
             pool_assets: vec![
@@ -708,19 +588,6 @@ mod tests {
             expect_shares: Uint128::new(833_333_315_972),
         },
         CalcJoinSharesTestCase {
-            // Expected output from Balancer paper (https://balancer.fi/whitepaper.pdf) using equation (25) on page 10:
-            // P_issued = P_supply * ((1 + (A_t / B_t))^W_t - 1)
-            //
-            // 819_444_430_000 = 1e20 * (( 1 + (50,000 * (1 - (1 - 0.167) * 0.02) / 1e12))^0.167 - 1)
-            //
-            // where:
-            // 	P_supply = initial pool supply = 1e20
-            //	A_t = amount of deposited asset = 50,000
-            //	B_t = existing balance of deposited asset in the pool prior to deposit = 1,000,000,000,000
-            //	W_t = normalized weight of deposited asset in pool = 200 / (200 + 1000) approx = 0.167
-            // Plugging all of this in, we get:
-            // 	Full solution: https://www.wolframalpha.com/input?i=100+*10%5E18*%28%281+%2B+%2850000*%281+-+%281-%28200+%2F+%28200+%2B+1000%29%29%29+*+0.02%29%2F1000000000000%29%29%5E%28200+%2F+%28200+%2B+1000%29%29+-+1%29
-            // 	Simplified:  P_issued = 819_444_430_000
             name:    "single asset - token in weight is smaller than the other token, with non-zero swap fee".to_string(),
             swap_fee: Decimal::from_str("0.02").unwrap(),
             pool_assets: vec![
@@ -737,19 +604,6 @@ mod tests {
             expect_shares: Uint128::new(819_444_430_000),
         },
         CalcJoinSharesTestCase {
-            // Expected output from Balancer paper (https://balancer.fi/whitepaper.pdf) using equation (25) on page 10:
-            // P_issued = P_supply * ((1 + (A_t / B_t))^W_t - 1)
-            //
-            // 9_775_731_930_496_140_648 = 1e20 * (( 1 + (117552 / 156_736))^0.167 - 1)
-            //
-            // where:
-            // 	P_supply = initial pool supply = 1e20
-            //	A_t = amount of deposited asset = 117552
-            //	B_t = existing balance of deposited asset in the pool prior to deposit = 156_736
-            //	W_t = normalized weight of deposited asset in pool = 200 / (200 + 1000) approx = 0.167
-            // Plugging all of this in, we get:
-            // 	Full solution: https://www.wolframalpha.com/input?i=100+*10%5E18*%28%281+%2B+%28117552*%281+-+%281-%28200+%2F+%28200+%2B+1000%29%29%29+*+0%29%2F156736%29%29%5E%28200+%2F+%28200+%2B+1000%29%29+-+1%29
-            // 	Simplified:  P_issued = 9_775_731_930_496_140_648
             name:    "single asset - tokenIn is large relative to liquidity, token in weight is smaller than the other token, with zero swap fee".to_string(),
             swap_fee: Decimal::from_str("0").unwrap(),
             pool_assets: vec![
@@ -767,19 +621,6 @@ mod tests {
             expect_shares: Uint128::new(9_775_731_930_496_140_648),
         },
         CalcJoinSharesTestCase {
-            // Expected output from Balancer paper (https://balancer.fi/whitepaper.pdf) using equation (25) on page 10:
-            // P_issued = P_supply * ((1 + (A_t / B_t))^W_t - 1)
-            //
-            // 9_644_655_900_000_000_000 = 1e20 * (( 1 + (117552 * (1 - (1 - 0.167) * 0.02) / 156_736))^0.167 - 1)
-            //
-            // where:
-            // 	P_supply = initial pool supply = 1e20
-            //	A_t = amount of deposited asset = 50,000
-            //	B_t = existing balance of deposited asset in the pool prior to deposit = 1,000,000,000,000
-            //	W_t = normalized weight of deposited asset in pool = 200 / (200 + 1000) approx = 0.167
-            // Plugging all of this in, we get:
-            // 	Full solution: https://www.wolframalpha.com/input?i=100+*10%5E18*%28%281+%2B+%2850000*%281+-+%281-%28200+%2F+%28200+%2B+1000%29%29%29+*+0.02%29%2F1000000000000%29%29%5E%28200+%2F+%28200+%2B+1000%29%29+-+1%29
-            // 	Simplified:  P_issued = 9_644_655_900_000_000_000
             name:    "single asset - tokenIn is large relative to liquidity, token in weight is smaller than the other token, with non-zero swap fee".to_string(),
             swap_fee: Decimal::from_str("0.02").unwrap(),
             pool_assets: vec![
@@ -797,19 +638,6 @@ mod tests {
             expect_shares: Uint128::new(9_644_655_900_000_000_000),
         },
         CalcJoinSharesTestCase {
-            // Expected output from Balancer paper (https://balancer.fi/whitepaper.pdf) using equation (25) on page 10:
-            // P_issued = P_supply * ((1 + (A_t / B_t))^W_t - 1)
-            //
-            // 6_504_099_261_800_144_638 = 1e20 * (( 1 + (499_000 / 500_000))^0.09 - 1)
-            //
-            // where:
-            // 	P_supply = initial pool supply = 1e20
-            //	A_t = amount of deposited asset = 195920
-            //	B_t = existing balance of deposited asset in the pool prior to deposit = 156_736
-            //	W_t = normalized weight of deposited asset in pool = 100 / (100 + 1000) approx = 0.09
-            // Plugging all of this in, we get:
-            // 	Full solution: https://www.wolframalpha.com/input?i=100+*10%5E18*%28%281+%2B+%28499999*%281+-+%281-%28100+%2F+%28100+%2B+1000%29%29%29+*+0%29%2F500000%29%29%5E%28100+%2F+%28100+%2B+1000%29%29+-+1%29
-            // 	Simplified:  P_issued = 6_504_099_261_800_144_638
             name:    "single asset - (almost 1 == tokenIn / liquidity ratio), token in weight is smaller than the other token, with zero swap fee".to_string(),
             swap_fee: Decimal::from_str("0").unwrap(),
             pool_assets: vec![
@@ -891,8 +719,45 @@ mod tests {
             ],
             tokens_in: vec![Coin::new(1, "uosmo")],
             expect_shares: Uint128::new(5_000_000),
+        }];
+
+        for test_case in calc_single_asset_join_test_cases {
+            let token_in = test_case.tokens_in[0].clone();
+
+            // Get the PoolAsset for the provided asset
+            let provided_asset_pool =
+                test_case.pool_assets.iter().find(|a| a.token.denom == token_in.denom).unwrap();
+
+            // Calculate the normalized weight for the provided asset
+            let total_weight: Uint128 = test_case.pool_assets.iter().map(|a| a.weight).sum();
+            let normalized_weight = Decimal::from_ratio(provided_asset_pool.weight, total_weight);
+
+            // Call function to calc single sided joining
+            let actual = calc_join_pool_shares_single_sided(
+                &test_case.tokens_in[0],
+                existing_pool_shares,
+                provided_asset_pool.token.amount,
+                normalized_weight,
+                test_case.swap_fee,
+            )
+            .unwrap();
+
+            assert_eq!(actual, test_case.expect_shares);
         }
-    ];
+    }
+
+    #[derive(Clone)]
+    struct PoolAsset {
+        token: Coin,
+        weight: Uint128,
+    }
+    struct CalcJoinSharesTestCase {
+        name: String,
+        swap_fee: Decimal,
+        pool_assets: Vec<PoolAsset>,
+        tokens_in: Vec<Coin>,
+        expect_shares: Uint128,
+    }
 
     // func (suite *KeeperTestSuite) TestCalcJoinPoolShares() {
     //     // We append shared calcSingleAssetJoinTestCases with multi-asset and edge
