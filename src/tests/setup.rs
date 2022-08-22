@@ -2,7 +2,6 @@ use std::marker::PhantomData;
 
 use apollo_safe::pay::input::AddPaymentInput;
 use apollo_safe::pay::msg::{PayInstantiateMsg, PayQueryMsg};
-use apollo_safe::pay::output::{DistributionScheduleResponse, PaymentInfoResponse};
 use cosmwasm_std::testing::{MockApi, MockStorage};
 use cosmwasm_std::OwnedDeps;
 use cosmwasm_std::{
@@ -62,10 +61,7 @@ impl InstantiateMsgBuilder {
 }
 
 // this will set up the instantiation for other tests
-pub fn do_instantiate() -> (
-    OwnedDeps<MockStorage, MockApi, CustomMockQuerier>,
-    MessageInfo,
-) {
+pub fn do_instantiate() -> (OwnedDeps<MockStorage, MockApi, CustomMockQuerier>, MessageInfo) {
     _do_instantiate(None, None, None)
 }
 
@@ -82,10 +78,7 @@ pub fn _do_instantiate(
     info: Option<MessageInfo>,
     payments: Option<Vec<AddPaymentInput>>,
     fee: Option<Decimal>,
-) -> (
-    OwnedDeps<MockStorage, MockApi, CustomMockQuerier>,
-    MessageInfo,
-) {
+) -> (OwnedDeps<MockStorage, MockApi, CustomMockQuerier>, MessageInfo) {
     let init_msg = InstantiateMsgBuilder::default()
         .with_initial_payments(payments.clone())
         .with_fee(fee)
@@ -99,8 +92,7 @@ pub fn _do_instantiate(
 
     let mut deps: OwnedDeps<MockStorage, MockApi, CustomMockQuerier> = mock_dependencies();
     // TODO: Make this for Vec<Coin>
-    deps.querier
-        .set_base_balances(creator_info.sender.as_str(), &creator_info.funds);
+    deps.querier.set_base_balances(creator_info.sender.as_str(), &creator_info.funds);
 
     if let Some(fee) = fee {
         deps.querier.set_raw_factory_fee(fee);
@@ -162,9 +154,7 @@ pub fn mock_add_payment(
     distribution_schedule: Option<DistributionSchedule>,
 ) -> PaymentInfo {
     let recipient = deps.api.addr_validate(&params.recipient).unwrap();
-    let starting_time = params
-        .starting_time
-        .unwrap_or_else(|| mock_env().block.time.seconds());
+    let starting_time = params.starting_time.unwrap_or_else(|| mock_env().block.time.seconds());
     let ending_time = starting_time + params.distribution_time;
 
     match distribution_schedule {
@@ -199,9 +189,8 @@ pub fn get_amount_claimable(
     fee: Decimal,
     time_delta: u64,
 ) -> (Uint128, Uint128) {
-    let amount_claimable = payment_info
-        .calculate_claimable_amount(&mock_env_time(time_delta))
-        .unwrap();
+    let amount_claimable =
+        payment_info.calculate_claimable_amount(&mock_env_time(time_delta)).unwrap();
 
     let calculated_amount = if let Some(amount_requested) = amount_to_claim {
         amount_requested.min(amount_claimable)

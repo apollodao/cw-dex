@@ -22,3 +22,6 @@ osmo-bindings = {git = "https://github.com/apollodao/bindings.git"}
 schemars = "0.8.1"
 serde = {version = "1.0.103", default-features = false, features = ["derive"]}
 thiserror = {version = "1.0.31"}
+
+[dev-dependencies]
+test-case = {version = "2.1.0"}

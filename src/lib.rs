@@ -8,5 +8,5 @@ pub use pool::*;
 pub use staking::*;
 mod utils;
 
-// #[cfg(test)]
-// pub mod tests;
+#[cfg(test)]
+pub mod tests;

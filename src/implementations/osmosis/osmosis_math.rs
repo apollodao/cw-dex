@@ -301,6 +301,7 @@ fn osmosis_solve_constant_function_invariant(
     token_balance_unknown_before: Uint128,
     token_weight_unknown: Decimal,
 ) -> StdResult<Uint128> {
+    println!("beginning of constant invariant");
     // // weightRatio = (weightX/weightY)
     // weightRatio := tokenWeightFixed.Quo(tokenWeightUnknown)
     let weight_ratio = token_weight_fixed / token_weight_unknown;
@@ -315,7 +316,10 @@ fn osmosis_solve_constant_function_invariant(
     // amountY := tokenBalanceUnknownBefore.Mul(paranthetical)
     // return amountY
     let y_to_weight_ratio = osmosis_pow(y, weight_ratio)?;
+    println!("past y_to_weight_ratio");
+    println!("y_to_weight_ratio {}", y_to_weight_ratio);
     let paranthetical = Decimal::one() - y_to_weight_ratio;
+    println!("past paranthetical");
     let amount_y = token_balance_unknown_before * paranthetical;
     return Ok(amount_y);
 }
