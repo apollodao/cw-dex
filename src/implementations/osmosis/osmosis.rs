@@ -11,8 +11,8 @@ use apollo_proto_rust::osmosis::superfluid::{
 use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
 use cosmwasm_std::{
-    Addr, Coin, CosmosMsg, Decimal, Deps, Empty, MessageInfo, Response, StdError, StdResult,
-    Uint128,
+    Addr, Coin, CosmosMsg, Decimal256, Deps, Empty, MessageInfo, Response, StdError, StdResult,
+    Uint128, Uint256,
 };
 use cw_asset::osmosis::OsmosisDenom;
 use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
@@ -31,10 +31,10 @@ use crate::{CwDexError, Pool, Staking};
 pub struct OsmosisPool {
     pool_id: u64,
     assets: Vec<String>,
-    exit_fee: Decimal, // TODO: queriable? remove?
-    swap_fee: Decimal,
+    exit_fee: Decimal256, // TODO: queriable? remove?
+    swap_fee: Decimal256,
     total_weight: Uint128,
-    normalized_weight: Decimal,
+    normalized_weight: Decimal256,
     // calcPoolOutGivenSingleIn - see here. Since all pools we are adding are 50/50, no need to store TotalWeight or the pool asset's weight
     // We should query this once Stargate queries are available
     // https://github.com/osmosis-labs/osmosis/blob/df2c511b04bf9e5783d91fe4f28a3761c0ff2019/x/gamm/pool-models/balancer/pool.go#L632
@@ -105,7 +105,7 @@ impl Pool<OsmosisQuery, Coin> for OsmosisPool {
         let token_out_mins = osmosis_calculate_exit_pool_amounts(
             deps,
             self.pool_id,
-            asset.amount,
+            Uint256::from(asset.amount),
             self.exit_fee,
             self.swap_fee,
             self.normalized_weight,
@@ -178,7 +178,7 @@ impl Pool<OsmosisQuery, Coin> for OsmosisPool {
         Ok(osmosis_calculate_exit_pool_amounts(
             deps,
             self.pool_id,
-            asset.amount,
+            Uint256::from(asset.amount),
             self.exit_fee,
             self.swap_fee,
             self.normalized_weight,
