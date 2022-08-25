@@ -50,17 +50,32 @@ pub struct OsmosisAssets {
     pub assets: Vec<AssetInfoBase<OsmosisDenom>>,
 }
 
-impl Pool<OsmosisQuery, Coin> for OsmosisPool {
+fn assert_only_native_coins(assets: AssetList) -> Result<Vec<Coin>, CwDexError> {
+    assets.into_iter().map(assert_native_coin).collect::<Result<Vec<Coin>, CwDexError>>()
+}
+
+fn assert_native_coin(asset: &Asset) -> Result<Coin, CwDexError> {
+    match asset.info {
+        AssetInfoBase::Cw20(_) => Err(CwDexError::InvalidInAsset {
+            a: asset.clone(),
+        }),
+        AssetInfoBase::Native(_) => asset.try_into().map_err(|e: StdError| e.into()),
+    }
+}
+
+impl Pool<OsmosisQuery> for OsmosisPool {
     fn provide_liquidity(
         &self,
         deps: Deps<OsmosisQuery>,
         info: &MessageInfo,
-        assets: Vec<Coin>,
+        assets: AssetList,
     ) -> Result<CosmosMsg, CwDexError> {
+        let assets = assert_only_native_coins(assets)?;
+
         let shares_out = osmosis_calculate_join_pool_shares(
             deps,
             self.pool_id,
-            assets.clone(),
+            assets.to_vec(),
             self.total_weight,
             self.normalized_weight,
             self.swap_fee,
@@ -99,18 +114,24 @@ impl Pool<OsmosisQuery, Coin> for OsmosisPool {
         &self,
         deps: Deps<OsmosisQuery>,
         info: &MessageInfo,
-        asset: Coin,
-        asset_to_withdraw: Option<Coin>,
+        asset: Asset,
+        asset_to_withdraw: Option<Asset>,
     ) -> Result<CosmosMsg, CwDexError> {
+        let lp_token = assert_native_coin(&asset)?;
+        let token_out = match asset_to_withdraw {
+            Some(asset) => Some(assert_native_coin(&asset)?),
+            None => None,
+        };
+
         let token_out_mins = osmosis_calculate_exit_pool_amounts(
             deps,
             self.pool_id,
-            asset.amount,
+            lp_token.amount,
             self.exit_fee,
             self.swap_fee,
             self.normalized_weight,
             self.total_weight,
-            asset_to_withdraw,
+            token_out,
         )?;
 
         let exit_msg = CosmosMsg::Stargate {
@@ -118,7 +139,7 @@ impl Pool<OsmosisQuery, Coin> for OsmosisPool {
             value: encode(MsgExitPool {
                 sender: info.sender.to_string(),
                 pool_id: self.pool_id,
-                share_in_amount: asset.amount.to_string(),
+                share_in_amount: lp_token.amount.to_string(),
                 token_out_mins: vec_into(token_out_mins),
             }),
         };
@@ -126,7 +147,10 @@ impl Pool<OsmosisQuery, Coin> for OsmosisPool {
         Ok(exit_msg)
     }
 
-    fn swap(&self, info: &MessageInfo, offer: Coin, ask: Coin) -> Result<CosmosMsg, CwDexError> {
+    fn swap(&self, info: &MessageInfo, offer: Asset, ask: Asset) -> Result<CosmosMsg, CwDexError> {
+        let offer = assert_native_coin(&offer)?;
+        let ask = assert_native_coin(&ask)?;
+
         let swap_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::SwapExactAmountIn.to_string(),
             value: encode(MsgSwapExactAmountIn {
@@ -143,38 +167,48 @@ impl Pool<OsmosisQuery, Coin> for OsmosisPool {
         Ok(swap_msg)
     }
 
-    fn get_pool_assets(&self) -> Result<Vec<Coin>, CwDexError> {
+    fn get_pool_assets(&self) -> Result<AssetList, CwDexError> {
         Ok(self
             .assets
             .iter()
-            .map(|asset| Coin {
-                denom: asset.clone(),
-                amount: Uint128::zero(),
+            .map(|asset| {
+                Coin {
+                    denom: asset.clone(),
+                    amount: Uint128::zero(),
+                }
+                .into()
             })
-            .collect())
+            .collect::<Vec<Asset>>()
+            .into())
     }
 
     fn simulate_provide_liquidity(
         &self,
         deps: Deps<OsmosisQuery>,
-        assets: Vec<Coin>,
-    ) -> Result<Coin, CwDexError> {
+        assets: AssetList,
+    ) -> Result<Asset, CwDexError> {
         Ok(osmosis_calculate_join_pool_shares(
             deps,
             self.pool_id,
-            assets,
+            assert_only_native_coins(assets)?,
             self.total_weight,
             self.normalized_weight,
             self.swap_fee,
-        )?)
+        )?
+        .into())
     }
 
     fn simulate_withdraw_liquidity(
         &self,
         deps: Deps<OsmosisQuery>,
-        asset: Coin,
-        asset_to_withdraw: Option<Coin>,
-    ) -> Result<Vec<Coin>, CwDexError> {
+        asset: Asset,
+        asset_to_withdraw: Option<Asset>,
+    ) -> Result<AssetList, CwDexError> {
+        let token_out = match asset_to_withdraw {
+            Some(asset) => Some(assert_native_coin(&asset)?),
+            None => None,
+        };
+
         Ok(osmosis_calculate_exit_pool_amounts(
             deps,
             self.pool_id,
@@ -183,8 +217,9 @@ impl Pool<OsmosisQuery, Coin> for OsmosisPool {
             self.swap_fee,
             self.normalized_weight,
             self.total_weight,
-            asset_to_withdraw,
-        )?)
+            token_out,
+        )?
+        .into())
     }
 }
 

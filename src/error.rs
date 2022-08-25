@@ -1,6 +1,7 @@
 use std::num::TryFromIntError;
 
 use cosmwasm_std::StdError;
+use cw_asset::Asset;
 use thiserror::Error;
 
 /// ## Description
@@ -19,4 +20,8 @@ pub enum CwDexError {
     InvalidOutAsset {},
     // Add any other custom errors you like here.
     // Look at https://docs.rs/thiserror/1.0.31/thiserror/ for details.
+    #[error("invalid input asset: {a}")]
+    InvalidInAsset {
+        a: Asset,
+    },
 }
