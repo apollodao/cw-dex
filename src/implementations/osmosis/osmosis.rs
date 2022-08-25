@@ -244,9 +244,10 @@ impl OsmosisStaking {
     }
 }
 
-impl Staking<OsmosisOptions, Coin> for OsmosisStaking {
-    fn stake(&self, asset: Coin, options: OsmosisOptions) -> Result<Response, CwDexError> {
+impl Staking<OsmosisOptions> for OsmosisStaking {
+    fn stake(&self, asset: Asset, options: OsmosisOptions) -> Result<Response, CwDexError> {
         let duration = Duration::from_nanos(self.lockup_duration);
+        let asset = assert_native_coin(&asset)?;
 
         let stake_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::BondLP.to_string(),
@@ -263,7 +264,8 @@ impl Staking<OsmosisOptions, Coin> for OsmosisStaking {
         Ok(Response::new().add_message(stake_msg))
     }
 
-    fn unstake(&self, asset: Coin, options: OsmosisOptions) -> Result<Response, CwDexError> {
+    fn unstake(&self, asset: Asset, options: OsmosisOptions) -> Result<Response, CwDexError> {
+        let asset = assert_native_coin(&asset)?;
         let id = options
             .lockup_id
             .ok_or(CwDexError::Std(StdError::generic_err("Osmosis: lockup_id not provided")))?;
@@ -292,8 +294,9 @@ pub struct OsmosisSuperfluidStaking {
     validator_address: Addr,
 }
 
-impl Staking<OsmosisOptions, Coin> for OsmosisSuperfluidStaking {
-    fn stake(&self, asset: Coin, options: OsmosisOptions) -> Result<Response, CwDexError> {
+impl Staking<OsmosisOptions> for OsmosisSuperfluidStaking {
+    fn stake(&self, asset: Asset, options: OsmosisOptions) -> Result<Response, CwDexError> {
+        let asset = assert_native_coin(&asset)?;
         let stake_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::SuperfluidBondLP.to_string(),
             value: encode(MsgLockAndSuperfluidDelegate {
@@ -306,7 +309,7 @@ impl Staking<OsmosisOptions, Coin> for OsmosisSuperfluidStaking {
         Ok(Response::new().add_message(stake_msg))
     }
 
-    fn unstake(&self, _asset: Coin, options: OsmosisOptions) -> Result<Response, CwDexError> {
+    fn unstake(&self, _asset: Asset, options: OsmosisOptions) -> Result<Response, CwDexError> {
         let lock_id = options
             .lockup_id
             .ok_or(CwDexError::Std(StdError::generic_err("Osmosis: lockup_id not provided")))?;
