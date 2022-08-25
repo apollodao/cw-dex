@@ -193,6 +193,7 @@ dependencies = [
  "cw-asset",
  "cw-storage-plus",
  "cw-token",
+ "cw-utils",
  "cw20",
  "cw20-base",
  "osmo-bindings",

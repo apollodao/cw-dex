@@ -10,10 +10,14 @@ use apollo_proto_rust::osmosis::superfluid::{
 };
 use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
-use cosmwasm_std::{Addr, Coin, CosmosMsg, Decimal, Deps, Response, StdError, StdResult, Uint128};
-use cw_asset::{Asset, AssetInfoBase, AssetList};
+use cosmwasm_std::{
+    Addr, Coin, CosmosMsg, Decimal, Deps, Empty, MessageInfo, Response, StdError, StdResult,
+    Uint128,
+};
+use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use cw_storage_plus::Item;
 use cw_token::osmosis::OsmosisDenom;
+use cw_utils::Duration as CwDuration;
 use osmo_bindings::OsmosisQuery;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -235,6 +239,11 @@ impl Staking for OsmosisStaking {
         // Rewards are automatically distributed to stakers every epoch.
         Ok(Response::new())
     }
+
+    fn get_lockup_duration(&self) -> Result<CwDuration, CwDexError> {
+        let std_duration: Duration = Duration::from_nanos(self.lockup_duration);
+        Ok(CwDuration::Time(std_duration.as_secs()))
+    }
 }
 
 /// Implementation of superfluid staking for osmosis.
@@ -277,5 +286,9 @@ impl Staking for OsmosisSuperfluidStaking {
     fn claim_rewards(&self) -> Result<Response, CwDexError> {
         // Rewards are automatically distributed to stakers every epoch.
         Ok(Response::new())
+    }
+
+    fn get_lockup_duration(&self) -> Result<CwDuration, CwDexError> {
+        todo!()
     }
 }
