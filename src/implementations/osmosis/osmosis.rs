@@ -256,6 +256,7 @@ impl Staking for OsmosisSuperfluidStaking {
     fn stake(&self, deps: Deps, asset: Asset) -> Result<Response, CwDexError> {
         let asset = assert_native_coin(&asset)?;
         let sender = VAULT_ADDR.load(deps.storage)?.to_string();
+
         let stake_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::SuperfluidBondLP.to_string(),
             value: encode(MsgLockAndSuperfluidDelegate {
