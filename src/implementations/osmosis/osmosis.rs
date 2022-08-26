@@ -72,39 +72,19 @@ impl Pool<OsmosisQuery, OsmosisOptions> for OsmosisPool {
     ) -> Result<CosmosMsg, CwDexError> {
         let assets = assert_only_native_coins(assets)?;
 
-        let shares_out = osmosis_calculate_join_pool_shares(
-            deps,
-            self.pool_id,
-            assets.to_vec(),
-            self.total_weight,
-            self.normalized_weight,
-            self.swap_fee,
-        )?;
+        let shares_out = osmosis_calculate_join_pool_shares(deps, self.pool_id, assets.to_vec())?;
 
-        let join_msg = if assets.len() == 1 {
-            let coin_in = assets[0].clone();
-            CosmosMsg::Stargate {
-                type_url: OsmosisTypeURLs::JoinSwapExternAmountIn.to_string(),
-                value: encode(MsgJoinSwapExternAmountIn {
-                    sender: options.sender.to_string(),
-                    pool_id: self.pool_id,
-                    token_in: Some(coin_in.into()),
-                    share_out_min_amount: shares_out.amount.to_string(),
-                }),
-            }
-        } else {
-            CosmosMsg::Stargate {
-                type_url: OsmosisTypeURLs::JoinPool.to_string(),
-                value: encode(MsgJoinPool {
-                    pool_id: self.pool_id,
-                    sender: options.sender.to_string(),
-                    share_out_amount: shares_out.amount.to_string(),
-                    token_in_maxs: assets
-                        .into_iter()
-                        .map(|coin| coin.into())
-                        .collect::<Vec<apollo_proto_rust::cosmos::base::v1beta1::Coin>>(),
-                }),
-            }
+        let join_msg = CosmosMsg::Stargate {
+            type_url: OsmosisTypeURLs::JoinPool.to_string(),
+            value: encode(MsgJoinPool {
+                pool_id: self.pool_id,
+                sender: options.sender.to_string(),
+                share_out_amount: shares_out.amount.to_string(),
+                token_in_maxs: assets
+                    .into_iter()
+                    .map(|coin| coin.into())
+                    .collect::<Vec<apollo_proto_rust::cosmos::base::v1beta1::Coin>>(),
+            }),
         };
 
         Ok(join_msg)
@@ -196,9 +176,6 @@ impl Pool<OsmosisQuery, OsmosisOptions> for OsmosisPool {
             deps,
             self.pool_id,
             assert_only_native_coins(assets)?,
-            self.total_weight,
-            self.normalized_weight,
-            self.swap_fee,
         )?
         .into())
     }

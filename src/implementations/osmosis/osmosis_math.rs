@@ -8,30 +8,23 @@ pub fn osmosis_calculate_join_pool_shares(
     deps: Deps<OsmosisQuery>,
     pool_id: u64,
     assets: Vec<Coin>,
-    total_weight: Uint128,
-    provided_asset_normalized_weight: Decimal,
-    swap_fee: Decimal,
 ) -> StdResult<Coin> {
     let osmosis_querier = OsmosisQuerier::new(&deps.querier);
     let pool_state = osmosis_querier.query_pool_state(pool_id)?;
 
-    if assets.len() == 1 {
-        let token_in = &assets[0];
-        let total_shares = pool_state.shares.amount;
-        let provided_asset_pool_balance =
-            pool_state.denom_pool_balance(&&token_in.denom.to_string());
-        let share_out_amount = calc_join_pool_shares_single_sided(
-            token_in,
-            total_shares,
-            provided_asset_pool_balance,
-            provided_asset_normalized_weight,
-            swap_fee,
-        )?;
-        return Ok(Coin {
-            denom: pool_state.shares.denom,
-            amount: share_out_amount,
-        });
-    }
+    // Validate that sent assets are in the pool
+    // TODO: Need to check if there are duplicates in the assets list?
+    assets.iter().map(|a| {
+        if pool_state.assets.contains(a) {
+            Ok(())
+        } else {
+            Err(StdError::generic_err(format!(
+                "Asset {} is not in the pool {}",
+                a, pool_id
+            )))
+        }
+    }).collect::<StdResult<Vec<_>>>()?;
+
     if assets.len() == 2 {
         let shares_out_amount = calc_join_pool_shares_double_sided(
             assets,
@@ -45,7 +38,7 @@ pub fn osmosis_calculate_join_pool_shares(
         });
     }
 
-    Err(StdError::generic_err("only 1 or 2 assets can be added to pool"))
+    Err(StdError::generic_err("only 2 assets can be added to pool"))
 }
 
 // func calcPoolSharesOutGivenSingleAssetIn(
