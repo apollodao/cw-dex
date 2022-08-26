@@ -28,12 +28,12 @@ use crate::{CwDexError, Pool, Staking};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OsmosisPool {
-    pool_id: u64,
-    assets: Vec<String>,
-    exit_fee: Decimal, // TODO: queriable? remove?
-    swap_fee: Decimal,
-    total_weight: Uint128,
-    normalized_weight: Decimal,
+    pub pool_id: u64,
+    pub assets: Vec<String>,
+    pub exit_fee: Decimal, // TODO: queriable? remove?
+    pub swap_fee: Decimal,
+    pub total_weight: Uint128,
+    pub normalized_weight: Decimal,
     // calcPoolOutGivenSingleIn - see here. Since all pools we are adding are 50/50, no need to store TotalWeight or the pool asset's weight
     // We should query this once Stargate queries are available
     // https://github.com/osmosis-labs/osmosis/blob/df2c511b04bf9e5783d91fe4f28a3761c0ff2019/x/gamm/pool-models/balancer/pool.go#L632
@@ -41,8 +41,8 @@ pub struct OsmosisPool {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OsmosisOptions {
-    sender: Addr,
-    lockup_id: Option<u64>,
+    pub sender: Addr,
+    pub lockup_id: Option<u64>,
 }
 
 pub struct OsmosisAssets {
@@ -192,7 +192,7 @@ impl Pool<OsmosisQuery, Coin> for OsmosisPool {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OsmosisStaking {
     /// Lockup duration in nano seconds. Allowed values 1 day, 1 week or 2 weeks.
-    lockup_duration: u64,
+    pub lockup_duration: u64,
 }
 
 impl OsmosisStaking {
