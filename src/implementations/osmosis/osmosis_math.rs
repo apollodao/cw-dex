@@ -154,8 +154,6 @@ pub fn osmosis_calculate_exit_pool_amounts(
     exit_fee: Decimal, // TODO: queriable?
     swap_fee: Decimal,
     normalized_weight: Decimal,
-    total_weight: Uint128,
-    token_out: Option<Coin>,
 ) -> StdResult<Vec<Coin>> {
     // TODO: Remove go code comments after review
     let osmosis_querier = OsmosisQuerier::new(&deps.querier);
@@ -169,48 +167,6 @@ pub fn osmosis_calculate_exit_pool_amounts(
     let total_shares = pool_state.shares.amount;
     if exit_share_amount >= total_shares {
         return Err(StdError::generic_err("exit share amount must be less than total shares"));
-    }
-
-    if let Some(token_out) = token_out {
-        if !pool_state.has_denom(&token_out.denom) {
-            return Err(StdError::generic_err("request asset to withdraw is not in the pool"));
-        }
-
-        // tokenAmountOutFeeIncluded := tokenAmountOut.Quo(feeRatio(normalizedTokenWeightOut, swap_fee))
-
-        // // delta poolSupply is positive(total pool shares decreases)
-        // // pool weight is always 1
-        // sharesIn := solveConstantFunctionInvariant(tokenBalanceOut.Sub(tokenAmountOutFeeIncluded), tokenBalanceOut, normalizedTokenWeightOut, totalPoolSharesSupply, sdk.OneDec())
-
-        // // charge exit fee on the pool token side
-        // // pAi = pAiAfterExitFee/(1-exitFee)
-        // sharesInFeeIncluded := sharesIn.Quo(sdk.OneDec().Sub(exitFee))
-
-        let pool_asset_out = pool_state.denom_pool_balance(&token_out.denom);
-
-        let token_amount_out_fee_included: Uint128 = Uint128::new(1)
-            * (Decimal::new(token_out.amount)
-                / (Decimal::one() - ((Decimal::one() - normalized_weight) * swap_fee)));
-
-        let shares_in = osmosis_solve_constant_function_invariant(
-            token_out.amount.checked_sub(token_amount_out_fee_included)?,
-            token_out.amount,
-            normalized_weight,
-            total_shares,
-            Decimal::one(),
-        )?;
-
-        let shares_in_fee_included =
-            Uint128::new(1) * (Decimal::new(shares_in) / (Decimal::one() - exit_fee));
-
-        if shares_in_fee_included > exit_share_amount {
-            return Err(StdError::generic_err("too many shares out"));
-        };
-
-        return Ok(vec![Coin {
-            denom: token_out.denom,
-            amount: shares_in_fee_included,
-        }]);
     }
 
     // // refundedShares = exitingShares * (1 - exit fee)

@@ -94,14 +94,9 @@ impl Pool<OsmosisQuery, OsmosisOptions> for OsmosisPool {
         &self,
         deps: Deps<OsmosisQuery>,
         asset: Asset,
-        asset_to_withdraw: Option<Asset>,
         options: OsmosisOptions,
     ) -> Result<CosmosMsg, CwDexError> {
         let lp_token = assert_native_coin(&asset)?;
-        let token_out = match asset_to_withdraw {
-            Some(asset) => Some(assert_native_coin(&asset)?),
-            None => None,
-        };
 
         let token_out_mins = osmosis_calculate_exit_pool_amounts(
             deps,
@@ -110,8 +105,6 @@ impl Pool<OsmosisQuery, OsmosisOptions> for OsmosisPool {
             self.exit_fee,
             self.swap_fee,
             self.normalized_weight,
-            self.total_weight,
-            token_out,
         )?;
 
         let exit_msg = CosmosMsg::Stargate {
@@ -184,13 +177,7 @@ impl Pool<OsmosisQuery, OsmosisOptions> for OsmosisPool {
         &self,
         deps: Deps<OsmosisQuery>,
         asset: Asset,
-        asset_to_withdraw: Option<Asset>,
     ) -> Result<AssetList, CwDexError> {
-        let token_out = match asset_to_withdraw {
-            Some(asset) => Some(assert_native_coin(&asset)?),
-            None => None,
-        };
-
         Ok(osmosis_calculate_exit_pool_amounts(
             deps,
             self.pool_id,
@@ -198,8 +185,6 @@ impl Pool<OsmosisQuery, OsmosisOptions> for OsmosisPool {
             self.exit_fee,
             self.swap_fee,
             self.normalized_weight,
-            self.total_weight,
-            token_out,
         )?
         .into())
     }

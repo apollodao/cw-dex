@@ -16,7 +16,6 @@ pub trait Pool<Q: CustomQuery, O = Empty>: Clone + Serialize + DeserializeOwned 
         &self,
         deps: Deps<Q>,
         asset: Asset,
-        asset_to_withdraw: Option<Asset>,
         options: O,
     ) -> Result<CosmosMsg, CwDexError>;
     fn swap(&self, offer: Asset, ask: Asset, options: O) -> Result<CosmosMsg, CwDexError>;
@@ -32,6 +31,5 @@ pub trait Pool<Q: CustomQuery, O = Empty>: Clone + Serialize + DeserializeOwned 
         &self,
         deps: Deps<Q>,
         asset: Asset,
-        asset_to_withdraw: Option<Asset>,
     ) -> Result<AssetList, CwDexError>;
 }
