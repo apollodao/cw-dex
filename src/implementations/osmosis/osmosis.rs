@@ -10,15 +10,14 @@ use apollo_proto_rust::osmosis::superfluid::{
 };
 use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
-use cosmwasm_std::{
-    Addr, Coin, CosmosMsg, Decimal, Deps, Empty, MessageInfo, Response, StdError, StdResult,
-    Uint128,
-};
-use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
+
+use cosmwasm_std::{Addr, Coin, CosmosMsg, Decimal, Deps, Response, StdError, StdResult, Uint128};
+use cw_asset::{Asset, AssetInfoBase, AssetList};
 use cw_storage_plus::Item;
 use cw_token::osmosis::OsmosisDenom;
 use cw_utils::Duration as CwDuration;
 use osmo_bindings::OsmosisQuery;
+
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;

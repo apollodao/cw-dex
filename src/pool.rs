@@ -1,5 +1,5 @@
-use cosmwasm_std::{CosmosMsg, Deps, MessageInfo};
-use cosmwasm_std::{CustomQuery, Empty};
+use cosmwasm_std::CustomQuery;
+use cosmwasm_std::{CosmosMsg, Deps};
 use cw_asset::{Asset, AssetList};
 use serde::{de::DeserializeOwned, Serialize};
 
