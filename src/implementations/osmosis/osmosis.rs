@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 use std::time::Duration;
 
 use apollo_proto_rust::osmosis::gamm::v1beta1::{
-    MsgJoinPool, MsgSwapExactAmountIn, SwapAmountInRoute, MsgExitPool,
+    MsgExitPool, MsgJoinPool, MsgSwapExactAmountIn, SwapAmountInRoute,
 };
 use apollo_proto_rust::osmosis::lockup::{MsgBeginUnlocking, MsgLockTokens};
 use apollo_proto_rust::osmosis::superfluid::{
@@ -14,9 +14,9 @@ use cosmwasm_std::{
     Addr, Coin, CosmosMsg, Decimal, Deps, Empty, MessageInfo, Response, StdError, StdResult,
     Uint128,
 };
-use cw_asset::osmosis::OsmosisDenom;
 use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use cw_storage_plus::Item;
+use cw_token::implementations::osmosis::OsmosisDenom;
 use osmo_bindings::{OsmosisQuerier, OsmosisQuery};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -51,10 +51,10 @@ fn assert_only_native_coins(assets: AssetList) -> Result<Vec<Coin>, CwDexError> 
 
 fn assert_native_coin(asset: &Asset) -> Result<Coin, CwDexError> {
     match asset.info {
-        AssetInfoBase::Cw20(_) => Err(CwDexError::InvalidInAsset {
+        AssetInfoBase::Native(_) => asset.try_into().map_err(|e: StdError| e.into()),
+        _ => Err(CwDexError::InvalidInAsset {
             a: asset.clone(),
         }),
-        AssetInfoBase::Native(_) => asset.try_into().map_err(|e: StdError| e.into()),
     }
 }
 

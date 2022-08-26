@@ -4,7 +4,7 @@ description = "Helper library for interacting with Cosmos dexes"
 edition = "2018"
 license = "GPL-3.0-or-later"
 name = "cw-dex"
-repository = "https://github.com/mars-protocol/cw-asset"
+repository = "https://github.com/apollodao/cw-dex"
 version = "0.0.1"
 
 [features]
@@ -14,7 +14,8 @@ osmosis = []
 [dependencies]
 apollo-proto-rust = {branch = "master", git = "https://github.com/apollodao/apollo-proto-rust"}
 cosmwasm-std = {version = "1.0", features = ["stargate"]}
-cw-asset = {git = "https://github.com/apollodao/cw-asset.git", branch = "dev/tokenideas"}
+cw-asset = {git = "https://github.com/mars-protocol/cw-asset.git"}
+cw-token = {git = "https://github.com/apollodao/cw-token.git"}
 cw-storage-plus = "0.13"
 cw20 = "0.13"
 cw20-base = "0.13"
