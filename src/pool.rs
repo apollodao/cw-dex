@@ -5,20 +5,10 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use crate::CwDexError;
 
-pub trait Pool<Q: CustomQuery, O = Empty>: Clone + Serialize + DeserializeOwned {
-    fn provide_liquidity(
-        &self,
-        deps: Deps<Q>,
-        assets: AssetList,
-        options: O,
-    ) -> Result<CosmosMsg, CwDexError>;
-    fn withdraw_liquidity(
-        &self,
-        deps: Deps<Q>,
-        asset: Asset,
-        options: O,
-    ) -> Result<CosmosMsg, CwDexError>;
-    fn swap(&self, offer: Asset, ask: Asset, options: O) -> Result<CosmosMsg, CwDexError>;
+pub trait Pool<Q: CustomQuery>: Clone + Serialize + DeserializeOwned {
+    fn provide_liquidity(&self, deps: Deps<Q>, assets: AssetList) -> Result<CosmosMsg, CwDexError>;
+    fn withdraw_liquidity(&self, deps: Deps<Q>, asset: Asset) -> Result<CosmosMsg, CwDexError>;
+    fn swap(&self, deps: Deps, offer: Asset, ask: Asset) -> Result<CosmosMsg, CwDexError>;
 
     /// Query functions
     fn get_pool_assets(&self) -> Result<AssetList, CwDexError>;

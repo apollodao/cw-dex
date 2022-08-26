@@ -152,8 +152,6 @@ pub fn osmosis_calculate_exit_pool_amounts(
     pool_id: u64,
     exit_share_amount: Uint128,
     exit_fee: Decimal, // TODO: queriable?
-    swap_fee: Decimal,
-    normalized_weight: Decimal,
 ) -> StdResult<Vec<Coin>> {
     // TODO: Remove go code comments after review
     let osmosis_querier = OsmosisQuerier::new(&deps.querier);

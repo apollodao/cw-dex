@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 use std::time::Duration;
 
 use apollo_proto_rust::osmosis::gamm::v1beta1::{
-    MsgExitPool, MsgJoinPool, MsgJoinSwapExternAmountIn, MsgSwapExactAmountIn, SwapAmountInRoute,
+    MsgJoinPool, MsgSwapExactAmountIn, SwapAmountInRoute, MsgExitPool,
 };
 use apollo_proto_rust::osmosis::lockup::{MsgBeginUnlocking, MsgLockTokens};
 use apollo_proto_rust::osmosis::superfluid::{
@@ -41,12 +41,6 @@ pub struct OsmosisPool {
     // https://github.com/osmosis-labs/osmosis/blob/df2c511b04bf9e5783d91fe4f28a3761c0ff2019/x/gamm/pool-models/balancer/pool.go#L632
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct OsmosisOptions {
-    pub sender: Addr,
-    pub lockup_id: Option<u64>,
-}
-
 pub struct OsmosisAssets {
     pub assets: Vec<AssetInfoBase<OsmosisDenom>>,
 }
@@ -64,14 +58,14 @@ fn assert_native_coin(asset: &Asset) -> Result<Coin, CwDexError> {
     }
 }
 
-impl Pool<OsmosisQuery, OsmosisOptions> for OsmosisPool {
+impl Pool<OsmosisQuery> for OsmosisPool {
     fn provide_liquidity(
         &self,
         deps: Deps<OsmosisQuery>,
         assets: AssetList,
-        options: OsmosisOptions,
     ) -> Result<CosmosMsg, CwDexError> {
         let assets = assert_only_native_coins(assets)?;
+        let sender = VAULT_ADDR.load(deps.storage)?.to_string();
 
         let shares_out = osmosis_calculate_join_pool_shares(deps, self.pool_id, assets.to_vec())?;
 
@@ -79,7 +73,7 @@ impl Pool<OsmosisQuery, OsmosisOptions> for OsmosisPool {
             type_url: OsmosisTypeURLs::JoinPool.to_string(),
             value: encode(MsgJoinPool {
                 pool_id: self.pool_id,
-                sender: options.sender.to_string(),
+                sender,
                 share_out_amount: shares_out.amount.to_string(),
                 token_in_maxs: assets
                     .into_iter()
@@ -95,23 +89,21 @@ impl Pool<OsmosisQuery, OsmosisOptions> for OsmosisPool {
         &self,
         deps: Deps<OsmosisQuery>,
         asset: Asset,
-        options: OsmosisOptions,
     ) -> Result<CosmosMsg, CwDexError> {
         let lp_token = assert_native_coin(&asset)?;
+        let sender = VAULT_ADDR.load(deps.storage)?.to_string();
 
         let token_out_mins = osmosis_calculate_exit_pool_amounts(
             deps,
             self.pool_id,
             lp_token.amount,
             self.exit_fee,
-            self.swap_fee,
-            self.normalized_weight,
         )?;
 
         let exit_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::ExitPool.to_string(),
             value: encode(MsgExitPool {
-                sender: options.sender.to_string(),
+                sender,
                 pool_id: self.pool_id,
                 share_in_amount: lp_token.amount.to_string(),
                 token_out_mins: vec_into(token_out_mins),
@@ -121,19 +113,15 @@ impl Pool<OsmosisQuery, OsmosisOptions> for OsmosisPool {
         Ok(exit_msg)
     }
 
-    fn swap(
-        &self,
-        offer: Asset,
-        ask: Asset,
-        options: OsmosisOptions,
-    ) -> Result<CosmosMsg, CwDexError> {
+    fn swap(&self, deps: Deps, offer: Asset, ask: Asset) -> Result<CosmosMsg, CwDexError> {
         let offer = assert_native_coin(&offer)?;
         let ask = assert_native_coin(&ask)?;
+        let sender = VAULT_ADDR.load(deps.storage)?.to_string();
 
         let swap_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::SwapExactAmountIn.to_string(),
             value: encode(MsgSwapExactAmountIn {
-                sender: options.sender.to_string(),
+                sender,
                 routes: vec![SwapAmountInRoute {
                     pool_id: self.pool_id,
                     token_out_denom: ask.denom,
@@ -179,15 +167,8 @@ impl Pool<OsmosisQuery, OsmosisOptions> for OsmosisPool {
         deps: Deps<OsmosisQuery>,
         asset: Asset,
     ) -> Result<AssetList, CwDexError> {
-        Ok(osmosis_calculate_exit_pool_amounts(
-            deps,
-            self.pool_id,
-            asset.amount,
-            self.exit_fee,
-            self.swap_fee,
-            self.normalized_weight,
-        )?
-        .into())
+        Ok(osmosis_calculate_exit_pool_amounts(deps, self.pool_id, asset.amount, self.exit_fee)?
+            .into())
     }
 }
 
