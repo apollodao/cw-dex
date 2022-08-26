@@ -63,12 +63,12 @@ fn assert_native_coin(asset: &Asset) -> Result<Coin, CwDexError> {
     }
 }
 
-impl Pool<OsmosisQuery> for OsmosisPool {
+impl Pool<OsmosisQuery, OsmosisOptions> for OsmosisPool {
     fn provide_liquidity(
         &self,
         deps: Deps<OsmosisQuery>,
-        info: &MessageInfo,
         assets: AssetList,
+        options: OsmosisOptions,
     ) -> Result<CosmosMsg, CwDexError> {
         let assets = assert_only_native_coins(assets)?;
 
@@ -86,7 +86,7 @@ impl Pool<OsmosisQuery> for OsmosisPool {
             CosmosMsg::Stargate {
                 type_url: OsmosisTypeURLs::JoinSwapExternAmountIn.to_string(),
                 value: encode(MsgJoinSwapExternAmountIn {
-                    sender: info.sender.to_string(),
+                    sender: options.sender.to_string(),
                     pool_id: self.pool_id,
                     token_in: Some(coin_in.into()),
                     share_out_min_amount: shares_out.amount.to_string(),
@@ -97,7 +97,7 @@ impl Pool<OsmosisQuery> for OsmosisPool {
                 type_url: OsmosisTypeURLs::JoinPool.to_string(),
                 value: encode(MsgJoinPool {
                     pool_id: self.pool_id,
-                    sender: info.sender.to_string(),
+                    sender: options.sender.to_string(),
                     share_out_amount: shares_out.amount.to_string(),
                     token_in_maxs: assets
                         .into_iter()
@@ -113,9 +113,9 @@ impl Pool<OsmosisQuery> for OsmosisPool {
     fn withdraw_liquidity(
         &self,
         deps: Deps<OsmosisQuery>,
-        info: &MessageInfo,
         asset: Asset,
         asset_to_withdraw: Option<Asset>,
+        options: OsmosisOptions,
     ) -> Result<CosmosMsg, CwDexError> {
         let lp_token = assert_native_coin(&asset)?;
         let token_out = match asset_to_withdraw {
@@ -137,7 +137,7 @@ impl Pool<OsmosisQuery> for OsmosisPool {
         let exit_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::ExitPool.to_string(),
             value: encode(MsgExitPool {
-                sender: info.sender.to_string(),
+                sender: options.sender.to_string(),
                 pool_id: self.pool_id,
                 share_in_amount: lp_token.amount.to_string(),
                 token_out_mins: vec_into(token_out_mins),
@@ -147,14 +147,19 @@ impl Pool<OsmosisQuery> for OsmosisPool {
         Ok(exit_msg)
     }
 
-    fn swap(&self, info: &MessageInfo, offer: Asset, ask: Asset) -> Result<CosmosMsg, CwDexError> {
+    fn swap(
+        &self,
+        offer: Asset,
+        ask: Asset,
+        options: OsmosisOptions,
+    ) -> Result<CosmosMsg, CwDexError> {
         let offer = assert_native_coin(&offer)?;
         let ask = assert_native_coin(&ask)?;
 
         let swap_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::SwapExactAmountIn.to_string(),
             value: encode(MsgSwapExactAmountIn {
-                sender: info.sender.to_string(),
+                sender: options.sender.to_string(),
                 routes: vec![SwapAmountInRoute {
                     pool_id: self.pool_id,
                     token_out_denom: ask.denom,
