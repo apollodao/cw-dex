@@ -1,16 +1,14 @@
 use std::{convert::TryInto, ops::Sub, str::FromStr};
 
-use cosmwasm_std::{Coin, Decimal, Deps, StdError, StdResult, Uint128};
-use cw_asset::{Asset, AssetList, AssetListUnchecked};
-use osmo_bindings::{OsmosisQuerier, OsmosisQuery};
+use cosmwasm_std::{Coin, Decimal, Deps, StdError, StdResult, Uint128, QueryRequest};
+use osmo_bindings::{ OsmosisQuery, PoolStateResponse};
 
 pub fn osmosis_calculate_join_pool_shares(
     deps: Deps<OsmosisQuery>,
     pool_id: u64,
     assets: Vec<Coin>,
 ) -> StdResult<Coin> {
-    let osmosis_querier = OsmosisQuerier::new(&deps.querier);
-    let pool_state = osmosis_querier.query_pool_state(pool_id)?;
+    let pool_state: PoolStateResponse = deps.querier.query(&QueryRequest::Custom(OsmosisQuery::PoolState { id: pool_id }))?;
 
     // Validate that sent assets are in the pool
     // TODO: Need to check if there are duplicates in the assets list?
@@ -154,8 +152,7 @@ pub fn osmosis_calculate_exit_pool_amounts(
     exit_fee: Decimal, // TODO: queriable?
 ) -> StdResult<Vec<Coin>> {
     // TODO: Remove go code comments after review
-    let osmosis_querier = OsmosisQuerier::new(&deps.querier);
-    let pool_state = osmosis_querier.query_pool_state(pool_id)?;
+    let pool_state: PoolStateResponse = deps.querier.query(&QueryRequest::Custom(OsmosisQuery::PoolState { id: pool_id }))?;
 
     // totalShares := pool.GetTotalShares()
     // if exitingShares.GTE(totalShares) {
