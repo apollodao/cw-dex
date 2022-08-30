@@ -13,7 +13,7 @@ use apollo_proto_rust::OsmosisTypeURLs;
 use cosmwasm_std::{Addr, Coin, CosmosMsg, Decimal, Deps, Response, StdError, StdResult, Uint128};
 use cw_asset::{Asset, AssetInfoBase, AssetList};
 use cw_storage_plus::Item;
-use cw_token::implementations::osmosis::OsmosisDenom;
+use cw_token::osmosis::OsmosisDenom;
 use osmo_bindings::OsmosisQuery;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
