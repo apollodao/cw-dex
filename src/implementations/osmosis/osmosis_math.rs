@@ -1,7 +1,7 @@
 use std::{convert::TryInto, ops::Sub, str::FromStr};
 
 use cosmwasm_std::{Coin, Decimal, Deps, StdError, StdResult, Uint128, QueryRequest};
-use osmo_bindings::{ OsmosisQuery, PoolStateResponse};
+use osmo_bindings::{OsmosisQuery, PoolStateResponse};
 
 pub fn osmosis_calculate_join_pool_shares(
     deps: Deps<OsmosisQuery>,
