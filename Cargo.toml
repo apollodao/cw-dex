@@ -15,9 +15,9 @@ osmosis = []
 apollo-proto-rust = {branch = "master", git = "https://github.com/apollodao/apollo-proto-rust"}
 cosmwasm-std = {version = "1.0", features = ["stargate"]}
 cw-asset = "2.1.0"
-cw-token = {git = "https://github.com/apollodao/cw-token.git", tag = "v0.3.0" }
-# cw-token = { path = "../../../cw-token" }
 cw-storage-plus = "0.13"
+cw-token = {git = "https://github.com/apollodao/cw-token.git", tag = "v0.3.0"}
+cw-utils = "0.13"
 cw20 = "0.13"
 cw20-base = "0.13"
 osmo-bindings = "0.5.1"

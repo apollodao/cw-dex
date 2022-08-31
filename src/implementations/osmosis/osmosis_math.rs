@@ -1,7 +1,7 @@
 use std::{convert::TryInto, ops::Sub, str::FromStr};
 
 use cosmwasm_std::{Coin, Decimal, Deps, StdError, StdResult, Uint128, QueryRequest};
-use osmo_bindings::{ OsmosisQuery, PoolStateResponse};
+use osmo_bindings::{OsmosisQuery, PoolStateResponse};
 
 pub fn osmosis_calculate_join_pool_shares(
     deps: Deps<OsmosisQuery>,
@@ -95,11 +95,11 @@ fn calc_join_pool_shares_double_sided(
 
 // feeRatio returns the fee ratio that is defined as follows:
 // 1 - ((1 - normalizedTokenWeightOut) * swapFee)
-fn fee_ratio(normalized_weight: Decimal, swap_fee: Decimal) -> Decimal {
+fn _fee_ratio(normalized_weight: Decimal, swap_fee: Decimal) -> Decimal {
     Decimal::one().sub(Decimal::one().sub(normalized_weight) * swap_fee)
 }
 
-fn calc_join_pool_shares_single_sided(
+fn _calc_join_pool_shares_single_sided(
     token_in: &Coin,
     total_shares: Uint128,
     provided_asset_pool_balance: Uint128,
@@ -128,8 +128,8 @@ fn calc_join_pool_shares_single_sided(
     // 	sdk.OneDec()).Neg()
 
     let token_in_amount_after_fee =
-        token_in.amount * fee_ratio(provided_asset_normalized_weight, swap_fee);
-    let pool_amount_out = osmosis_solve_constant_function_invariant(
+        token_in.amount * _fee_ratio(provided_asset_normalized_weight, swap_fee);
+    let pool_amount_out = _osmosis_solve_constant_function_invariant(
         provided_asset_pool_balance.checked_add(token_in_amount_after_fee)?,
         provided_asset_pool_balance,
         provided_asset_normalized_weight,
@@ -238,7 +238,7 @@ pub fn osmosis_calculate_exit_pool_amounts(
 /// The y_to_weight_ratio calculation is a workaround that works only for dual pools with
 /// even weight of the two assets. Go function in osmosis code can be found here:
 /// https://github.com/osmosis-labs/osmosis/blob/main/x/gamm/pool-models/balancer/amm.go#L94
-fn osmosis_solve_constant_function_invariant(
+fn _osmosis_solve_constant_function_invariant(
     token_balance_fixed_before: Uint128,
     token_balance_fixed_after: Uint128,
     token_weight_fixed: Decimal,
@@ -258,13 +258,13 @@ fn osmosis_solve_constant_function_invariant(
     // paranthetical := sdk.OneDec().Sub(yToWeightRatio)
     // amountY := tokenBalanceUnknownBefore.Mul(paranthetical)
     // return amountY
-    let y_to_weight_ratio = osmosis_pow(y, weight_ratio)?;
+    let y_to_weight_ratio = _osmosis_pow(y, weight_ratio)?;
     let paranthetical = Decimal::one() - y_to_weight_ratio;
     let amount_y = token_balance_unknown_before * paranthetical;
     return Ok(amount_y);
 }
 
-fn osmosis_pow(base: Decimal, exp: Decimal) -> StdResult<Decimal> {
+fn _osmosis_pow(base: Decimal, exp: Decimal) -> StdResult<Decimal> {
     if base >= Decimal::from_ratio(2u128, 1u128) {
         return Err(StdError::generic_err("base must be lesser than two"));
     }
@@ -288,7 +288,7 @@ fn osmosis_pow(base: Decimal, exp: Decimal) -> StdResult<Decimal> {
     }
 
     // fractionalPow := PowApprox(base, fractional, powPrecision)
-    let fractional_pow = osmosis_pow_approx(base, fractional, Decimal::from_ratio(1u128, 1u128));
+    let fractional_pow = _osmosis_pow_approx(base, fractional, Decimal::from_ratio(1u128, 1u128));
 
     // return integerPow.Mul(fractionalPow)
     return Ok(integer_pow.checked_mul(fractional_pow)?);
@@ -296,7 +296,7 @@ fn osmosis_pow(base: Decimal, exp: Decimal) -> StdResult<Decimal> {
 
 // Contract: 0 < base <= 2
 // 0 <= exp < 1.
-fn osmosis_pow_approx(base: Decimal, exp: Decimal, precision: Decimal) -> Decimal {
+fn _osmosis_pow_approx(base: Decimal, exp: Decimal, precision: Decimal) -> Decimal {
     if exp.is_zero() {
         return Decimal::one();
     }
@@ -341,7 +341,7 @@ fn osmosis_pow_approx(base: Decimal, exp: Decimal, precision: Decimal) -> Decima
     // term := sdk.OneDec()
     // sum := sdk.OneDec()
     // negative := false
-    let (x, x_neg) = osmosis_abs_difference_with_sign(base, Decimal::one());
+    let (x, x_neg) = _osmosis_abs_difference_with_sign(base, Decimal::one());
     let mut term = Decimal::one();
     let mut sum = Decimal::one();
     let mut negative = false;
@@ -363,7 +363,7 @@ fn osmosis_pow_approx(base: Decimal, exp: Decimal, precision: Decimal) -> Decima
         // // To avoid expensive big.Int allocation, we reuse bigK variable.
         // // On this line, bigK == i-1.
         // c, cneg := AbsDifferenceWithSign(a, bigK)
-        let (c, c_neg) = osmosis_abs_difference_with_sign(a, big_k);
+        let (c, c_neg) = _osmosis_abs_difference_with_sign(a, big_k);
 
         // // On this line, bigK == i.
         // bigK.Set(sdk.NewDec(i))
@@ -414,7 +414,7 @@ fn osmosis_pow_approx(base: Decimal, exp: Decimal, precision: Decimal) -> Decima
 
 // AbsDifferenceWithSign returns | a - b |, (a - b).sign()
 // a is mutated and returned.
-fn osmosis_abs_difference_with_sign(a: Decimal, b: Decimal) -> (Decimal, bool) {
+fn _osmosis_abs_difference_with_sign(a: Decimal, b: Decimal) -> (Decimal, bool) {
     if a >= b {
         (a - b, false)
     } else {
