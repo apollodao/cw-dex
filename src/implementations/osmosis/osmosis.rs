@@ -1,4 +1,6 @@
 use std::convert::TryFrom;
+use std::marker::PhantomData;
+use std::ops::Deref;
 use std::time::Duration;
 
 use apollo_proto_rust::osmosis::gamm::v1beta1::{
@@ -12,8 +14,9 @@ use apollo_proto_rust::osmosis::superfluid::{
 };
 use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
-
-use cosmwasm_std::{Addr, Coin, CosmosMsg, Decimal, Deps, Response, StdError, StdResult, Uint128};
+use cosmwasm_std::{
+    Addr, Coin, CosmosMsg, Decimal, Deps, QuerierWrapper, Response, StdError, StdResult, Uint128,
+};
 use cw_asset::{Asset, AssetInfoBase, AssetList};
 use cw_storage_plus::Item;
 use cw_token::osmosis::OsmosisDenom;
@@ -58,16 +61,15 @@ fn assert_native_coin(asset: &Asset) -> Result<Coin, CwDexError> {
     }
 }
 
-impl Pool<OsmosisQuery> for OsmosisPool {
-    fn provide_liquidity(
-        &self,
-        deps: Deps<OsmosisQuery>,
-        assets: AssetList,
-    ) -> Result<CosmosMsg, CwDexError> {
+impl Pool for OsmosisPool {
+    fn provide_liquidity(&self, deps: Deps, assets: AssetList) -> Result<CosmosMsg, CwDexError> {
         let assets = assert_only_native_coins(assets)?;
         let sender = VAULT_ADDR.load(deps.storage)?.to_string();
 
-        let shares_out = osmosis_calculate_join_pool_shares(deps, self.pool_id, assets.to_vec())?;
+        let querier = QuerierWrapper::<OsmosisQuery>::new(deps.querier.deref());
+
+        let shares_out =
+            osmosis_calculate_join_pool_shares(querier, self.pool_id, assets.to_vec())?;
 
         let join_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::JoinPool.to_string(),
@@ -85,16 +87,14 @@ impl Pool<OsmosisQuery> for OsmosisPool {
         Ok(join_msg)
     }
 
-    fn withdraw_liquidity(
-        &self,
-        deps: Deps<OsmosisQuery>,
-        asset: Asset,
-    ) -> Result<CosmosMsg, CwDexError> {
+    fn withdraw_liquidity(&self, deps: Deps, asset: Asset) -> Result<CosmosMsg, CwDexError> {
         let lp_token = assert_native_coin(&asset)?;
         let sender = VAULT_ADDR.load(deps.storage)?.to_string();
 
+        let querier = QuerierWrapper::<OsmosisQuery>::new(deps.querier.deref());
+
         let token_out_mins = osmosis_calculate_exit_pool_amounts(
-            deps,
+            querier,
             self.pool_id,
             lp_token.amount,
             self.exit_fee,
@@ -151,11 +151,12 @@ impl Pool<OsmosisQuery> for OsmosisPool {
 
     fn simulate_provide_liquidity(
         &self,
-        deps: Deps<OsmosisQuery>,
+        deps: Deps,
         assets: AssetList,
     ) -> Result<Asset, CwDexError> {
+        let querier = QuerierWrapper::<OsmosisQuery>::new(deps.querier.deref());
         Ok(osmosis_calculate_join_pool_shares(
-            deps,
+            querier,
             self.pool_id,
             assert_only_native_coins(assets)?,
         )?
@@ -164,10 +165,11 @@ impl Pool<OsmosisQuery> for OsmosisPool {
 
     fn simulate_withdraw_liquidity(
         &self,
-        deps: Deps<OsmosisQuery>,
+        deps: Deps,
         asset: Asset,
     ) -> Result<AssetList, CwDexError> {
-        Ok(osmosis_calculate_exit_pool_amounts(deps, self.pool_id, asset.amount, self.exit_fee)?
+        let querier = QuerierWrapper::<OsmosisQuery>::new(deps.querier.deref());
+        Ok(osmosis_calculate_exit_pool_amounts(querier, self.pool_id, asset.amount, self.exit_fee)?
             .into())
     }
 }
