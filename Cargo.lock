@@ -185,12 +185,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw-asset"
+version = "2.2.0"
+source = "git+https://github.com/mars-protocol/cw-asset.git?tag=v2.2.0#18af52816e552027f2526a13c9d158ae1052f4e6"
+dependencies = [
+ "cosmwasm-std",
+ "cw-storage-plus",
+ "cw1155",
+ "cw20",
+ "schemars",
+ "serde",
+]
+
+[[package]]
 name = "cw-dex"
 version = "0.0.1"
 dependencies = [
  "apollo-proto-rust 0.1.0 (git+https://github.com/apollodao/apollo-proto-rust?branch=master)",
  "cosmwasm-std",
- "cw-asset",
+ "cw-asset 2.2.0 (git+https://github.com/mars-protocol/cw-asset.git?tag=v2.2.0)",
  "cw-storage-plus",
  "cw-token",
  "cw-utils",
@@ -220,7 +233,7 @@ source = "git+https://github.com/apollodao/cw-token.git?tag=v0.3.0#1cef7720f5fef
 dependencies = [
  "apollo-proto-rust 0.1.0 (git+https://github.com/apollodao/apollo-proto-rust?tag=v0.1.0)",
  "cosmwasm-std",
- "cw-asset",
+ "cw-asset 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cw-storage-plus",
  "cw20",
  "cw20-base",
