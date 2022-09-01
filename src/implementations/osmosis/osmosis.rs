@@ -62,7 +62,7 @@ fn assert_native_coin(asset: &Asset) -> Result<Coin, CwDexError> {
 }
 
 impl Pool for OsmosisPool {
-    fn provide_liquidity(&self, deps: Deps, assets: AssetList) -> Result<CosmosMsg, CwDexError> {
+    fn provide_liquidity(&self, deps: Deps, assets: AssetList) -> Result<Response, CwDexError> {
         let assets = assert_only_native_coins(assets)?;
         let sender = VAULT_ADDR.load(deps.storage)?.to_string();
 
@@ -84,10 +84,10 @@ impl Pool for OsmosisPool {
             }),
         };
 
-        Ok(join_msg)
+        Ok(Response::new().add_message(join_msg))
     }
 
-    fn withdraw_liquidity(&self, deps: Deps, asset: Asset) -> Result<CosmosMsg, CwDexError> {
+    fn withdraw_liquidity(&self, deps: Deps, asset: Asset) -> Result<Response, CwDexError> {
         let lp_token = assert_native_coin(&asset)?;
         let sender = VAULT_ADDR.load(deps.storage)?.to_string();
 
@@ -110,10 +110,10 @@ impl Pool for OsmosisPool {
             }),
         };
 
-        Ok(exit_msg)
+        Ok(Response::new().add_message(exit_msg))
     }
 
-    fn swap(&self, deps: Deps, offer: Asset, ask: Asset) -> Result<CosmosMsg, CwDexError> {
+    fn swap(&self, deps: Deps, offer: Asset, ask: Asset) -> Result<Response, CwDexError> {
         let offer = assert_native_coin(&offer)?;
         let ask = assert_native_coin(&ask)?;
         let sender = VAULT_ADDR.load(deps.storage)?.to_string();
@@ -131,7 +131,7 @@ impl Pool for OsmosisPool {
             }),
         };
 
-        Ok(swap_msg)
+        Ok(Response::new().add_message(swap_msg))
     }
 
     fn get_pool_assets(&self) -> Result<AssetList, CwDexError> {
