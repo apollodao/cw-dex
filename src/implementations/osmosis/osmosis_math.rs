@@ -20,26 +20,24 @@ pub fn osmosis_calculate_join_pool_shares(
 
     // Validate that sent assets are in the pool
     // TODO: Need to check if there are duplicates in the assets list?
-    let mut valid: bool = false;
     assets
         .iter()
         .map(|a| {
+            let mut valid: bool = false;
             for asset in &pool_state.assets {
                 if asset.denom == a.denom {
                     valid = true;
-                    return Ok(());
                 }
+            }
+            if valid == false {
+                return Err(StdError::generic_err(format!(
+                    "Assets {:?} are not in the pool {}, expected: {:?}",
+                    assets, pool_id, pool_state.assets
+                )));
             }
             Ok(())
         })
         .collect::<StdResult<Vec<_>>>()?;
-
-    if valid == false {
-        return Err(StdError::generic_err(format!(
-            "Assets {:?} are not in the pool {}, expected: {:?}",
-            assets, pool_id, pool_state.assets
-        )));
-    }
 
     if assets.len() == 2 {
         let shares_out_amount = calc_join_pool_shares_double_sided(
