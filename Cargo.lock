@@ -22,7 +22,7 @@ dependencies = [
 [[package]]
 name = "apollo-proto-rust"
 version = "0.1.0"
-source = "git+https://github.com/apollodao/apollo-proto-rust?branch=master#54e8b3ed4fa32f60ba77dec03e6ad9922f88991c"
+source = "git+https://github.com/apollodao/apollo-proto-rust?branch=master#18cb23f298a0f9c8b492b50fbfe9af1256520984"
 dependencies = [
  "cosmwasm-std",
  "prost",
