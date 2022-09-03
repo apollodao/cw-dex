@@ -146,7 +146,7 @@ impl Pool for OsmosisPool {
         Ok(Response::new().add_message(swap_msg))
     }
 
-    fn get_pool_assets(&self, deps: Deps) -> Result<AssetList, CwDexError> {
+    fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {
         let pool_assets =
             deps.querier.query::<QueryTotalPoolLiquidityResponse>(&QueryRequest::Stargate {
                 path: OsmosisTypeURLs::QueryTotalPoolLiquidity.to_string(),
