@@ -1,10 +1,12 @@
 use std::convert::TryFrom;
 use std::marker::PhantomData;
 use std::ops::Deref;
+use std::str::FromStr;
 use std::time::Duration;
 
 use apollo_proto_rust::osmosis::gamm::v1beta1::{
-    MsgExitPool, MsgJoinPool, MsgSwapExactAmountIn, SwapAmountInRoute,
+    MsgExitPool, MsgJoinPool, MsgSwapExactAmountIn, QueryTotalPoolLiquidityRequest,
+    QueryTotalPoolLiquidityResponse, SwapAmountInRoute,
 };
 
 use cw_utils::Duration as CwDuration;
@@ -19,7 +21,7 @@ use cosmwasm_std::{
     Addr, Coin, CosmosMsg, Decimal, Deps, QuerierWrapper, QueryRequest, Response, StdError,
     StdResult, Uint128,
 };
-use cw_asset::{Asset, AssetInfoBase, AssetList};
+use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use cw_storage_plus::Item;
 use cw_token::osmosis::OsmosisDenom;
 use osmo_bindings::OsmosisQuery;
@@ -36,11 +38,6 @@ use crate::{CwDexError, Pool, Staking};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OsmosisPool {
     pub pool_id: u64,
-    pub assets: Vec<String>,
-    pub exit_fee: Decimal, // TODO: queriable? remove?
-    pub swap_fee: Decimal,
-    pub total_weight: Uint128,
-    pub normalized_weight: Decimal,
     // calcPoolOutGivenSingleIn - see here. Since all pools we are adding are 50/50, no need to store TotalWeight or the pool asset's weight
     // We should query this once Stargate queries are available
     // https://github.com/osmosis-labs/osmosis/blob/df2c511b04bf9e5783d91fe4f28a3761c0ff2019/x/gamm/pool-models/balancer/pool.go#L632
@@ -149,19 +146,28 @@ impl Pool for OsmosisPool {
         Ok(Response::new().add_message(swap_msg))
     }
 
-    fn get_pool_assets(&self) -> Result<AssetList, CwDexError> {
-        Ok(self
-            .assets
-            .iter()
-            .map(|asset| {
-                Coin {
-                    denom: asset.clone(),
-                    amount: Uint128::zero(),
-                }
-                .into()
+    fn get_pool_assets(&self, deps: Deps) -> Result<AssetList, CwDexError> {
+        let pool_assets =
+            deps.querier.query::<QueryTotalPoolLiquidityResponse>(&QueryRequest::Stargate {
+                path: OsmosisTypeURLs::QueryTotalPoolLiquidity.to_string(),
+                data: encode(QueryTotalPoolLiquidityRequest {
+                    pool_id: self.pool_id,
+                }),
+            })?;
+
+        let asset_list: AssetList = pool_assets
+            .liquidity
+            .into_iter()
+            .map(|coin| {
+                Ok(Asset {
+                    info: AssetInfo::Native(coin.denom),
+                    amount: Uint128::from_str(&coin.amount)?,
+                })
             })
-            .collect::<Vec<Asset>>()
-            .into())
+            .collect::<StdResult<Vec<Asset>>>()?
+            .into();
+
+        Ok(asset_list)
     }
 
     fn simulate_provide_liquidity(

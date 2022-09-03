@@ -27,7 +27,7 @@ pub trait Pool: Clone + Serialize + DeserializeOwned {
     ) -> Result<Response, CwDexError>;
 
     /// Query functions
-    fn get_pool_assets(&self) -> Result<AssetList, CwDexError>;
+    fn get_pool_assets(&self, deps: Deps) -> Result<AssetList, CwDexError>;
     fn simulate_provide_liquidity(&self, deps: Deps, asset: AssetList)
         -> Result<Asset, CwDexError>;
     fn simulate_withdraw_liquidity(
