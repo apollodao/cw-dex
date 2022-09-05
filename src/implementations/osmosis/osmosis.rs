@@ -36,6 +36,8 @@ use crate::osmosis::osmosis_math::{
 use crate::utils::vec_into;
 use crate::{CwDexError, Pool, Staking};
 
+use super::helpers::{assert_native_coin, assert_only_native_coins};
+
 /// Struct for interacting with Osmosis v1beta1 balancer pools. If `pool_id` maps to another type of pool this will fail.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OsmosisPool {
@@ -44,19 +46,6 @@ pub struct OsmosisPool {
     // calcPoolOutGivenSingleIn - see here. Since all pools we are adding are 50/50, no need to store TotalWeight or the pool asset's weight
     // We should query this once Stargate queries are available
     // https://github.com/osmosis-labs/osmosis/blob/df2c511b04bf9e5783d91fe4f28a3761c0ff2019/x/gamm/pool-models/balancer/pool.go#L632
-}
-
-fn assert_only_native_coins(assets: AssetList) -> Result<Vec<Coin>, CwDexError> {
-    assets.into_iter().map(assert_native_coin).collect::<Result<Vec<Coin>, CwDexError>>()
-}
-
-fn assert_native_coin(asset: &Asset) -> Result<Coin, CwDexError> {
-    match asset.info {
-        AssetInfoBase::Native(_) => asset.try_into().map_err(|e: StdError| e.into()),
-        _ => Err(CwDexError::InvalidInAsset {
-            a: asset.clone(),
-        }),
-    }
 }
 
 impl Pool for OsmosisPool {
@@ -99,32 +88,9 @@ impl Pool for OsmosisPool {
 
         let querier = QuerierWrapper::<OsmosisQuery>::new(deps.querier.deref());
 
-        let params: PoolParams = from_binary(
-            &deps
-                .querier
-                .query::<QueryPoolParamsResponse>(&QueryRequest::Stargate {
-                    path: OsmosisTypeURLs::QueryPoolParams {
-                        pool_id: self.pool_id,
-                    }
-                    .to_string(),
-                    data: encode(QueryPoolParamsRequest {
-                        pool_id: self.pool_id,
-                    }),
-                })?
-                .params
-                .ok_or(StdError::generic_err("failed to query pool params"))?
-                .value
-                .as_slice()
-                .into(),
-        )?;
-
         // TODO: Query for exit pool amounts?
-        let token_out_mins = osmosis_calculate_exit_pool_amounts(
-            querier,
-            self.pool_id,
-            lp_token.amount,
-            params.exit_fee,
-        )?;
+        let token_out_mins =
+            osmosis_calculate_exit_pool_amounts(querier, self.pool_id, lp_token.amount)?;
 
         let exit_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::ExitPool.to_string(),
@@ -141,7 +107,7 @@ impl Pool for OsmosisPool {
 
     fn swap(
         &self,
-        deps: Deps,
+        _deps: Deps,
         offer: Asset,
         ask: Asset,
         recipient: Addr,
@@ -209,8 +175,7 @@ impl Pool for OsmosisPool {
         asset: Asset,
     ) -> Result<AssetList, CwDexError> {
         let querier = QuerierWrapper::<OsmosisQuery>::new(deps.querier.deref());
-        Ok(osmosis_calculate_exit_pool_amounts(querier, self.pool_id, asset.amount, self.exit_fee)?
-            .into())
+        Ok(osmosis_calculate_exit_pool_amounts(querier, self.pool_id, asset.amount)?.into())
     }
 }
 

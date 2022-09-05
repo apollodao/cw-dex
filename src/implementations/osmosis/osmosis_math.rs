@@ -1,12 +1,15 @@
 use std::{
     marker::PhantomData,
     ops::{Deref, Sub},
+    str::FromStr,
 };
 
 use cosmwasm_std::{
     Coin, Decimal, Deps, QuerierWrapper, QueryRequest, StdError, StdResult, Uint128,
 };
 use osmo_bindings::{OsmosisQuery, PoolStateResponse};
+
+use super::helpers::query_pool_params;
 
 pub fn osmosis_calculate_join_pool_shares(
     querier: QuerierWrapper<OsmosisQuery>,
@@ -165,13 +168,15 @@ pub fn osmosis_calculate_exit_pool_amounts(
     querier: QuerierWrapper<OsmosisQuery>,
     pool_id: u64,
     exit_share_amount: Uint128,
-    exit_fee: Decimal, // TODO: queriable?
 ) -> StdResult<Vec<Coin>> {
     // TODO: Remove go code comments after review
     let pool_state: PoolStateResponse =
         querier.query(&QueryRequest::Custom(OsmosisQuery::PoolState {
             id: pool_id,
         }))?;
+
+    let pool_params = query_pool_params(querier, pool_id)?;
+    let exit_fee = Decimal::from_str(&pool_params.exit_fee)?;
 
     // totalShares := pool.GetTotalShares()
     // if exitingShares.GTE(totalShares) {
