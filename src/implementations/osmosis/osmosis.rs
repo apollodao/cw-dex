@@ -5,8 +5,9 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use apollo_proto_rust::osmosis::gamm::v1beta1::{
-    MsgExitPool, MsgJoinPool, MsgSwapExactAmountIn, QueryTotalPoolLiquidityRequest,
-    QueryTotalPoolLiquidityResponse, SwapAmountInRoute,
+    MsgExitPool, MsgJoinPool, MsgSwapExactAmountIn, PoolParams, QueryPoolParamsRequest,
+    QueryPoolParamsResponse, QueryTotalPoolLiquidityRequest, QueryTotalPoolLiquidityResponse,
+    SwapAmountInRoute,
 };
 
 use cw_utils::Duration as CwDuration;
@@ -18,8 +19,8 @@ use apollo_proto_rust::osmosis::superfluid::{
 use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
 use cosmwasm_std::{
-    Addr, Coin, CosmosMsg, Decimal, Deps, QuerierWrapper, QueryRequest, Response, StdError,
-    StdResult, Uint128,
+    from_binary, Addr, Binary, Coin, CosmosMsg, Decimal, Deps, QuerierWrapper, QueryRequest,
+    Response, StdError, StdResult, Uint128,
 };
 use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use cw_storage_plus::Item;
@@ -35,16 +36,14 @@ use crate::osmosis::osmosis_math::{
 use crate::utils::vec_into;
 use crate::{CwDexError, Pool, Staking};
 
+/// Struct for interacting with Osmosis v1beta1 balancer pools. If `pool_id` maps to another type of pool this will fail.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OsmosisPool {
+    /// The pool id of the pool to interact with
     pub pool_id: u64,
     // calcPoolOutGivenSingleIn - see here. Since all pools we are adding are 50/50, no need to store TotalWeight or the pool asset's weight
     // We should query this once Stargate queries are available
     // https://github.com/osmosis-labs/osmosis/blob/df2c511b04bf9e5783d91fe4f28a3761c0ff2019/x/gamm/pool-models/balancer/pool.go#L632
-}
-
-pub struct OsmosisAssets {
-    pub assets: Vec<AssetInfoBase<OsmosisDenom>>,
 }
 
 fn assert_only_native_coins(assets: AssetList) -> Result<Vec<Coin>, CwDexError> {
@@ -100,11 +99,31 @@ impl Pool for OsmosisPool {
 
         let querier = QuerierWrapper::<OsmosisQuery>::new(deps.querier.deref());
 
+        let params: PoolParams = from_binary(
+            &deps
+                .querier
+                .query::<QueryPoolParamsResponse>(&QueryRequest::Stargate {
+                    path: OsmosisTypeURLs::QueryPoolParams {
+                        pool_id: self.pool_id,
+                    }
+                    .to_string(),
+                    data: encode(QueryPoolParamsRequest {
+                        pool_id: self.pool_id,
+                    }),
+                })?
+                .params
+                .ok_or(StdError::generic_err("failed to query pool params"))?
+                .value
+                .as_slice()
+                .into(),
+        )?;
+
+        // TODO: Query for exit pool amounts?
         let token_out_mins = osmosis_calculate_exit_pool_amounts(
             querier,
             self.pool_id,
             lp_token.amount,
-            self.exit_fee,
+            params.exit_fee,
         )?;
 
         let exit_msg = CosmosMsg::Stargate {
