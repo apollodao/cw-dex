@@ -220,7 +220,7 @@ impl OsmosisStaking {
 pub const LOCK_ID: Item<u64> = Item::new("lock_id"); // TODO: stargate query
 
 impl Staking for OsmosisStaking {
-    fn stake(&self, deps: Deps, asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
+    fn stake(&self, _deps: Deps, asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
         let duration = Duration::from_nanos(self.lockup_duration);
         let asset = assert_native_coin(&asset)?;
 
@@ -232,32 +232,44 @@ impl Staking for OsmosisStaking {
                     seconds: i64::try_from(duration.as_secs())?,
                     nanos: duration.subsec_nanos() as i32,
                 }),
-                coins: vec![asset.into()],
+                coins: vec![asset.clone().into()],
             }),
         };
 
-        Ok(Response::new().add_message(stake_msg))
+        let event = Event::new("apollo/cwdex/stake")
+            .add_attribute("asset", asset.to_string())
+            .add_attribute("recipient", recipient.to_string())
+            .add_attribute("lockup_duration", self.lockup_duration.to_string());
+
+        Ok(Response::new().add_message(stake_msg).add_event(event))
     }
 
     fn unstake(&self, deps: Deps, asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
         let asset = assert_native_coin(&asset)?;
-        let id = LOCK_ID.load(deps.storage)?;
+        let id = LOCK_ID.load(deps.storage)?; // TODO: Stargate query
 
         let unstake_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::UnBondLP.to_string(),
             value: encode(MsgBeginUnlocking {
                 owner: recipient.to_string(),
                 id,
-                coins: vec![asset.into()],
+                coins: vec![asset.clone().into()],
             }),
         };
 
-        Ok(Response::new().add_message(unstake_msg))
+        let event = Event::new("apollo/cwdex/unstake")
+            .add_attribute("asset", asset.to_string())
+            .add_attribute("recipient", recipient.to_string())
+            .add_attribute("lockup_duration", self.lockup_duration.to_string())
+            .add_attribute("lock_id", id.to_string());
+
+        Ok(Response::new().add_message(unstake_msg).add_event(event))
     }
 
-    fn claim_rewards(&self, recipient: Addr) -> Result<Response, CwDexError> {
+    fn claim_rewards(&self, _recipient: Addr) -> Result<Response, CwDexError> {
         // Rewards are automatically distributed to stakers every epoch.
-        Ok(Response::new())
+        let event = Event::new("apollo/cwdex/claim_rewards");
+        Ok(Response::new().add_event(event))
     }
 
     fn get_lockup_duration(&self) -> Result<CwDuration, CwDexError> {
