@@ -11,7 +11,6 @@ checksum = "98161a4e3e2184da77bb14f02184cdd111e83bbbcc9979dfee3c44b9a85f5602"
 [[package]]
 name = "apollo-proto-rust"
 version = "0.1.0"
-source = "git+https://github.com/apollodao/apollo-proto-rust?tag=v0.1.0#935e15f94e2e0f3484572aeed650d6905784057d"
 dependencies = [
  "cosmwasm-std",
  "prost",
@@ -22,7 +21,7 @@ dependencies = [
 [[package]]
 name = "apollo-proto-rust"
 version = "0.1.0"
-source = "git+https://github.com/apollodao/apollo-proto-rust?branch=master#98b6ff6574f149c54cea71de5f3cb1ec683e420b"
+source = "git+https://github.com/apollodao/apollo-proto-rust?tag=v0.1.0#935e15f94e2e0f3484572aeed650d6905784057d"
 dependencies = [
  "cosmwasm-std",
  "prost",
@@ -198,7 +197,7 @@ dependencies = [
 name = "cw-dex"
 version = "0.0.1"
 dependencies = [
- "apollo-proto-rust 0.1.0 (git+https://github.com/apollodao/apollo-proto-rust?branch=master)",
+ "apollo-proto-rust 0.1.0",
  "cosmwasm-std",
  "cw-asset",
  "cw-storage-plus 0.13.4",

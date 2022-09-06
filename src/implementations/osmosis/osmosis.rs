@@ -12,7 +12,10 @@ use apollo_proto_rust::osmosis::gamm::v1beta1::{
 
 use cw_utils::Duration as CwDuration;
 
-use apollo_proto_rust::osmosis::lockup::{MsgBeginUnlocking, MsgLockTokens};
+use apollo_proto_rust::osmosis::lockup::{
+    AccountLockedLongerDurationNotUnlockingOnlyRequest,
+    AccountLockedLongerDurationNotUnlockingOnlyResponse, MsgBeginUnlocking, MsgLockTokens,
+};
 use apollo_proto_rust::osmosis::superfluid::{
     MsgLockAndSuperfluidDelegate, MsgSuperfluidUnbondLock,
 };
@@ -36,7 +39,9 @@ use crate::osmosis::osmosis_math::{
 use crate::utils::vec_into;
 use crate::{CwDexError, Pool, Staking};
 
-use super::helpers::{assert_native_coin, assert_only_native_coins};
+use super::helpers::{
+    assert_native_coin, assert_only_native_coins, query_lock, ToProtobufDuration,
+};
 
 /// Struct for interacting with Osmosis v1beta1 balancer pools. If `pool_id` maps to another type of pool this will fail.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -201,37 +206,36 @@ impl Pool for OsmosisPool {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OsmosisStaking {
     /// Lockup duration in nano seconds. Allowed values 1 day, 1 week or 2 weeks.
-    pub lockup_duration: u64,
+    pub lockup_duration: Duration,
 }
 
 impl OsmosisStaking {
+    /// Creates a new OsmosisStaking instance with lock up duration set to `lockup_duration`.
+    ///
+    /// Arguments:
+    /// - `lockup_duration` is the duration of the lockup period in seconds.
+    ///
+    /// Returns an error if `lockup_duration` is not one of the allowed values,
+    /// 86400, 604800 or 1209600, representing 1 day, 1 week or 2 weeks respectively.
     pub fn new(lockup_duration: u64) -> StdResult<Self> {
-        if !(vec![86_400_000_000_000u64, 604800_000_000_000u64, 1209600_000_000_000u64]
-            .contains(&lockup_duration))
-        {
+        if !(vec![86400u64, 604800u64, 1209600u64].contains(&lockup_duration)) {
             return Err(StdError::generic_err("osmosis error: invalid lockup duration"));
         }
         Ok(Self {
-            lockup_duration,
+            lockup_duration: Duration::from_secs(lockup_duration),
         })
     }
 }
 
-pub const LOCK_ID: Item<u64> = Item::new("lock_id"); // TODO: stargate query
-
 impl Staking for OsmosisStaking {
     fn stake(&self, _deps: Deps, asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
-        let duration = Duration::from_nanos(self.lockup_duration);
         let asset = assert_native_coin(&asset)?;
 
         let stake_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::BondLP.to_string(),
             value: encode(MsgLockTokens {
                 owner: recipient.to_string(),
-                duration: Some(apollo_proto_rust::google::protobuf::Duration {
-                    seconds: i64::try_from(duration.as_secs())?,
-                    nanos: duration.subsec_nanos() as i32,
-                }),
+                duration: Some(self.lockup_duration.to_protobuf_duration()),
                 coins: vec![asset.clone().into()],
             }),
         };
@@ -240,14 +244,15 @@ impl Staking for OsmosisStaking {
             .add_attribute("type", "osmosis_staking")
             .add_attribute("asset", asset.to_string())
             .add_attribute("recipient", recipient.to_string())
-            .add_attribute("lockup_duration", self.lockup_duration.to_string());
+            .add_attribute("lockup_duration_secs", self.lockup_duration.as_secs().to_string());
 
         Ok(Response::new().add_message(stake_msg).add_event(event))
     }
 
     fn unstake(&self, deps: Deps, asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
         let asset = assert_native_coin(&asset)?;
-        let id = LOCK_ID.load(deps.storage)?; // TODO: Stargate query
+
+        let id = query_lock(deps.querier, recipient.to_string(), self.lockup_duration)?.id;
 
         let unstake_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::UnBondLP.to_string(),
@@ -262,7 +267,7 @@ impl Staking for OsmosisStaking {
             .add_attribute("type", "osmosis_staking")
             .add_attribute("asset", asset.to_string())
             .add_attribute("recipient", recipient.to_string())
-            .add_attribute("lockup_duration", self.lockup_duration.to_string())
+            .add_attribute("lockup_duration_secs", self.lockup_duration.as_secs().to_string())
             .add_attribute("lock_id", id.to_string());
 
         Ok(Response::new().add_message(unstake_msg).add_event(event))
@@ -276,8 +281,7 @@ impl Staking for OsmosisStaking {
     }
 
     fn get_lockup_duration(&self) -> Result<CwDuration, CwDexError> {
-        let std_duration: Duration = Duration::from_nanos(self.lockup_duration);
-        Ok(CwDuration::Time(std_duration.as_secs()))
+        Ok(CwDuration::Time(self.lockup_duration.as_secs()))
     }
 }
 
@@ -286,6 +290,8 @@ impl Staking for OsmosisStaking {
 pub struct OsmosisSuperfluidStaking {
     validator_address: Addr,
 }
+
+const TWO_WEEKS_IN_SECS: u64 = 14 * 24 * 60 * 60;
 
 impl Staking for OsmosisSuperfluidStaking {
     fn stake(&self, _deps: Deps, asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
@@ -309,7 +315,12 @@ impl Staking for OsmosisSuperfluidStaking {
     }
 
     fn unstake(&self, deps: Deps, _asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
-        let lock_id = LOCK_ID.load(deps.storage)?;
+        let lock_id = query_lock(
+            deps.querier,
+            recipient.to_string(),
+            Duration::from_secs(TWO_WEEKS_IN_SECS),
+        )?
+        .id;
 
         let unstake_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::SuperfluidUnBondLP.to_string(),
@@ -337,7 +348,6 @@ impl Staking for OsmosisSuperfluidStaking {
 
     fn get_lockup_duration(&self) -> Result<CwDuration, CwDexError> {
         // Lockup time for superfluid staking is always 14 days.
-        let two_weeks_in_secs = 14 * 24 * 60 * 60;
-        Ok(CwDuration::Time(two_weeks_in_secs))
+        Ok(CwDuration::Time(TWO_WEEKS_IN_SECS))
     }
 }
