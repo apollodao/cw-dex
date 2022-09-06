@@ -336,6 +336,8 @@ impl Staking for OsmosisSuperfluidStaking {
     }
 
     fn get_lockup_duration(&self) -> Result<CwDuration, CwDexError> {
-        todo!()
+        // Lockup time for superfluid staking is always 14 days.
+        let two_weeks_in_secs = 14 * 24 * 60 * 60;
+        Ok(CwDuration::Time(two_weeks_in_secs))
     }
 }
