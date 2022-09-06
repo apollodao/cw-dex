@@ -99,8 +99,7 @@ impl Pool for OsmosisPool {
         let querier = QuerierWrapper::<OsmosisQuery>::new(deps.querier.deref());
 
         // TODO: Query for exit pool amounts?
-        let token_out_mins =
-            osmosis_calculate_exit_pool_amounts(querier, self.pool_id, lp_token.amount)?;
+        let token_out_mins = osmosis_calculate_exit_pool_amounts(querier, self.pool_id, &lp_token)?;
 
         let exit_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::ExitPool.to_string(),
@@ -197,7 +196,8 @@ impl Pool for OsmosisPool {
         asset: Asset,
     ) -> Result<AssetList, CwDexError> {
         let querier = QuerierWrapper::<OsmosisQuery>::new(deps.querier.deref());
-        Ok(osmosis_calculate_exit_pool_amounts(querier, self.pool_id, asset.amount)?.into())
+        let lp_token = assert_native_coin(&asset)?;
+        Ok(osmosis_calculate_exit_pool_amounts(querier, self.pool_id, &lp_token)?.into())
     }
 }
 
@@ -252,7 +252,7 @@ impl Staking for OsmosisStaking {
     fn unstake(&self, deps: Deps, asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
         let asset = assert_native_coin(&asset)?;
 
-        let id = query_lock(deps.querier, recipient.to_string(), self.lockup_duration)?.id;
+        let id = query_lock(deps.querier, &recipient, self.lockup_duration)?.id;
 
         let unstake_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::UnBondLP.to_string(),
@@ -315,12 +315,8 @@ impl Staking for OsmosisSuperfluidStaking {
     }
 
     fn unstake(&self, deps: Deps, _asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
-        let lock_id = query_lock(
-            deps.querier,
-            recipient.to_string(),
-            Duration::from_secs(TWO_WEEKS_IN_SECS),
-        )?
-        .id;
+        let lock_id =
+            query_lock(deps.querier, &recipient, Duration::from_secs(TWO_WEEKS_IN_SECS))?.id;
 
         let unstake_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::SuperfluidUnBondLP.to_string(),

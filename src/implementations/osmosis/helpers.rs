@@ -56,17 +56,17 @@ impl ToProtobufDuration for Duration {
 
 pub(crate) fn query_lock<C: CustomQuery>(
     querier: QuerierWrapper<C>,
-    owner: String,
+    owner: &Addr,
     duration: Duration,
 ) -> StdResult<PeriodLock> {
     let locks = querier
         .query::<AccountLockedLongerDurationNotUnlockingOnlyResponse>(&QueryRequest::Stargate {
             path: OsmosisTypeURLs::QueryAccountLockedLongerDurationNotUnlockingOnly {
-                owner,
+                owner: owner.to_string(),
             }
             .to_string(),
             data: encode(AccountLockedLongerDurationNotUnlockingOnlyRequest {
-                owner,
+                owner: owner.to_string(),
                 duration: Some(duration.to_protobuf_duration()),
             }),
         })?
@@ -74,7 +74,7 @@ pub(crate) fn query_lock<C: CustomQuery>(
 
     // Unwrap PeriodLock object from response
     if locks.len() == 1 {
-        Ok(locks[0])
+        Ok(locks[0].clone())
     } else if locks.len() == 0 {
         Err(StdError::generic_err("osmosis error: no lock found".to_string()))
     } else {
