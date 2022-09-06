@@ -19,7 +19,7 @@ use apollo_proto_rust::osmosis::superfluid::{
 use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
 use cosmwasm_std::{
-    from_binary, Addr, Binary, Coin, CosmosMsg, Decimal, Deps, QuerierWrapper, QueryRequest,
+    from_binary, Addr, Binary, Coin, CosmosMsg, Decimal, Deps, Event, QuerierWrapper, QueryRequest,
     Response, StdError, StdResult, Uint128,
 };
 use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
@@ -75,7 +75,12 @@ impl Pool for OsmosisPool {
             }),
         };
 
-        Ok(Response::new().add_message(join_msg))
+        let event = Event::new("apollo/cwdex/provide_liquidity")
+            .add_attribute("pool_id", self.pool_id.to_string())
+            .add_attribute("shares_out", shares_out.to_string())
+            .add_attribute("recipient", recipient.to_string());
+
+        Ok(Response::new().add_message(join_msg).add_event(event))
     }
 
     fn withdraw_liquidity(
@@ -102,7 +107,12 @@ impl Pool for OsmosisPool {
             }),
         };
 
-        Ok(Response::new().add_message(exit_msg))
+        let event = Event::new("apollo/cwdex/withdraw_liquidity")
+            .add_attribute("pool_id", self.pool_id.to_string())
+            .add_attribute("lp_token", lp_token.to_string())
+            .add_attribute("recipient", recipient.to_string());
+
+        Ok(Response::new().add_message(exit_msg).add_event(event))
     }
 
     fn swap(
@@ -121,14 +131,21 @@ impl Pool for OsmosisPool {
                 sender: recipient.to_string(),
                 routes: vec![SwapAmountInRoute {
                     pool_id: self.pool_id,
-                    token_out_denom: ask.denom,
+                    token_out_denom: ask.clone().denom,
                 }],
-                token_in: Some(offer.into()),
+                token_in: Some(offer.clone().into()),
                 token_out_min_amount: ask.amount.to_string(),
             }),
         };
 
-        Ok(Response::new().add_message(swap_msg))
+        let event = Event::new("apollo/cwdex/swap")
+            .add_attribute("pool_id", self.pool_id.to_string())
+            .add_attribute("offer", offer.to_string())
+            .add_attribute("ask", ask.to_string())
+            .add_attribute("recipient", recipient.to_string())
+            .add_attribute("token_out_min_amount", ask.amount.to_string());
+
+        Ok(Response::new().add_message(swap_msg).add_event(event))
     }
 
     fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {
