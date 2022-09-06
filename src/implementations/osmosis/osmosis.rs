@@ -75,7 +75,7 @@ impl Pool for OsmosisPool {
             }),
         };
 
-        let event = Event::new("apollo/cwdex/provide_liquidity")
+        let event = Event::new("apollo/cw-dex/provide_liquidity")
             .add_attribute("pool_id", self.pool_id.to_string())
             .add_attribute("shares_out", shares_out.to_string())
             .add_attribute("recipient", recipient.to_string());
@@ -107,7 +107,7 @@ impl Pool for OsmosisPool {
             }),
         };
 
-        let event = Event::new("apollo/cwdex/withdraw_liquidity")
+        let event = Event::new("apollo/cw-dex/withdraw_liquidity")
             .add_attribute("pool_id", self.pool_id.to_string())
             .add_attribute("lp_token", lp_token.to_string())
             .add_attribute("recipient", recipient.to_string());
@@ -138,7 +138,7 @@ impl Pool for OsmosisPool {
             }),
         };
 
-        let event = Event::new("apollo/cwdex/swap")
+        let event = Event::new("apollo/cw-dex/swap")
             .add_attribute("pool_id", self.pool_id.to_string())
             .add_attribute("offer", offer.to_string())
             .add_attribute("ask", ask.to_string())
@@ -236,7 +236,8 @@ impl Staking for OsmosisStaking {
             }),
         };
 
-        let event = Event::new("apollo/cwdex/stake")
+        let event = Event::new("apollo/cw-dex/stake")
+            .add_attribute("type", "osmosis_staking")
             .add_attribute("asset", asset.to_string())
             .add_attribute("recipient", recipient.to_string())
             .add_attribute("lockup_duration", self.lockup_duration.to_string());
@@ -257,7 +258,8 @@ impl Staking for OsmosisStaking {
             }),
         };
 
-        let event = Event::new("apollo/cwdex/unstake")
+        let event = Event::new("apollo/cw-dex/unstake")
+            .add_attribute("type", "osmosis_staking")
             .add_attribute("asset", asset.to_string())
             .add_attribute("recipient", recipient.to_string())
             .add_attribute("lockup_duration", self.lockup_duration.to_string())
@@ -268,7 +270,8 @@ impl Staking for OsmosisStaking {
 
     fn claim_rewards(&self, _recipient: Addr) -> Result<Response, CwDexError> {
         // Rewards are automatically distributed to stakers every epoch.
-        let event = Event::new("apollo/cwdex/claim_rewards");
+        let event =
+            Event::new("apollo/cw-dex/claim_rewards").add_attribute("type", "osmosis_staking");
         Ok(Response::new().add_event(event))
     }
 
@@ -285,18 +288,24 @@ pub struct OsmosisSuperfluidStaking {
 }
 
 impl Staking for OsmosisSuperfluidStaking {
-    fn stake(&self, deps: Deps, asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
+    fn stake(&self, _deps: Deps, asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
         let asset = assert_native_coin(&asset)?;
         let stake_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::SuperfluidBondLP.to_string(),
             value: encode(MsgLockAndSuperfluidDelegate {
                 sender: recipient.to_string(),
-                coins: vec![asset.into()],
+                coins: vec![asset.clone().into()],
                 val_addr: self.validator_address.to_string(),
             }),
         };
 
-        Ok(Response::new().add_message(stake_msg))
+        let event = Event::new("apollo/cw-dex/stake")
+            .add_attribute("type", "osmosis_superfluid_staking")
+            .add_attribute("asset", asset.to_string())
+            .add_attribute("recipient", recipient.to_string())
+            .add_attribute("validator_address", self.validator_address.to_string());
+
+        Ok(Response::new().add_message(stake_msg).add_event(event))
     }
 
     fn unstake(&self, deps: Deps, _asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
@@ -310,12 +319,20 @@ impl Staking for OsmosisSuperfluidStaking {
             }),
         };
 
-        Ok(Response::new().add_message(unstake_msg))
+        let event = Event::new("apollo/cw-dex/unstake")
+            .add_attribute("type", "osmosis_superfluid_staking")
+            .add_attribute("recipient", recipient.to_string())
+            .add_attribute("validator_address", self.validator_address.to_string())
+            .add_attribute("lock_id", lock_id.to_string());
+
+        Ok(Response::new().add_message(unstake_msg).add_event(event))
     }
 
     fn claim_rewards(&self, _recipient: Addr) -> Result<Response, CwDexError> {
         // Rewards are automatically distributed to stakers every epoch.
-        Ok(Response::new())
+        let event = Event::new("apollo/cw-dex/claim_rewards")
+            .add_attribute("type", "osmosis_superfluid_staking");
+        Ok(Response::new().add_event(event))
     }
 
     fn get_lockup_duration(&self) -> Result<CwDuration, CwDexError> {
