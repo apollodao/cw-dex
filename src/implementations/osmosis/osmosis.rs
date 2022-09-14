@@ -1,23 +1,31 @@
 use std::convert::TryFrom;
 use std::marker::PhantomData;
 use std::ops::Deref;
+use std::str::FromStr;
 use std::time::Duration;
 
 use apollo_proto_rust::osmosis::gamm::v1beta1::{
-    MsgExitPool, MsgJoinPool, MsgSwapExactAmountIn, SwapAmountInRoute,
+    MsgExitPool, MsgJoinPool, MsgSwapExactAmountIn, PoolParams, QueryPoolParamsRequest,
+    QueryPoolParamsResponse, QueryTotalPoolLiquidityRequest, QueryTotalPoolLiquidityResponse,
+    SwapAmountInRoute,
 };
+
 use cw_utils::Duration as CwDuration;
 
-use apollo_proto_rust::osmosis::lockup::{MsgBeginUnlocking, MsgLockTokens};
+use apollo_proto_rust::osmosis::lockup::{
+    AccountLockedLongerDurationNotUnlockingOnlyRequest,
+    AccountLockedLongerDurationNotUnlockingOnlyResponse, MsgBeginUnlocking, MsgLockTokens,
+};
 use apollo_proto_rust::osmosis::superfluid::{
     MsgLockAndSuperfluidDelegate, MsgSuperfluidUnbondLock,
 };
 use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
 use cosmwasm_std::{
-    Addr, Coin, CosmosMsg, Decimal, Deps, QuerierWrapper, Response, StdError, StdResult, Uint128,
+    from_binary, Addr, Binary, Coin, CosmosMsg, Decimal, Deps, Event, QuerierWrapper, QueryRequest,
+    Response, StdError, StdResult, Uint128,
 };
-use cw_asset::{Asset, AssetInfoBase, AssetList};
+use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use cw_storage_plus::Item;
 use cw_token::osmosis::OsmosisDenom;
 use osmo_bindings::OsmosisQuery;
@@ -31,40 +39,28 @@ use crate::osmosis::osmosis_math::{
 use crate::utils::vec_into;
 use crate::{CwDexError, Pool, Staking};
 
+use super::helpers::{
+    assert_native_coin, assert_only_native_coins, query_lock, ToProtobufDuration,
+};
+
+/// Struct for interacting with Osmosis v1beta1 balancer pools. If `pool_id` maps to another type of pool this will fail.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OsmosisPool {
+    /// The pool id of the pool to interact with
     pub pool_id: u64,
-    pub assets: Vec<String>,
-    pub exit_fee: Decimal, // TODO: queriable? remove?
-    pub swap_fee: Decimal,
-    pub total_weight: Uint128,
-    pub normalized_weight: Decimal,
     // calcPoolOutGivenSingleIn - see here. Since all pools we are adding are 50/50, no need to store TotalWeight or the pool asset's weight
     // We should query this once Stargate queries are available
     // https://github.com/osmosis-labs/osmosis/blob/df2c511b04bf9e5783d91fe4f28a3761c0ff2019/x/gamm/pool-models/balancer/pool.go#L632
 }
 
-pub struct OsmosisAssets {
-    pub assets: Vec<AssetInfoBase<OsmosisDenom>>,
-}
-
-fn assert_only_native_coins(assets: AssetList) -> Result<Vec<Coin>, CwDexError> {
-    assets.into_iter().map(assert_native_coin).collect::<Result<Vec<Coin>, CwDexError>>()
-}
-
-fn assert_native_coin(asset: &Asset) -> Result<Coin, CwDexError> {
-    match asset.info {
-        AssetInfoBase::Native(_) => asset.try_into().map_err(|e: StdError| e.into()),
-        _ => Err(CwDexError::InvalidInAsset {
-            a: asset.clone(),
-        }),
-    }
-}
-
 impl Pool for OsmosisPool {
-    fn provide_liquidity(&self, deps: Deps, assets: AssetList) -> Result<Response, CwDexError> {
+    fn provide_liquidity(
+        &self,
+        deps: Deps,
+        assets: AssetList,
+        recipient: Addr,
+    ) -> Result<Response, CwDexError> {
         let assets = assert_only_native_coins(assets)?;
-        let sender = VAULT_ADDR.load(deps.storage)?.to_string();
 
         let querier = QuerierWrapper::<OsmosisQuery>::new(deps.querier.deref());
 
@@ -75,7 +71,7 @@ impl Pool for OsmosisPool {
             type_url: OsmosisTypeURLs::JoinPool.to_string(),
             value: encode(MsgJoinPool {
                 pool_id: self.pool_id,
-                sender,
+                sender: recipient.to_string(),
                 share_out_amount: shares_out.amount.to_string(),
                 token_in_maxs: assets
                     .into_iter()
@@ -84,69 +80,100 @@ impl Pool for OsmosisPool {
             }),
         };
 
-        Ok(Response::new().add_message(join_msg))
+        let event = Event::new("apollo/cw-dex/provide_liquidity")
+            .add_attribute("pool_id", self.pool_id.to_string())
+            .add_attribute("shares_out", shares_out.to_string())
+            .add_attribute("recipient", recipient.to_string());
+
+        Ok(Response::new().add_message(join_msg).add_event(event))
     }
 
-    fn withdraw_liquidity(&self, deps: Deps, asset: Asset) -> Result<Response, CwDexError> {
+    fn withdraw_liquidity(
+        &self,
+        deps: Deps,
+        asset: Asset,
+        recipient: Addr,
+    ) -> Result<Response, CwDexError> {
         let lp_token = assert_native_coin(&asset)?;
-        let sender = VAULT_ADDR.load(deps.storage)?.to_string();
 
         let querier = QuerierWrapper::<OsmosisQuery>::new(deps.querier.deref());
 
-        let token_out_mins = osmosis_calculate_exit_pool_amounts(
-            querier,
-            self.pool_id,
-            lp_token.amount,
-            self.exit_fee,
-        )?;
+        // TODO: Query for exit pool amounts?
+        let token_out_mins = osmosis_calculate_exit_pool_amounts(querier, self.pool_id, &lp_token)?;
 
         let exit_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::ExitPool.to_string(),
             value: encode(MsgExitPool {
-                sender,
+                sender: recipient.to_string(),
                 pool_id: self.pool_id,
                 share_in_amount: lp_token.amount.to_string(),
                 token_out_mins: vec_into(token_out_mins),
             }),
         };
 
-        Ok(Response::new().add_message(exit_msg))
+        let event = Event::new("apollo/cw-dex/withdraw_liquidity")
+            .add_attribute("pool_id", self.pool_id.to_string())
+            .add_attribute("lp_token", lp_token.to_string())
+            .add_attribute("recipient", recipient.to_string());
+
+        Ok(Response::new().add_message(exit_msg).add_event(event))
     }
 
-    fn swap(&self, deps: Deps, offer: Asset, ask: Asset) -> Result<Response, CwDexError> {
+    fn swap(
+        &self,
+        _deps: Deps,
+        offer: Asset,
+        ask: Asset,
+        recipient: Addr,
+    ) -> Result<Response, CwDexError> {
         let offer = assert_native_coin(&offer)?;
         let ask = assert_native_coin(&ask)?;
-        let sender = VAULT_ADDR.load(deps.storage)?.to_string();
 
         let swap_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::SwapExactAmountIn.to_string(),
             value: encode(MsgSwapExactAmountIn {
-                sender,
+                sender: recipient.to_string(),
                 routes: vec![SwapAmountInRoute {
                     pool_id: self.pool_id,
-                    token_out_denom: ask.denom,
+                    token_out_denom: ask.clone().denom,
                 }],
-                token_in: Some(offer.into()),
+                token_in: Some(offer.clone().into()),
                 token_out_min_amount: ask.amount.to_string(),
             }),
         };
 
-        Ok(Response::new().add_message(swap_msg))
+        let event = Event::new("apollo/cw-dex/swap")
+            .add_attribute("pool_id", self.pool_id.to_string())
+            .add_attribute("offer", offer.to_string())
+            .add_attribute("ask", ask.to_string())
+            .add_attribute("recipient", recipient.to_string())
+            .add_attribute("token_out_min_amount", ask.amount.to_string());
+
+        Ok(Response::new().add_message(swap_msg).add_event(event))
     }
 
-    fn get_pool_assets(&self) -> Result<AssetList, CwDexError> {
-        Ok(self
-            .assets
-            .iter()
-            .map(|asset| {
-                Coin {
-                    denom: asset.clone(),
-                    amount: Uint128::zero(),
-                }
-                .into()
+    fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {
+        let pool_assets =
+            deps.querier.query::<QueryTotalPoolLiquidityResponse>(&QueryRequest::Stargate {
+                path: OsmosisTypeURLs::QueryTotalPoolLiquidity.to_string(),
+                data: encode(QueryTotalPoolLiquidityRequest {
+                    pool_id: self.pool_id,
+                }),
+            })?;
+
+        let asset_list: AssetList = pool_assets
+            .liquidity
+            .into_iter()
+            .map(|coin| {
+                Ok(Asset {
+                    info: AssetInfo::Native(coin.denom),
+                    amount: Uint128::from_str(&coin.amount)?,
+                })
             })
-            .collect::<Vec<Asset>>()
-            .into())
+            .collect::<StdResult<Vec<Asset>>>()?
+            .into();
+
+        Ok(asset_list)
     }
 
     fn simulate_provide_liquidity(
@@ -169,8 +196,8 @@ impl Pool for OsmosisPool {
         asset: Asset,
     ) -> Result<AssetList, CwDexError> {
         let querier = QuerierWrapper::<OsmosisQuery>::new(deps.querier.deref());
-        Ok(osmosis_calculate_exit_pool_amounts(querier, self.pool_id, asset.amount, self.exit_fee)?
-            .into())
+        let lp_token = assert_native_coin(&asset)?;
+        Ok(osmosis_calculate_exit_pool_amounts(querier, self.pool_id, &lp_token)?.into())
     }
 }
 
@@ -179,71 +206,82 @@ impl Pool for OsmosisPool {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OsmosisStaking {
     /// Lockup duration in nano seconds. Allowed values 1 day, 1 week or 2 weeks.
-    pub lockup_duration: u64,
+    pub lockup_duration: Duration,
 }
 
 impl OsmosisStaking {
+    /// Creates a new OsmosisStaking instance with lock up duration set to `lockup_duration`.
+    ///
+    /// Arguments:
+    /// - `lockup_duration` is the duration of the lockup period in seconds.
+    ///
+    /// Returns an error if `lockup_duration` is not one of the allowed values,
+    /// 86400, 604800 or 1209600, representing 1 day, 1 week or 2 weeks respectively.
     pub fn new(lockup_duration: u64) -> StdResult<Self> {
-        if !(vec![86_400_000_000_000u64, 604800_000_000_000u64, 1209600_000_000_000u64]
-            .contains(&lockup_duration))
-        {
+        if !(vec![86400u64, 604800u64, 1209600u64].contains(&lockup_duration)) {
             return Err(StdError::generic_err("osmosis error: invalid lockup duration"));
         }
         Ok(Self {
-            lockup_duration,
+            lockup_duration: Duration::from_secs(lockup_duration),
         })
     }
 }
 
-pub const LOCK_ID: Item<u64> = Item::new("lock_id");
-pub const VAULT_ADDR: Item<Addr> = Item::<Addr>::new("vault_addr");
-
 impl Staking for OsmosisStaking {
-    fn stake(&self, deps: Deps, asset: Asset) -> Result<Response, CwDexError> {
-        let duration = Duration::from_nanos(self.lockup_duration);
+    fn stake(&self, _deps: Deps, asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
         let asset = assert_native_coin(&asset)?;
-        let owner = VAULT_ADDR.load(deps.storage)?.to_string();
 
         let stake_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::BondLP.to_string(),
             value: encode(MsgLockTokens {
-                owner,
-                duration: Some(apollo_proto_rust::google::protobuf::Duration {
-                    seconds: i64::try_from(duration.as_secs())?,
-                    nanos: duration.subsec_nanos() as i32,
-                }),
-                coins: vec![asset.into()],
+                owner: recipient.to_string(),
+                duration: Some(self.lockup_duration.to_protobuf_duration()),
+                coins: vec![asset.clone().into()],
             }),
         };
 
-        Ok(Response::new().add_message(stake_msg))
+        let event = Event::new("apollo/cw-dex/stake")
+            .add_attribute("type", "osmosis_staking")
+            .add_attribute("asset", asset.to_string())
+            .add_attribute("recipient", recipient.to_string())
+            .add_attribute("lockup_duration_secs", self.lockup_duration.as_secs().to_string());
+
+        Ok(Response::new().add_message(stake_msg).add_event(event))
     }
 
-    fn unstake(&self, deps: Deps, asset: Asset) -> Result<Response, CwDexError> {
+    fn unstake(&self, deps: Deps, asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
         let asset = assert_native_coin(&asset)?;
-        let id = LOCK_ID.load(deps.storage)?;
-        let owner = VAULT_ADDR.load(deps.storage)?.to_string();
+
+        let id = query_lock(deps.querier, &recipient, self.lockup_duration)?.id;
 
         let unstake_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::UnBondLP.to_string(),
             value: encode(MsgBeginUnlocking {
-                owner,
+                owner: recipient.to_string(),
                 id,
-                coins: vec![asset.into()],
+                coins: vec![asset.clone().into()],
             }),
         };
 
-        Ok(Response::new().add_message(unstake_msg))
+        let event = Event::new("apollo/cw-dex/unstake")
+            .add_attribute("type", "osmosis_staking")
+            .add_attribute("asset", asset.to_string())
+            .add_attribute("recipient", recipient.to_string())
+            .add_attribute("lockup_duration_secs", self.lockup_duration.as_secs().to_string())
+            .add_attribute("lock_id", id.to_string());
+
+        Ok(Response::new().add_message(unstake_msg).add_event(event))
     }
 
-    fn claim_rewards(&self) -> Result<Response, CwDexError> {
+    fn claim_rewards(&self, _recipient: Addr) -> Result<Response, CwDexError> {
         // Rewards are automatically distributed to stakers every epoch.
-        Ok(Response::new())
+        let event =
+            Event::new("apollo/cw-dex/claim_rewards").add_attribute("type", "osmosis_staking");
+        Ok(Response::new().add_event(event))
     }
 
     fn get_lockup_duration(&self) -> Result<CwDuration, CwDexError> {
-        let std_duration: Duration = Duration::from_nanos(self.lockup_duration);
-        Ok(CwDuration::Time(std_duration.as_secs()))
+        Ok(CwDuration::Time(self.lockup_duration.as_secs()))
     }
 }
 
@@ -253,43 +291,59 @@ pub struct OsmosisSuperfluidStaking {
     validator_address: Addr,
 }
 
+const TWO_WEEKS_IN_SECS: u64 = 14 * 24 * 60 * 60;
+
 impl Staking for OsmosisSuperfluidStaking {
-    fn stake(&self, deps: Deps, asset: Asset) -> Result<Response, CwDexError> {
+    fn stake(&self, _deps: Deps, asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
         let asset = assert_native_coin(&asset)?;
-        let sender = VAULT_ADDR.load(deps.storage)?.to_string();
         let stake_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::SuperfluidBondLP.to_string(),
             value: encode(MsgLockAndSuperfluidDelegate {
-                sender,
-                coins: vec![asset.into()],
+                sender: recipient.to_string(),
+                coins: vec![asset.clone().into()],
                 val_addr: self.validator_address.to_string(),
             }),
         };
 
-        Ok(Response::new().add_message(stake_msg))
+        let event = Event::new("apollo/cw-dex/stake")
+            .add_attribute("type", "osmosis_superfluid_staking")
+            .add_attribute("asset", asset.to_string())
+            .add_attribute("recipient", recipient.to_string())
+            .add_attribute("validator_address", self.validator_address.to_string());
+
+        Ok(Response::new().add_message(stake_msg).add_event(event))
     }
 
-    fn unstake(&self, deps: Deps, _asset: Asset) -> Result<Response, CwDexError> {
-        let lock_id = LOCK_ID.load(deps.storage)?;
-        let sender = VAULT_ADDR.load(deps.storage)?.to_string();
+    fn unstake(&self, deps: Deps, _asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
+        let lock_id =
+            query_lock(deps.querier, &recipient, Duration::from_secs(TWO_WEEKS_IN_SECS))?.id;
 
         let unstake_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::SuperfluidUnBondLP.to_string(),
             value: encode(MsgSuperfluidUnbondLock {
-                sender,
+                sender: recipient.to_string(),
                 lock_id,
             }),
         };
 
-        Ok(Response::new().add_message(unstake_msg))
+        let event = Event::new("apollo/cw-dex/unstake")
+            .add_attribute("type", "osmosis_superfluid_staking")
+            .add_attribute("recipient", recipient.to_string())
+            .add_attribute("validator_address", self.validator_address.to_string())
+            .add_attribute("lock_id", lock_id.to_string());
+
+        Ok(Response::new().add_message(unstake_msg).add_event(event))
     }
 
-    fn claim_rewards(&self) -> Result<Response, CwDexError> {
+    fn claim_rewards(&self, _recipient: Addr) -> Result<Response, CwDexError> {
         // Rewards are automatically distributed to stakers every epoch.
-        Ok(Response::new())
+        let event = Event::new("apollo/cw-dex/claim_rewards")
+            .add_attribute("type", "osmosis_superfluid_staking");
+        Ok(Response::new().add_event(event))
     }
 
     fn get_lockup_duration(&self) -> Result<CwDuration, CwDexError> {
-        todo!()
+        // Lockup time for superfluid staking is always 14 days.
+        Ok(CwDuration::Time(TWO_WEEKS_IN_SECS))
     }
 }

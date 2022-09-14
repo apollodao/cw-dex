@@ -1,3 +1,4 @@
+mod helpers;
 mod osmosis;
 mod osmosis_math;
 

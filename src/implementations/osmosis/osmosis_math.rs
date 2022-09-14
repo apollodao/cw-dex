@@ -1,12 +1,16 @@
 use std::{
     marker::PhantomData,
     ops::{Deref, Sub},
+    str::FromStr,
 };
 
 use cosmwasm_std::{
     Coin, Decimal, Deps, QuerierWrapper, QueryRequest, StdError, StdResult, Uint128,
 };
+use cw_asset::Asset;
 use osmo_bindings::{OsmosisQuery, PoolStateResponse};
+
+use super::helpers::query_pool_params;
 
 pub fn osmosis_calculate_join_pool_shares(
     querier: QuerierWrapper<OsmosisQuery>,
@@ -164,8 +168,7 @@ fn _calc_join_pool_shares_single_sided(
 pub fn osmosis_calculate_exit_pool_amounts(
     querier: QuerierWrapper<OsmosisQuery>,
     pool_id: u64,
-    exit_share_amount: Uint128,
-    exit_fee: Decimal, // TODO: queriable?
+    exit_lp_shares: &Coin,
 ) -> StdResult<Vec<Coin>> {
     // TODO: Remove go code comments after review
     let pool_state: PoolStateResponse =
@@ -173,13 +176,23 @@ pub fn osmosis_calculate_exit_pool_amounts(
             id: pool_id,
         }))?;
 
+    if exit_lp_shares.denom != pool_state.shares.denom {
+        return Err(StdError::generic_err(format!(
+            "exit_shares denom {} does not match pool lp shares denom {}",
+            exit_lp_shares.denom, pool_state.shares.denom
+        )));
+    }
+
+    let pool_params = query_pool_params(querier, pool_id)?;
+    let exit_fee = Decimal::from_str(&pool_params.exit_fee)?;
+
     // totalShares := pool.GetTotalShares()
     // if exitingShares.GTE(totalShares) {
     // 	return sdk.Coins{}, sdkerrors.Wrapf(types.ErrLimitMaxAmount, errMsgFormatSharesLargerThanMax, exitingShares, totalShares)
     // }
 
     let total_shares = pool_state.shares.amount;
-    if exit_share_amount >= total_shares {
+    if exit_lp_shares.amount >= total_shares {
         return Err(StdError::generic_err("exit share amount must be less than total shares"));
     }
 
@@ -196,10 +209,10 @@ pub fn osmosis_calculate_exit_pool_amounts(
 
     let refunded_shares: Decimal;
     if !exit_fee.is_zero() {
-        refunded_shares =
-            Decimal::from_ratio(exit_share_amount, 1u128).checked_mul(Decimal::one() - exit_fee)?;
+        refunded_shares = Decimal::from_ratio(exit_lp_shares.amount, 1u128)
+            .checked_mul(Decimal::one() - exit_fee)?;
     } else {
-        refunded_shares = Decimal::from_ratio(exit_share_amount, 1u128);
+        refunded_shares = Decimal::from_ratio(exit_lp_shares.amount, 1u128);
     }
 
     // shareOutRatio := refundedShares.QuoInt(totalShares)
