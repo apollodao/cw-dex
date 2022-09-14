@@ -1,37 +1,28 @@
-use std::convert::TryFrom;
-use std::marker::PhantomData;
 use std::ops::Deref;
 use std::str::FromStr;
 use std::time::Duration;
 
 use apollo_proto_rust::osmosis::gamm::v1beta1::{
-    MsgExitPool, MsgJoinPool, MsgSwapExactAmountIn, PoolParams, QueryPoolParamsRequest,
-    QueryPoolParamsResponse, QueryTotalPoolLiquidityRequest, QueryTotalPoolLiquidityResponse,
-    SwapAmountInRoute,
+    MsgExitPool, MsgJoinPool, MsgSwapExactAmountIn, QueryTotalPoolLiquidityRequest,
+    QueryTotalPoolLiquidityResponse, SwapAmountInRoute,
 };
 
 use cw_utils::Duration as CwDuration;
 
-use apollo_proto_rust::osmosis::lockup::{
-    AccountLockedLongerDurationNotUnlockingOnlyRequest,
-    AccountLockedLongerDurationNotUnlockingOnlyResponse, MsgBeginUnlocking, MsgLockTokens,
-};
+use apollo_proto_rust::osmosis::lockup::{MsgBeginUnlocking, MsgLockTokens};
 use apollo_proto_rust::osmosis::superfluid::{
     MsgLockAndSuperfluidDelegate, MsgSuperfluidUnbondLock,
 };
 use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
 use cosmwasm_std::{
-    from_binary, Addr, Binary, Coin, CosmosMsg, Decimal, Deps, Event, QuerierWrapper, QueryRequest,
-    Response, StdError, StdResult, Uint128,
+    Addr, CosmosMsg, Deps, Event, QuerierWrapper, QueryRequest, Response, StdError, StdResult,
+    Uint128,
 };
-use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
-use cw_storage_plus::Item;
-use cw_token::osmosis::OsmosisDenom;
+use cw_asset::{Asset, AssetInfo, AssetList};
 use osmo_bindings::OsmosisQuery;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::convert::TryInto;
 
 use crate::osmosis::osmosis_math::{
     osmosis_calculate_exit_pool_amounts, osmosis_calculate_join_pool_shares,

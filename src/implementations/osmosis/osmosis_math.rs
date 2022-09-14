@@ -1,13 +1,6 @@
-use std::{
-    marker::PhantomData,
-    ops::{Deref, Sub},
-    str::FromStr,
-};
+use std::{ops::Sub, str::FromStr};
 
-use cosmwasm_std::{
-    Coin, Decimal, Deps, QuerierWrapper, QueryRequest, StdError, StdResult, Uint128,
-};
-use cw_asset::Asset;
+use cosmwasm_std::{Coin, Decimal, QuerierWrapper, QueryRequest, StdError, StdResult, Uint128};
 use osmo_bindings::{OsmosisQuery, PoolStateResponse};
 
 use super::helpers::query_pool_params;
