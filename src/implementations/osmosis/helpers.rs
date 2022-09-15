@@ -73,6 +73,7 @@ pub(crate) fn query_lock<C: CustomQuery>(
         .locks;
 
     // Unwrap PeriodLock object from response
+    // TODO: Generalize to support a user that has multiple locks in different lps or durations.
     if locks.len() == 1 {
         Ok(locks[0].clone())
     } else if locks.len() == 0 {
