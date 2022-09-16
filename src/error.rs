@@ -25,3 +25,11 @@ pub enum CwDexError {
         a: Asset,
     },
 }
+
+impl Into<StdError> for CwDexError {
+    fn into(self) -> StdError {
+        StdError::GenericErr {
+            msg: self.to_string(),
+        }
+    }
+}

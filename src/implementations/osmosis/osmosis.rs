@@ -55,6 +55,7 @@ impl Pool for OsmosisPool {
 
         let querier = QuerierWrapper::<OsmosisQuery>::new(deps.querier.deref());
 
+        // TODO: Turn into stargate query
         let shares_out =
             osmosis_calculate_join_pool_shares(querier, self.pool_id, assets.to_vec())?;
 
