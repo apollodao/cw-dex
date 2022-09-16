@@ -26,10 +26,10 @@ pub enum CwDexError {
     },
 }
 
-impl Into<StdError> for CwDexError {
-    fn into(self) -> StdError {
-        StdError::GenericErr {
-            msg: self.to_string(),
+impl From<CwDexError> for StdError {
+    fn from(x: CwDexError) -> Self {
+        Self::GenericErr {
+            msg: String::from("CwDexError: ") + &x.to_string(),
         }
     }
 }
