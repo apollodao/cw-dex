@@ -12,19 +12,16 @@ default = ["osmosis"]
 osmosis = []
 
 [dependencies]
-apollo-proto-rust = {branch = "master", git = "https://github.com/apollodao/apollo-proto-rust"}
-# apollo-proto-rust = { path = "../apollo-proto-rust" }
-
-cosmwasm-std = {version = "1.0", features = ["stargate"]}
-# cw-asset = "2.1.0"
-cw-asset = "^2.3.0"
-# cw-token = { path = "../../../cw-token" }
-cw-storage-plus = "0.13"
-cw-token = { git = "https://github.com/apollodao/cw-token.git" }
-cw-utils = "0.13"
-cw20 = "0.13"
-cw20-base = "0.13"
-osmo-bindings = "0.5.1"
-schemars = "0.8.1"
-serde = {version = "1.0.103", default-features = false, features = ["derive"]}
+cosmwasm-std = {version = "1.1.0", features = ["stargate"]}
+cosmwasm-schema = "1.1.0"
+serde = {version = "1.0.137", default-features = false, features = ["derive"]}
 thiserror = {version = "1.0.31"}
+schemars = "0.8.8"
+cw-storage-plus = "0.15"
+cw-asset = "2.3.0"
+apollo-proto-rust = {git = "https://github.com/apollodao/apollo-proto-rust", branch = "dev/cosmwasm-1.1"}
+cw-token = { git = "https://github.com/apollodao/cw-token.git", branch = "dev/cosmwasm-1.1" }
+cw-utils = "0.15"
+cw20 = "0.15"
+cw20-base = "0.15"
+osmo-bindings = "0.5.1"

@@ -15,14 +15,13 @@ use apollo_proto_rust::osmosis::superfluid::{
 };
 use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     Addr, CosmosMsg, Deps, Event, QuerierWrapper, QueryRequest, Response, StdError, StdResult,
     Uint128,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
 use osmo_bindings::OsmosisQuery;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
 use crate::osmosis::osmosis_math::{
     osmosis_calculate_exit_pool_amounts, osmosis_calculate_join_pool_shares,
@@ -35,7 +34,7 @@ use super::helpers::{
 };
 
 /// Struct for interacting with Osmosis v1beta1 balancer pools. If `pool_id` maps to another type of pool this will fail.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct OsmosisPool {
     /// The pool id of the pool to interact with
     pub pool_id: u64,
@@ -195,7 +194,7 @@ impl Pool for OsmosisPool {
 
 /// Implementation of locked staking on osmosis. Using the Staking trait.
 /// `lockup_duration` is the duration of the lockup period in nano seconds.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct OsmosisStaking {
     /// Lockup duration in nano seconds. Allowed values 1 day, 1 week or 2 weeks.
     pub lockup_duration: Duration,
@@ -278,7 +277,7 @@ impl Staking for OsmosisStaking {
 }
 
 /// Implementation of superfluid staking for osmosis.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct OsmosisSuperfluidStaking {
     validator_address: Addr,
 }
