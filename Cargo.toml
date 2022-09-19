@@ -1,7 +1,7 @@
 [package]
 authors = ["Apollo Devs"]
 description = "Helper library for interacting with Cosmos dexes"
-edition = "2018"
+edition = "2021"
 license = "GPL-3.0-or-later"
 name = "cw-dex"
 repository = "https://github.com/apollodao/cw-dex"
@@ -19,8 +19,8 @@ thiserror = {version = "1.0.31"}
 schemars = "0.8.8"
 cw-storage-plus = "0.15"
 cw-asset = "2.3.0"
-apollo-proto-rust = {git = "https://github.com/apollodao/apollo-proto-rust", branch = "dev/cosmwasm-1.1"}
-cw-token = { git = "https://github.com/apollodao/cw-token.git", branch = "dev/cosmwasm-1.1" }
+apollo-proto-rust = { git = "https://github.com/apollodao/apollo-proto-rust" }
+cw-token = { git = "https://github.com/apollodao/cw-token.git" }
 cw-utils = "0.15"
 cw20 = "0.15"
 cw20-base = "0.15"
