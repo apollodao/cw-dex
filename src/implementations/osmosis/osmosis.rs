@@ -43,6 +43,14 @@ pub struct OsmosisPool {
     // https://github.com/osmosis-labs/osmosis/blob/df2c511b04bf9e5783d91fe4f28a3761c0ff2019/x/gamm/pool-models/balancer/pool.go#L632
 }
 
+impl OsmosisPool {
+    pub fn new(pool_id: u64) -> Self {
+        Self {
+            pool_id,
+        }
+    }
+}
+
 impl Pool for OsmosisPool {
     fn provide_liquidity(
         &self,
