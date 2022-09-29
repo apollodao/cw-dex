@@ -6,7 +6,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use crate::CwDexError;
 
 /// Trait to represent an AMM pool.
-pub trait Pool: Clone + Serialize + DeserializeOwned {
+pub trait Pool: Serialize + DeserializeOwned {
     /// Provide liquidity to the pool.
     ///
     /// Returns a Response with the necessary messages to provide liquidity to the pool.
