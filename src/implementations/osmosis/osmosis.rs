@@ -201,6 +201,17 @@ impl Pool for OsmosisPool {
         let lp_token = assert_native_coin(&asset)?;
         Ok(osmosis_calculate_exit_pool_amounts(querier, self.pool_id, &lp_token)?.into())
     }
+
+    fn simulate_swap(
+        &self,
+        _deps: Deps,
+        _offer_asset: Asset,
+        _ask_asset_info: AssetInfo,
+        _minimum_out_amount: Uint128,
+    ) -> Result<Uint128, CwDexError> {
+        // TODO: How do we do this? I don't see a stargate query for it...
+        todo!()
+    }
 }
 
 /// Implementation of locked staking on osmosis. Using the Staking trait.

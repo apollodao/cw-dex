@@ -70,4 +70,12 @@ pub trait Pool {
         deps: Deps,
         asset: Asset,
     ) -> Result<AssetList, CwDexError>;
+
+    fn simulate_swap(
+        &self,
+        deps: Deps,
+        offer_asset: Asset,
+        ask_asset_info: AssetInfo,
+        minimum_out_amount: Uint128,
+    ) -> Result<Uint128, CwDexError>;
 }
