@@ -1,12 +1,11 @@
 use cosmwasm_std::Deps;
 use cosmwasm_std::{Addr, Response};
 use cw_asset::{Asset, AssetList};
-use serde::{de::DeserializeOwned, Serialize};
 
 use crate::CwDexError;
 
 /// Trait to represent an AMM pool.
-pub trait Pool: Serialize + DeserializeOwned {
+pub trait Pool {
     /// Provide liquidity to the pool.
     ///
     /// Returns a Response with the necessary messages to provide liquidity to the pool.
