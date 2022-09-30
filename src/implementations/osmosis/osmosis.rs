@@ -30,7 +30,8 @@ use crate::utils::vec_into;
 use crate::{CwDexError, Pool, Staking};
 
 use super::helpers::{
-    assert_native_coin, assert_only_native_coins, query_lock, ToProtobufDuration,
+    assert_native_asset_info, assert_native_coin, assert_only_native_coins, query_lock,
+    ToProtobufDuration,
 };
 
 /// Struct for interacting with Osmosis v1beta1 balancer pools. If `pool_id` maps to another type of pool this will fail.
@@ -122,12 +123,13 @@ impl Pool for OsmosisPool {
     fn swap(
         &self,
         _deps: Deps,
-        offer: Asset,
-        ask: Asset,
+        offer_asset: Asset,
+        ask_asset_info: AssetInfo,
+        minimum_out_amount: Uint128,
         recipient: Addr,
     ) -> Result<Response, CwDexError> {
-        let offer = assert_native_coin(&offer)?;
-        let ask = assert_native_coin(&ask)?;
+        let offer = assert_native_coin(&offer_asset)?;
+        let ask_denom = assert_native_asset_info(&ask_asset_info)?;
 
         let swap_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::SwapExactAmountIn.to_string(),
@@ -135,19 +137,19 @@ impl Pool for OsmosisPool {
                 sender: recipient.to_string(),
                 routes: vec![SwapAmountInRoute {
                     pool_id: self.pool_id,
-                    token_out_denom: ask.clone().denom,
+                    token_out_denom: ask_denom.clone(),
                 }],
                 token_in: Some(offer.clone().into()),
-                token_out_min_amount: ask.amount.to_string(),
+                token_out_min_amount: minimum_out_amount.to_string(),
             }),
         };
 
         let event = Event::new("apollo/cw-dex/swap")
             .add_attribute("pool_id", self.pool_id.to_string())
             .add_attribute("offer", offer.to_string())
-            .add_attribute("ask", ask.to_string())
+            .add_attribute("ask", ask_denom)
             .add_attribute("recipient", recipient.to_string())
-            .add_attribute("token_out_min_amount", ask.amount.to_string());
+            .add_attribute("token_out_min_amount", minimum_out_amount);
 
         Ok(Response::new().add_message(swap_msg).add_event(event))
     }

@@ -95,3 +95,10 @@ pub(crate) fn assert_native_coin(asset: &Asset) -> Result<Coin, CwDexError> {
         }),
     }
 }
+
+pub(crate) fn assert_native_asset_info(asset_info: &AssetInfo) -> Result<String, CwDexError> {
+    match asset_info {
+        cw_asset::AssetInfoBase::Native(denom) => Ok(denom.clone()),
+        _ => Err(CwDexError::InvalidOutAsset {}),
+    }
+}

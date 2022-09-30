@@ -1,6 +1,6 @@
-use cosmwasm_std::Deps;
 use cosmwasm_std::{Addr, Response};
-use cw_asset::{Asset, AssetList};
+use cosmwasm_std::{Deps, Uint128};
+use cw_asset::{Asset, AssetInfo, AssetList};
 
 use crate::CwDexError;
 
@@ -42,9 +42,9 @@ pub trait Pool {
     fn swap(
         &self,
         deps: Deps,
-        offer: Asset,
-        ask: Asset,
-        // TODO: slippage tolerance
+        offer_asset: Asset,
+        ask_asset_info: AssetInfo,
+        minimum_out_amount: Uint128,
         recipient: Addr,
     ) -> Result<Response, CwDexError>;
 
