@@ -35,6 +35,7 @@ use super::helpers::{
 
 /// Struct for interacting with Osmosis v1beta1 balancer pools. If `pool_id` maps to another type of pool this will fail.
 #[cw_serde]
+#[derive(Copy)]
 pub struct OsmosisPool {
     /// The pool id of the pool to interact with
     pub pool_id: u64,
