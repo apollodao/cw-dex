@@ -3,7 +3,8 @@ use std::{
     str::FromStr,
 };
 
-use apollo_proto_rust::osmosis::gamm::v1beta1::{Pool, PoolAsset};
+use apollo_proto_rust::osmosis::gamm::v1beta1::{Pool as ProtoPool, PoolAsset as ProtoPoolAsset};
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Coin, Decimal, QuerierWrapper, QueryRequest, StdError, StdResult, Uint128};
 use cw20_base::ContractError;
 use num_bigint::BigInt;
@@ -113,13 +114,12 @@ fn _fee_ratio(normalized_weight: Decimal, swap_fee: Decimal) -> Decimal {
 }
 
 pub fn calc_pool_shares_out_given_single_asset_in(
-    token_balance_in: Uint128,
+    token_balance_in: Decimal,
     normalized_token_weight_in: Decimal,
-	poolShares,
-	tokenAmountIn,
-	swapFee sdk.Dec,
+    pool_shares: Decimal,
+    token_amount_in: Decimal,
     swap_fee: Decimal,
-) -> StdResult<Uint128> {
+) -> StdResult<BigRational> {
     // deduct swapfee on the in asset.
     // We don't charge swap fee on the token amount that we imagine as unswapped (the normalized weight).
     // So effective_swapfee = swapfee * (1 - normalized_token_weight)
@@ -142,21 +142,17 @@ pub fn calc_pool_shares_out_given_single_asset_in(
     // 	sdk.OneDec()).Neg()
 
     let token_in_amount_after_fee =
-        token_balance_in * _fee_ratio(provided_asset_normalized_weight, swap_fee);
+        token_amount_in * _fee_ratio(normalized_token_weight_in, swap_fee);
     let pool_amount_out = osmosis_solve_constant_function_invariant(
-        provided_asset_pool_balance.checked_add(token_in_amount_after_fee)?,
-        provided_asset_pool_balance,
-        provided_asset_normalized_weight,
-        total_shares,
+        token_balance_in.checked_add(token_in_amount_after_fee)?,
+        token_balance_in,
+        normalized_token_weight_in,
+        pool_shares,
         Decimal::one(),
     )?
     .neg();
-    // TODO: Is this going to run into a negative number and cause a crash?
 
-    pool_amount_out
-        .to_u128()
-        .map(Uint128::from)
-        .ok_or(StdError::from(CwDexError::BigIntOverflow {}))
+    Ok(pool_amount_out)
 }
 
 // func (p *Pool) calcSingleAssetJoin(tokenIn sdk.Coin, swapFee sdk.Dec, tokenInPoolAsset PoolAsset, totalShares sdk.Int) (numShares sdk.Int, err error) {
@@ -179,6 +175,59 @@ pub fn calc_pool_shares_out_given_single_asset_in(
 // 	).TruncateInt(), nil
 // }
 
+#[cw_serde]
+pub struct Pool {
+    pub assets: Vec<PoolAsset>,
+    pub total_weight: Uint128,
+    pub total_shares: Coin,
+}
+
+impl TryFrom<ProtoPool> for Pool {
+    type Error = StdError;
+
+    fn try_from(proto_pool: ProtoPool) -> StdResult<Self> {
+        let assets = proto_pool
+            .pool_assets
+            .into_iter()
+            .map(|asset| PoolAsset::try_from(asset))
+            .collect::<StdResult<Vec<PoolAsset>>>()?;
+        let total_weight = Uint128::from_str(&proto_pool.total_weight)?;
+        let total_shares_proto =
+            proto_pool.total_shares.ok_or(StdError::generic_err("total shares not set"))?;
+        let total_shares = Coin {
+            amount: Uint128::from_str(total_shares_proto.amount.as_str())?,
+            denom: total_shares_proto.denom,
+        };
+
+        Ok(Pool {
+            assets,
+            total_weight,
+            total_shares,
+        })
+    }
+}
+
+#[cw_serde]
+pub struct PoolAsset {
+    pub token: Coin,
+    pub weight: Uint128,
+}
+
+impl TryFrom<ProtoPoolAsset> for PoolAsset {
+    type Error = StdError;
+
+    fn try_from(proto_pool_asset: ProtoPoolAsset) -> StdResult<Self> {
+        let proto_coin = proto_pool_asset.token.ok_or(StdError::generic_err("token is missing"))?;
+        Ok(PoolAsset {
+            token: Coin {
+                amount: Uint128::from_str(proto_coin.amount.as_str())?,
+                denom: proto_coin.denom,
+            },
+            weight: Uint128::from_str(proto_pool_asset.weight.as_str())?,
+        })
+    }
+}
+
 pub fn calc_single_asset_join(
     pool: Pool,
     token_in: &Coin,
@@ -191,20 +240,72 @@ pub fn calc_single_asset_join(
     // 		return sdk.ZeroInt(), err
     // 	}
 
-    let total_weight = Uint128::from_str(pool.total_weight.as_str())?;
-    if total_weight.is_zero() {
+    if pool.total_weight.is_zero() {
         return Err(StdError::generic_err("pool misconfigured, total weight = 0"));
     }
 
-    let token_in_pool_asset_weight = Uint128::from_str(token_in_pool_asset.weight.as_str())?;
-    let normalized_weight = Decimal::from_ratio(token_in_pool_asset_weight, total_weight);
+    let normalized_weight = Decimal::from_ratio(token_in_pool_asset.weight, pool.total_weight);
     calc_pool_shares_out_given_single_asset_in(
-        token_in,
-        total_shares,
-        token_in_pool_asset.token.amount,
+        Decimal::from_ratio(token_in_pool_asset.token.amount, Uint128::from(1u128)),
         normalized_weight,
+        Decimal::from_ratio(total_shares, Uint128::from(1u128)),
+        Decimal::from_ratio(token_in.amount, Uint128::from(1u128)),
         swap_fee,
-    )
+    )?
+    .to_integer()
+    .to_u128()
+    .map(Uint128::from)
+    .ok_or(StdError::from(CwDexError::BigIntOverflow {}))
+}
+
+// calcJoinSingleAssetTokensIn attempts to calculate single
+// asset join for all tokensIn given totalShares in pool,
+// poolAssetsByDenom and swapFee. totalShares is the number
+// of shares in pool before beginnning to join any of the tokensIn.
+//
+// Returns totalNewShares and totalNewLiquidity from joining all tokensIn
+// by mimicking individually single asset joining each.
+// or error if fails to calculate join for any of the tokensIn.
+// func (p *Pool) calcJoinSingleAssetTokensIn(tokensIn sdk.Coins, totalShares sdk.Int, poolAssetsByDenom map[string]PoolAsset, swapFee sdk.Dec) (sdk.Int, sdk.Coins, error) {
+// 	totalNewShares := sdk.ZeroInt()
+// 	totalNewLiquidity := sdk.NewCoins()
+// 	for _, coin := range tokensIn {
+// 		newShares, err := p.calcSingleAssetJoin(coin, swapFee, poolAssetsByDenom[coin.Denom], totalShares.Add(totalNewShares))
+// 		if err != nil {
+// 			return sdk.ZeroInt(), sdk.Coins{}, err
+// 		}
+
+// 		totalNewLiquidity = totalNewLiquidity.Add(coin)
+// 		totalNewShares = totalNewShares.Add(newShares)
+// 	}
+// 	return totalNewShares, totalNewLiquidity, nil
+// }
+
+pub fn calc_join_single_asset_tokens_in(
+    pool: Pool,
+    tokens_in: Vec<Coin>,
+    total_shares: Uint128,
+    pool_assets: Vec<PoolAsset>,
+    swap_fee: Decimal,
+) -> StdResult<(Uint128, Vec<Coin>)> {
+    let mut total_new_shares = Uint128::zero();
+    let mut total_new_liquidity = vec![];
+    for coin in tokens_in {
+        let new_shares = calc_single_asset_join(
+            pool.clone(),
+            &coin,
+            swap_fee,
+            pool_assets
+                .iter()
+                .find(|pool_asset| pool_asset.token.denom == coin.denom)
+                .ok_or(StdError::generic_err("pool asset not found"))?,
+            total_shares.checked_add(total_new_shares)?,
+        )?;
+
+        total_new_liquidity.push(coin);
+        total_new_shares = total_new_shares.checked_add(new_shares)?;
+    }
+    Ok((total_new_shares, total_new_liquidity))
 }
 
 /// Calculates the [[`Coin`]] amounts that will be returned when withdrawing `exit_share_amount` LP shares from the pool
@@ -317,12 +418,12 @@ pub fn osmosis_calculate_exit_pool_amounts(
 /// even weight of the two assets. Go function in osmosis code can be found here:
 /// https://github.com/osmosis-labs/osmosis/blob/main/x/gamm/pool-models/balancer/amm.go#L94
 fn osmosis_solve_constant_function_invariant(
-    token_balance_fixed_before: Uint128,
-    token_balance_fixed_after: Uint128,
+    token_balance_fixed_before: Decimal,
+    token_balance_fixed_after: Decimal,
     token_weight_fixed: Decimal,
-    token_balance_unknown_before: Uint128,
+    token_balance_unknown_before: Decimal,
     token_weight_unknown: Decimal,
-) -> StdResult<BigInt> {
+) -> StdResult<BigRational> {
     // // weightRatio = (weightX/weightY)
     // weightRatio := tokenWeightFixed.Quo(tokenWeightUnknown)
     let weight_ratio =
@@ -331,10 +432,12 @@ fn osmosis_solve_constant_function_invariant(
     // // y = balanceXBefore/balanceXAfter
     // y := tokenBalanceFixedBefore.Quo(tokenBalanceFixedAfter)
     // let y = Decimal::from_ratio(token_balance_fixed_before, token_balance_fixed_after);
-    let y = BigRational::new_raw(
-        token_balance_fixed_before.u128().into(),
-        token_balance_fixed_after.u128().into(),
-    );
+    // let y = BigRational::new_raw(
+    //     token_balance_fixed_before.u128().into(),
+    //     token_balance_fixed_after.u128().into(),
+    // );
+    let y = decimal_to_bigrational(token_balance_fixed_before)
+        / decimal_to_bigrational(token_balance_fixed_after);
 
     // // amountY = balanceY * (1 - (y ^ weightRatio))
     // yToWeightRatio := osmomath.Pow(y, weightRatio)
@@ -343,9 +446,8 @@ fn osmosis_solve_constant_function_invariant(
     // return amountY
     let y_to_weight_ratio = _osmosis_pow(y, weight_ratio)?;
     let paranthetical = BigRational::new_raw(1u128.into(), 1u128.into()) - y_to_weight_ratio;
-    let amount_y = BigRational::new_raw(token_balance_unknown_before.u128().into(), 1u128.into())
-        * paranthetical;
-    return Ok(amount_y.to_integer());
+    let amount_y = decimal_to_bigrational(token_balance_unknown_before) * paranthetical;
+    return Ok(amount_y);
 }
 
 fn decimal_to_bigrational(decimal: Decimal) -> BigRational {
@@ -545,12 +647,6 @@ mod tests {
         pub pool_assets: Vec<PoolAsset>,
         pub tokens_in: Vec<Coin>,
         pub expect_shares: Uint128,
-    }
-
-    #[derive(Clone)]
-    struct PoolAsset {
-        pub token: Coin,
-        pub weight: Uint128,
     }
 
     #[test]
@@ -779,30 +875,83 @@ mod tests {
             expect_shares: Uint128::new(5_000_000),
         }];
 
-        for test_case in calc_single_asset_join_test_cases {
-            let token_in = test_case.tokens_in[0].clone();
+        // func assertExpectedSharesErrRatio(t *testing.T, expectedShares, actualShares sdk.Int) {
+        //     allowedErrRatioDec, err := sdk.NewDecFromStr(allowedErrRatio)
+        //     require.NoError(t, err)
 
-            // Get the PoolAsset for the provided asset
-            let provided_asset_pool =
-                test_case.pool_assets.iter().find(|a| a.token.denom == token_in.denom).unwrap();
+        //     errTolerance := osmoutils.ErrTolerance{
+        //         MultiplicativeTolerance: allowedErrRatioDec,
+        //     }
 
-            // Calculate the normalized weight for the provided asset
-            let total_weight: Uint128 = test_case.pool_assets.iter().map(|a| a.weight).sum();
-            let normalized_weight = Decimal::from_ratio(provided_asset_pool.weight, total_weight);
+        //     require.Equal(
+        //         t,
+        //         0,
+        //         errTolerance.Compare(expectedShares, actualShares),
+        //         fmt.Sprintf("expectedShares: %s, actualShares: %s", expectedShares.String(), actualShares.String()))
+        // }
 
-            // Call function to calc single sided joining
-            let actual = calc_pool_shares_out_given_single_asset_in(
-                &test_case.tokens_in[0],
-                existing_pool_shares,
-                provided_asset_pool.token.amount,
-                normalized_weight,
+        fn assert_expected_shares_err_ratio(expected_shares: Uint128, actual_shares: Uint128) {
+            fn compare(expected: Uint128, actual: Uint128) -> i8 {
+                let allowed_err_ratio_dec = Decimal::from_str("0.0000001").unwrap();
+                let multiplicative_tolerance = allowed_err_ratio_dec;
+                let diff = if expected > actual {
+                    expected - actual
+                } else {
+                    actual - expected
+                };
+
+                let comparison_sign = if expected > actual {
+                    1
+                } else {
+                    -1
+                };
+
+                //Check multiplicative tolerance equations
+                if !multiplicative_tolerance.is_zero() {
+                    // let err_term = diff.to_decimal() / Decimal::from(expected.min(actual));
+                    let err_term = Decimal::from_ratio(diff, expected.min(actual));
+                    if err_term > multiplicative_tolerance {
+                        return comparison_sign;
+                    }
+                }
+                return 0;
+            }
+
+            assert_eq!(0, compare(expected_shares, actual_shares));
+        }
+
+        for (id, test_case) in calc_single_asset_join_test_cases.into_iter().enumerate() {
+            let expected_new_liquidity = test_case.tokens_in.clone();
+
+            let one_share = Uint128::from(10u128.pow(18));
+            let init_pool_shares_supply = one_share * Uint128::from(100u128);
+
+            let pool = Pool {
+                assets: test_case.pool_assets.clone(),
+                total_weight: test_case.pool_assets.iter().map(|a| a.weight).sum(),
+                total_shares: Coin {
+                    denom: test_case
+                        .pool_assets
+                        .iter()
+                        .fold("".to_string(), |acc, a| acc + &a.token.denom + " "),
+                    amount: init_pool_shares_supply,
+                },
+            };
+
+            let (total_num_shares, total_new_liquidity) = calc_join_single_asset_tokens_in(
+                pool.clone(),
+                test_case.tokens_in,
+                pool.total_shares.amount,
+                test_case.pool_assets,
                 test_case.swap_fee,
             )
             .unwrap();
 
-            println!("Running test for Test case: {}", test_case.name);
+            println!("Running test for Test case id {}, name: {}", id, test_case.name);
 
-            assert_eq!(actual, test_case.expect_shares);
+            assert_eq!(expected_new_liquidity, total_new_liquidity);
+
+            assert_expected_shares_err_ratio(test_case.expect_shares, total_num_shares);
         }
     }
 }
