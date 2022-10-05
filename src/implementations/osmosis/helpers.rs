@@ -102,3 +102,12 @@ pub(crate) fn assert_native_asset_info(asset_info: &AssetInfo) -> Result<String,
         _ => Err(CwDexError::InvalidOutAsset {}),
     }
 }
+
+pub(crate) fn merge_assets<'a, A: Into<&'a AssetList>>(assets: A) -> StdResult<AssetList> {
+    let asset_list = assets.into();
+    let mut merged = AssetList::new();
+    for asset in asset_list {
+        merged.add(asset)?;
+    }
+    Ok(merged)
+}
