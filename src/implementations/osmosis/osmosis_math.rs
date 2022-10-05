@@ -27,30 +27,22 @@ pub fn osmosis_calculate_join_pool_shares(
             id: pool_id,
         }))?;
 
-    // Validate that sent assets are in the pool
-    if !pool_state.assets.iter().all(|x| assets.iter().any(|y| x.denom == y.denom)) {
-        return Err(StdError::generic_err(format!(
-            "Invalid assets sent. Pool assets: {:?}, sent assets: {:?}",
-            pool_state.assets, assets
-        )));
-    }
-
-    // TODO: Need to check if there are duplicates in the assets list?
-
-    if assets.len() == 2 {
+    if assets.len() == 1 && pool_state.assets.iter().any(|c| c.denom == assets[0].denom) {
+        todo!("Calculate single asset join pool shares")
+    } else if pool_state.assets.iter().all(|x| assets.iter().any(|y| x.denom == y.denom)) {
         let shares_out_amount = calc_join_pool_shares_double_sided(
             assets,
             pool_state.assets,
             pool_state.shares.amount,
         )?;
 
-        return Ok(Coin {
+        Ok(Coin {
             denom: pool_state.shares.denom,
             amount: shares_out_amount,
-        });
+        })
+    } else {
+        Err(StdError::generic_err("Provided assets must be either exactly one of the pool assets or all of the pool assets"))
     }
-
-    Err(StdError::generic_err("only 2 assets can be added to pool"))
 }
 
 // func calcPoolSharesOutGivenSingleAssetIn(

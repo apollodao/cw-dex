@@ -3,8 +3,8 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use apollo_proto_rust::osmosis::gamm::v1beta1::{
-    MsgExitPool, MsgJoinPool, MsgSwapExactAmountIn, QueryTotalPoolLiquidityRequest,
-    QueryTotalPoolLiquidityResponse, SwapAmountInRoute,
+    MsgExitPool, MsgJoinPool, MsgJoinSwapExternAmountIn, MsgSwapExactAmountIn,
+    QueryTotalPoolLiquidityRequest, QueryTotalPoolLiquidityResponse, SwapAmountInRoute,
 };
 
 use cw_utils::Duration as CwDuration;
@@ -30,8 +30,8 @@ use crate::utils::vec_into;
 use crate::{pool, CwDexError, Pool, Staking};
 
 use super::helpers::{
-    assert_native_asset_info, assert_native_coin, assert_only_native_coins, query_lock,
-    ToProtobufDuration,
+    assert_native_asset_info, assert_native_coin, assert_only_native_coins, merge_assets,
+    query_lock, ToProtobufDuration,
 };
 
 /// Struct for interacting with Osmosis v1beta1 balancer pools. If `pool_id` maps to another type of pool this will fail.
@@ -61,7 +61,8 @@ impl Pool for OsmosisPool {
         recipient: Addr,
         slippage_tolerance: Option<Decimal>,
     ) -> Result<Response, CwDexError> {
-        let assets = assert_only_native_coins(assets)?;
+        // Remove all zero amount Coins, merge duplicates and assert that all assets are native.
+        let assets = assert_only_native_coins(merge_assets(assets.purge().deref())?)?;
 
         let querier = QuerierWrapper::<OsmosisQuery>::new(deps.querier.deref());
 
@@ -70,27 +71,25 @@ impl Pool for OsmosisPool {
                 id: self.pool_id,
             }))?;
 
-        // TODO: merge duplicates in assets
+        // TODO: Turn into stargate query
+        let shares_out =
+            osmosis_calculate_join_pool_shares(querier, self.pool_id, assets.to_vec())?;
 
         // If provided asset is one of the pool assets, perform single sided join
+        let mut join_msg;
         if assets.len() == 1 && pool_state.assets.iter().any(|c| c.denom == assets[0].denom) {
-            //todo
-            querier.query(&QueryRequest::Custom(OsmosisQuery::SpotPrice {
-                swap: Swap {
+            join_msg = CosmosMsg::Stargate {
+                type_url: OsmosisTypeURLs::JoinSwapExternAmountIn.to_string(),
+                value: encode(MsgJoinSwapExternAmountIn {
+                    sender: recipient.to_string(),
                     pool_id: self.pool_id,
-                    denom_in: todo!(),
-                    denom_out: todo!(),
-                },
-                with_swap_fee: todo!(),
-            }))?;
+                    token_in: Some(assets[0].into()),
+                    share_out_min_amount: shares_out.amount.to_string(),
+                }),
+            }
         } else if pool_state.assets.iter().all(|x| assets.iter().any(|y| x.denom == y.denom)) {
             // Else if provided assets are the pool assets, perform a normal join
-
-            // TODO: Turn into stargate query
-            let shares_out =
-                osmosis_calculate_join_pool_shares(querier, self.pool_id, assets.to_vec())?;
-
-            let join_msg = CosmosMsg::Stargate {
+            join_msg = CosmosMsg::Stargate {
                 type_url: OsmosisTypeURLs::JoinPool.to_string(),
                 value: encode(MsgJoinPool {
                     pool_id: self.pool_id,
@@ -101,17 +100,15 @@ impl Pool for OsmosisPool {
                         .map(|coin| coin.into())
                         .collect::<Vec<apollo_proto_rust::cosmos::base::v1beta1::Coin>>(),
                 }),
-            };
+            }
+        };
 
-            let event = Event::new("apollo/cw-dex/provide_liquidity")
-                .add_attribute("pool_id", self.pool_id.to_string())
-                .add_attribute("shares_out", shares_out.to_string())
-                .add_attribute("recipient", recipient.to_string());
+        let event = Event::new("apollo/cw-dex/provide_liquidity")
+            .add_attribute("pool_id", self.pool_id.to_string())
+            .add_attribute("shares_out", shares_out.to_string())
+            .add_attribute("recipient", recipient.to_string());
 
-            Ok(Response::new().add_message(join_msg).add_event(event))
-        } else {
-            Err(CwDexError::Std(StdError::generic_err("Provided assets must be either exactly one of the pool assets or all of the pool assets")))
-        }
+        Ok(Response::new().add_message(join_msg).add_event(event))
     }
 
     fn withdraw_liquidity(
