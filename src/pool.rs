@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Decimal, MessageInfo, Response, StdResult};
+use cosmwasm_std::{Addr, Decimal, Response, StdResult};
 use cosmwasm_std::{Deps, Uint128};
 use cw_asset::{Asset, AssetInfo, AssetList};
 
@@ -77,9 +77,12 @@ pub trait Pool {
     fn simulate_swap(
         &self,
         deps: Deps,
-        info: MessageInfo,
         offer_asset: Asset,
         ask_asset_info: AssetInfo,
         minimum_out_amount: Uint128,
+        //For some reason Osmosis requires us to send a sender address for simulation.
+        //This obviously makes no sense and I guess we'll have to make a PR to
+        //Osmosis to fix this, or perhaps copy their math and perform the calculation here...
+        sender: Option<String>,
     ) -> StdResult<Uint128>;
 }
