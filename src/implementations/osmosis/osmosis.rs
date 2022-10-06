@@ -18,8 +18,8 @@ use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    Addr, Coin, CosmosMsg, Decimal, Deps, Event, MessageInfo, QuerierWrapper, QueryRequest,
-    Response, StdError, StdResult, Uint128,
+    Addr, Coin, CosmosMsg, Decimal, Deps, Event, Fraction, MessageInfo, QuerierWrapper,
+    QueryRequest, Response, StdError, StdResult, Uint128,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
 use osmo_bindings::{OsmosisQuery, PoolStateResponse};
@@ -78,6 +78,8 @@ impl Pool for OsmosisPool {
         let shares_out =
             osmosis_calculate_join_pool_shares(querier, self.pool_id, assets.to_vec())?;
 
+        let slippage_tolerance = slippage_tolerance.unwrap_or_else(|| Decimal::one());
+
         // If provided asset is one of the pool assets, perform single sided join
         let join_msg =
             if assets.len() == 1 && pool_state.assets.iter().any(|c| c.denom == assets[0].denom) {
@@ -87,22 +89,35 @@ impl Pool for OsmosisPool {
                         sender: recipient.to_string(),
                         pool_id: self.pool_id,
                         token_in: Some(assets[0].clone().into()),
-                        share_out_min_amount: shares_out.amount.to_string(),
+                        share_out_min_amount: (shares_out.amount * slippage_tolerance).to_string(),
                     }),
                 })
             } else if pool_state.assets.iter().all(|x| assets.iter().any(|y| x.denom == y.denom)) {
                 // Else if provided assets are the pool assets, perform a normal join
+                let inverted_slippage_tolerance = slippage_tolerance
+                    .inv()
+                    .ok_or(StdError::generic_err("Slippage tolerance must be greater than 0"))?;
                 Ok(CosmosMsg::Stargate {
                     type_url: OsmosisTypeURLs::JoinPool.to_string(),
-                    value: encode(MsgJoinPool {
-                        pool_id: self.pool_id,
-                        sender: recipient.to_string(),
-                        share_out_amount: shares_out.amount.to_string(),
-                        token_in_maxs: assets
-                            .into_iter()
-                            .map(|coin| coin.into())
-                            .collect::<Vec<apollo_proto_rust::cosmos::base::v1beta1::Coin>>(),
-                    }),
+                    value: encode::<MsgJoinPool>(
+                        MsgJoinPool {
+                            pool_id: self.pool_id,
+                            sender: recipient.to_string(),
+                            share_out_amount: shares_out.amount.to_string(),
+                            token_in_maxs: assets
+                                .into_iter()
+                                .map(|coin| {
+                                    let amount = coin.amount * inverted_slippage_tolerance;
+                                    Ok(Coin {
+                                        denom: coin.denom,
+                                        amount,
+                                    }
+                                    .into())
+                                })
+                                .collect::<StdResult<Vec<_>>>()?,
+                        }
+                        .into(),
+                    ),
                 })
             } else {
                 Err(StdError::generic_err("Provided assets do not match pool assets"))
