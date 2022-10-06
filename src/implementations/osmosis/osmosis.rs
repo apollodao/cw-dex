@@ -61,6 +61,8 @@ impl Pool for OsmosisPool {
         recipient: Addr,
         slippage_tolerance: Option<Decimal>,
     ) -> Result<Response, CwDexError> {
+        let mut assets = assets;
+
         // Remove all zero amount Coins, merge duplicates and assert that all assets are native.
         let assets = assert_only_native_coins(merge_assets(assets.purge().deref())?)?;
 
@@ -76,32 +78,34 @@ impl Pool for OsmosisPool {
             osmosis_calculate_join_pool_shares(querier, self.pool_id, assets.to_vec())?;
 
         // If provided asset is one of the pool assets, perform single sided join
-        let mut join_msg;
-        if assets.len() == 1 && pool_state.assets.iter().any(|c| c.denom == assets[0].denom) {
-            join_msg = CosmosMsg::Stargate {
-                type_url: OsmosisTypeURLs::JoinSwapExternAmountIn.to_string(),
-                value: encode(MsgJoinSwapExternAmountIn {
-                    sender: recipient.to_string(),
-                    pool_id: self.pool_id,
-                    token_in: Some(assets[0].into()),
-                    share_out_min_amount: shares_out.amount.to_string(),
-                }),
-            }
-        } else if pool_state.assets.iter().all(|x| assets.iter().any(|y| x.denom == y.denom)) {
-            // Else if provided assets are the pool assets, perform a normal join
-            join_msg = CosmosMsg::Stargate {
-                type_url: OsmosisTypeURLs::JoinPool.to_string(),
-                value: encode(MsgJoinPool {
-                    pool_id: self.pool_id,
-                    sender: recipient.to_string(),
-                    share_out_amount: shares_out.amount.to_string(),
-                    token_in_maxs: assets
-                        .into_iter()
-                        .map(|coin| coin.into())
-                        .collect::<Vec<apollo_proto_rust::cosmos::base::v1beta1::Coin>>(),
-                }),
-            }
-        };
+        let join_msg =
+            if assets.len() == 1 && pool_state.assets.iter().any(|c| c.denom == assets[0].denom) {
+                Ok(CosmosMsg::Stargate {
+                    type_url: OsmosisTypeURLs::JoinSwapExternAmountIn.to_string(),
+                    value: encode(MsgJoinSwapExternAmountIn {
+                        sender: recipient.to_string(),
+                        pool_id: self.pool_id,
+                        token_in: Some(assets[0].clone().into()),
+                        share_out_min_amount: shares_out.amount.to_string(),
+                    }),
+                })
+            } else if pool_state.assets.iter().all(|x| assets.iter().any(|y| x.denom == y.denom)) {
+                // Else if provided assets are the pool assets, perform a normal join
+                Ok(CosmosMsg::Stargate {
+                    type_url: OsmosisTypeURLs::JoinPool.to_string(),
+                    value: encode(MsgJoinPool {
+                        pool_id: self.pool_id,
+                        sender: recipient.to_string(),
+                        share_out_amount: shares_out.amount.to_string(),
+                        token_in_maxs: assets
+                            .into_iter()
+                            .map(|coin| coin.into())
+                            .collect::<Vec<apollo_proto_rust::cosmos::base::v1beta1::Coin>>(),
+                    }),
+                })
+            } else {
+                Err(StdError::generic_err("Provided assets do not match pool assets"))
+            }?;
 
         let event = Event::new("apollo/cw-dex/provide_liquidity")
             .add_attribute("pool_id", self.pool_id.to_string())
