@@ -18,8 +18,8 @@ use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    Addr, Coin, CosmosMsg, Decimal, Deps, Event, Fraction, MessageInfo, QuerierWrapper,
-    QueryRequest, Response, StdError, StdResult, Uint128,
+    Addr, Coin, CosmosMsg, Decimal, Deps, Event, Fraction, QuerierWrapper, QueryRequest, Response,
+    StdError, StdResult, Uint128,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
 use osmo_bindings::{OsmosisQuery, PoolStateResponse};
@@ -248,17 +248,18 @@ impl Pool for OsmosisPool {
     fn simulate_swap(
         &self,
         deps: Deps,
-        info: MessageInfo,
         offer: Asset,
         _ask_asset_info: AssetInfo,
         _minimum_out_amount: Uint128,
+        sender: Option<String>,
     ) -> StdResult<Uint128> {
         let offer: Coin = offer.try_into()?;
         let swap_response =
             deps.querier.query::<QuerySwapExactAmountInResponse>(&QueryRequest::Stargate {
                 path: OsmosisTypeURLs::QuerySwapExactAmountIn.to_string(),
                 data: encode(QuerySwapExactAmountInRequest {
-                    sender: info.sender.to_string(),
+                    sender: sender
+                        .ok_or(StdError::generic_err("sender is required for osmosis"))?,
                     pool_id: self.pool_id,
                     routes: vec![SwapAmountInRoute {
                         pool_id: self.pool_id,
