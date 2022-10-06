@@ -6,12 +6,11 @@ use std::{
 use apollo_proto_rust::osmosis::gamm::v1beta1::{Pool as ProtoPool, PoolAsset as ProtoPoolAsset};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Coin, Decimal, QuerierWrapper, QueryRequest, StdError, StdResult, Uint128};
-use cw20_base::ContractError;
 use num_bigint::BigInt;
 use osmo_bindings::{OsmosisQuery, PoolStateResponse};
 
 use num_rational::BigRational;
-use num_traits::{identities::One, ToPrimitive};
+use num_traits::ToPrimitive;
 
 use crate::CwDexError;
 
@@ -418,8 +417,7 @@ fn osmosis_solve_constant_function_invariant(
 ) -> StdResult<BigRational> {
     // // weightRatio = (weightX/weightY)
     // weightRatio := tokenWeightFixed.Quo(tokenWeightUnknown)
-    let weight_ratio =
-        decimal_to_bigrational(token_weight_fixed) / decimal_to_bigrational(token_weight_unknown);
+    let weight_ratio = token_weight_fixed / token_weight_unknown;
 
     // // y = balanceXBefore/balanceXAfter
     // y := tokenBalanceFixedBefore.Quo(tokenBalanceFixedAfter)
@@ -428,8 +426,7 @@ fn osmosis_solve_constant_function_invariant(
     //     token_balance_fixed_before.u128().into(),
     //     token_balance_fixed_after.u128().into(),
     // );
-    let y = decimal_to_bigrational(token_balance_fixed_before)
-        / decimal_to_bigrational(token_balance_fixed_after);
+    let y = token_balance_fixed_before / token_balance_fixed_after;
 
     // // amountY = balanceY * (1 - (y ^ weightRatio))
     // yToWeightRatio := osmomath.Pow(y, weightRatio)
@@ -447,8 +444,9 @@ fn decimal_to_bigrational(decimal: Decimal) -> BigRational {
     BigRational::new_raw(decimal.atomics().u128().into(), denom.clone())
 }
 
-fn _osmosis_pow(base: BigRational, exp: BigRational) -> StdResult<BigRational> {
-    if base >= BigRational::new_raw(2u128.into(), 1u128.into()) {
+fn _osmosis_pow(base: Decimal, exp: Decimal) -> StdResult<BigRational> {
+    let base_big = decimal_to_bigrational(base);
+    if base_big >= BigRational::new_raw(2u128.into(), 1u128.into()) {
         return Err(StdError::generic_err("base must be lesser than two"));
     }
 
@@ -457,12 +455,16 @@ fn _osmosis_pow(base: BigRational, exp: BigRational) -> StdResult<BigRational> {
     // // an integer component and a fractional component.
     // integer := exp.TruncateDec()
     // fractional := exp.Sub(integer)
-    let integer = exp.to_integer();
-    let fractional = exp - BigRational::new_raw(integer.clone(), 1u128.into());
+
+    // let integer = exp.to_integer();
+    // let fractional = exp - BigRational::new_raw(integer.clone(), 1u128.into());
+    let integer = exp * Uint128::one();
+    let fractional = exp - Decimal::from_ratio(integer, 1u128);
 
     // integerPow := base.Power(uint64(integer.TruncateInt64()))
-    let integer_pow = base.pow(
+    let integer_pow = base_big.pow(
         integer
+            .u128()
             .try_into()
             .map_err(|x| StdError::generic_err(format!("integer conversion failed: {}", x)))?,
     );
@@ -470,14 +472,14 @@ fn _osmosis_pow(base: BigRational, exp: BigRational) -> StdResult<BigRational> {
     // if fractional.IsZero() {
     // 	return integerPow
     // }
-    if fractional == BigRational::new_raw(0u128.into(), 1u128.into()) {
+    if fractional.is_zero() {
         return Ok(integer_pow);
     }
 
-    let pow_precision: BigRational = BigRational::new_raw(1u128.into(), 100000000u128.into());
+    let pow_precision = Decimal::from_ratio(1u128, 100000000u128);
 
     // fractionalPow := PowApprox(base, fractional, powPrecision)
-    let fractional_pow = _osmosis_pow_approx(base, fractional, pow_precision.clone());
+    let fractional_pow = _osmosis_pow_approx(base, fractional, pow_precision.clone())?;
 
     // return integerPow.Mul(fractionalPow)
     return Ok(integer_pow * fractional_pow);
@@ -485,11 +487,10 @@ fn _osmosis_pow(base: BigRational, exp: BigRational) -> StdResult<BigRational> {
 
 // Contract: 0 < base <= 2
 // 0 <= exp < 1.
-fn _osmosis_pow_approx(base: BigRational, exp: BigRational, precision: BigRational) -> BigRational {
-    let zero: BigRational = BigRational::from_integer(0u128.into());
+fn _osmosis_pow_approx(base: Decimal, exp: Decimal, precision: Decimal) -> StdResult<BigRational> {
     let one: BigRational = BigRational::from_integer(1u128.into());
-    if exp == zero {
-        return one;
+    if exp.is_zero() {
+        return Ok(one);
     }
 
     // Common case optimization
@@ -534,20 +535,22 @@ fn _osmosis_pow_approx(base: BigRational, exp: BigRational, precision: BigRation
     // term := sdk.OneDec()
     // sum := sdk.OneDec()
     // negative := false
-    let (x, x_neg) = _osmosis_abs_difference_with_sign(base, one.clone());
-    let mut term = one.clone();
+    let (x, x_neg) = _osmosis_abs_difference_with_sign(base, Decimal::one());
+    let mut term = Decimal::one();
     let mut sum = one;
     let mut negative = false;
 
     // a := exp.Clone()
     // bigK := sdk.NewDec(0)
     let mut a = exp.clone();
-    let mut big_k = zero.clone();
+    let mut big_k = Decimal::zero();
 
+    println!("precision: {}", precision.to_string());
     // for i := int64(1); term.GTE(precision); i++ {
-    let mut i: i64 = 0;
+    let mut i: i64 = 1;
     loop {
-        i += 1;
+        // println!("term: {}", term.to_string());
+
         if term < precision {
             break;
         }
@@ -561,8 +564,12 @@ fn _osmosis_pow_approx(base: BigRational, exp: BigRational, precision: BigRation
         // // On this line, bigK == i.
         // bigK.Set(sdk.NewDec(i))
         // term.MulMut(c).MulMut(x).QuoMut(bigK)
-        big_k = BigRational::new_raw(i.into(), 1u128.into());
-        term *= c * x.clone() / big_k.clone();
+        // big_k = BigRational::new_raw(i.into(), 1u128.into());
+        big_k = Decimal::from_ratio(i as u128, 1u128);
+        term = mul_mut(term, c)?;
+        term = mul_mut(term, x)?;
+        term /= big_k.clone();
+        // term = quo_mut(term, big_k)?
 
         // // a is mutated on absDifferenceWithSign, reset
         // a.Set(exp)
@@ -573,7 +580,7 @@ fn _osmosis_pow_approx(base: BigRational, exp: BigRational, precision: BigRation
         // if term.isZero() {
         //     break;
         // }
-        if term == zero {
+        if term.is_zero() {
             break;
         }
 
@@ -597,17 +604,100 @@ fn _osmosis_pow_approx(base: BigRational, exp: BigRational, precision: BigRation
         //     sum.AddMut(term)
         // }
         if negative {
-            sum -= term.clone();
+            sum -= decimal_to_bigrational(term);
         } else {
-            sum += term.clone();
+            sum += decimal_to_bigrational(term);
+        }
+
+        i += 1;
+    }
+    return Ok(sum);
+}
+
+//Don't ask...
+fn chop_precision_and_round(d: u128) -> u128 {
+    // 	// get the truncated quotient and remainder
+    // quo, rem := d, big.NewInt(0)
+    // quo, rem = quo.QuoRem(d, precisionReuse, rem)
+
+    // if rem.Sign() == 0 { // remainder is zero
+    // 	return quo
+    // }
+
+    // switch rem.Cmp(fivePrecision) {
+    // case -1:
+    // 	return quo
+    // case 1:
+    // 	return quo.Add(quo, oneInt)
+    // default: // bankers rounding must take place
+    // 	// always round to an even number
+    // 	if quo.Bit(0) == 0 {
+    // 		return quo
+    // 	}
+    // 	return quo.Add(quo, oneInt)
+    // }
+
+    let precision_reuse = 10u128.pow(18);
+    let five_precision = precision_reuse / 2;
+
+    let quo = d / precision_reuse;
+    let rem = d - precision_reuse * quo;
+
+    if rem == 0 {
+        return quo;
+    }
+
+    if rem < five_precision {
+        return quo;
+    } else if rem > five_precision {
+        return quo + 1;
+    } else {
+        if ((quo >> 0) & 1) == 0 {
+            return quo;
+        } else {
+            return quo + 1;
         }
     }
-    return sum;
+}
+
+fn mul_mut(d: Decimal, d2: Decimal) -> StdResult<Decimal> {
+    let mut di = d.atomics();
+    di *= d2.atomics();
+
+    let chopped = chop_precision_and_round(di.u128());
+
+    Decimal::from_atomics(chopped, Decimal::DECIMAL_PLACES).map_err(|e| {
+        StdError::generic_err(format!("Error converting from atomics to decimal: {}", e))
+    })
+}
+
+fn quo_mut(d: Decimal, d2: Decimal) -> StdResult<Decimal> {
+    // multiply precision twice
+    // d.i.Mul(d.i, precisionReuse)
+    // d.i.Mul(d.i, precisionReuse)
+    // d.i.Quo(d.i, d2.i)
+
+    // chopPrecisionAndRound(d.i)
+    // if d.i.BitLen() > maxDecBitLen {
+    // 	panic("Int overflow")
+    // }
+    // return d
+
+    let mut di = d.atomics().u128();
+    di *= 10u128.pow(18);
+    di *= 10u128.pow(18);
+    di /= d2.atomics().u128();
+
+    let chopped = chop_precision_and_round(di);
+
+    Decimal::from_atomics(chopped, Decimal::DECIMAL_PLACES).map_err(|e| {
+        StdError::generic_err(format!("Error converting from atomics to decimal: {}", e))
+    })
 }
 
 // AbsDifferenceWithSign returns | a - b |, (a - b).sign()
 // a is mutated and returned.
-fn _osmosis_abs_difference_with_sign(a: BigRational, b: BigRational) -> (BigRational, bool) {
+fn _osmosis_abs_difference_with_sign(a: Decimal, b: Decimal) -> (Decimal, bool) {
     if a >= b {
         (a - b, false)
     } else {

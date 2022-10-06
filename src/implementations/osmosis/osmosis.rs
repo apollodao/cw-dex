@@ -21,13 +21,13 @@ use cosmwasm_std::{
     StdResult, Uint128,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
-use osmo_bindings::{OsmosisQuery, PoolStateResponse, Swap};
+use osmo_bindings::{OsmosisQuery, PoolStateResponse};
 
 use crate::osmosis::osmosis_math::{
     osmosis_calculate_exit_pool_amounts, osmosis_calculate_join_pool_shares,
 };
 use crate::utils::vec_into;
-use crate::{pool, CwDexError, Pool, Staking};
+use crate::{CwDexError, Pool, Staking};
 
 use super::helpers::{
     assert_native_asset_info, assert_native_coin, assert_only_native_coins, merge_assets,
