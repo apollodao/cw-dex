@@ -3,7 +3,16 @@ use std::{
     str::FromStr,
 };
 
-use apollo_proto_rust::osmosis::gamm::v1beta1::{Pool as ProtoPool, PoolAsset as ProtoPoolAsset};
+use apollo_proto_rust::{
+    osmosis::gamm::{
+        poolmodels::stableswap::v1beta1::PoolParams,
+        v1beta1::{
+            Pool as ProtoPool, PoolAsset as ProtoPoolAsset, QueryPoolRequest, QueryPoolResponse,
+        },
+    },
+    utils::{decode, encode},
+    OsmosisTypeURLs,
+};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Coin, Decimal, QuerierWrapper, QueryRequest, StdError, StdResult, Uint128};
 use num_bigint::BigInt;
@@ -12,7 +21,7 @@ use osmo_bindings::{OsmosisQuery, PoolStateResponse};
 use num_rational::BigRational;
 use num_traits::ToPrimitive;
 
-use crate::CwDexError;
+use crate::{pool, CwDexError};
 
 use super::helpers::query_pool_params;
 
@@ -27,7 +36,34 @@ pub fn osmosis_calculate_join_pool_shares(
         }))?;
 
     if assets.len() == 1 && pool_state.assets.iter().any(|c| c.denom == assets[0].denom) {
-        todo!("Calculate single asset join pool shares")
+        let pool: Pool = decode::<ProtoPool>(
+            &querier
+                .query::<QueryPoolResponse>(&QueryRequest::Stargate {
+                    path: OsmosisTypeURLs::QueryPool.to_string(),
+                    data: encode(QueryPoolRequest {
+                        pool_id,
+                    }),
+                })?
+                .pool
+                .ok_or(StdError::generic_err("failed to query pool"))?
+                .value
+                .as_slice()
+                .into(),
+        )
+        .map_err(|e| StdError::generic_err(format!("{}", e)))?
+        .try_into()?;
+        let shares_out = calc_join_single_asset_tokens_in(
+            pool.clone(),
+            assets,
+            pool.total_shares.amount,
+            pool.assets,
+            pool.swap_fee,
+        )?
+        .0;
+        Ok(Coin {
+            denom: pool.total_shares.denom,
+            amount: shares_out,
+        })
     } else if pool_state.assets.iter().all(|x| assets.iter().any(|y| x.denom == y.denom)) {
         let shares_out_amount = calc_join_pool_shares_double_sided(
             assets,
@@ -171,6 +207,7 @@ pub struct Pool {
     pub assets: Vec<PoolAsset>,
     pub total_weight: Uint128,
     pub total_shares: Coin,
+    pub swap_fee: Decimal,
 }
 
 impl TryFrom<ProtoPool> for Pool {
@@ -190,10 +227,14 @@ impl TryFrom<ProtoPool> for Pool {
             denom: total_shares_proto.denom,
         };
 
+        let pool_params =
+            proto_pool.pool_params.ok_or(StdError::generic_err("pool params not set"))?;
+
         Ok(Pool {
             assets,
             total_weight,
             total_shares,
+            swap_fee: Decimal::from_str(&pool_params.swap_fee)?,
         })
     }
 }
@@ -705,6 +746,8 @@ fn _osmosis_abs_difference_with_sign(a: Decimal, b: Decimal) -> (Decimal, bool) 
     }
 }
 
+// TODO: Tests for JoinPool and ExitPool
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1018,6 +1061,7 @@ mod tests {
                         .fold("".to_string(), |acc, a| acc + &a.token.denom + " "),
                     amount: init_pool_shares_supply,
                 },
+                swap_fee: test_case.swap_fee,
             };
 
             let (total_num_shares, total_new_liquidity) = calc_join_single_asset_tokens_in(
