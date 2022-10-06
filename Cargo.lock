@@ -23,7 +23,7 @@ dependencies = [
 [[package]]
 name = "apollo-proto-rust"
 version = "0.2.0"
-source = "git+https://github.com/apollodao/apollo-proto-rust#c32895a6f1c70337beed43ebc8e59034a8547610"
+source = "git+https://github.com/apollodao/apollo-proto-rust#48538a6f169e0875a353cb1b2a79a7af065aa37e"
 dependencies = [
  "cosmwasm-std",
  "prost",
@@ -274,7 +274,7 @@ dependencies = [
 [[package]]
 name = "cw-token"
 version = "0.1.0"
-source = "git+https://github.com/apollodao/cw-token.git#cec6eeffe1e68950ac206c3773d276d9d6f116a3"
+source = "git+https://github.com/apollodao/cw-token.git#3e29648ae249266652bae19f1d380de4fcce8699"
 dependencies = [
  "apollo-proto-rust 0.2.0 (git+https://github.com/apollodao/apollo-proto-rust?tag=v0.2.0)",
  "cosmwasm-schema",

@@ -4,7 +4,8 @@ use std::time::Duration;
 
 use apollo_proto_rust::osmosis::gamm::v1beta1::{
     MsgExitPool, MsgJoinPool, MsgJoinSwapExternAmountIn, MsgSwapExactAmountIn,
-    QueryTotalPoolLiquidityRequest, QueryTotalPoolLiquidityResponse, SwapAmountInRoute,
+    QuerySwapExactAmountInRequest, QuerySwapExactAmountInResponse, QueryTotalPoolLiquidityRequest,
+    QueryTotalPoolLiquidityResponse, SwapAmountInRoute,
 };
 
 use cw_utils::Duration as CwDuration;
@@ -17,8 +18,8 @@ use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    Addr, CosmosMsg, Decimal, Deps, Event, QuerierWrapper, QueryRequest, Response, StdError,
-    StdResult, Uint128,
+    Addr, Coin, CosmosMsg, Decimal, Deps, Event, MessageInfo, QuerierWrapper, QueryRequest,
+    Response, StdError, StdResult, Uint128,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
 use osmo_bindings::{OsmosisQuery, PoolStateResponse};
@@ -230,13 +231,27 @@ impl Pool for OsmosisPool {
 
     fn simulate_swap(
         &self,
-        _deps: Deps,
-        _offer_asset: Asset,
+        deps: Deps,
+        info: MessageInfo,
+        offer: Asset,
         _ask_asset_info: AssetInfo,
         _minimum_out_amount: Uint128,
-    ) -> Result<Uint128, CwDexError> {
-        // TODO: How do we do this? I don't see a stargate query for it...
-        todo!()
+    ) -> StdResult<Uint128> {
+        let offer: Coin = offer.try_into()?;
+        let swap_response =
+            deps.querier.query::<QuerySwapExactAmountInResponse>(&QueryRequest::Stargate {
+                path: OsmosisTypeURLs::QuerySwapExactAmountIn.to_string(),
+                data: encode(QuerySwapExactAmountInRequest {
+                    sender: info.sender.to_string(),
+                    pool_id: self.pool_id,
+                    routes: vec![SwapAmountInRoute {
+                        pool_id: self.pool_id,
+                        token_out_denom: offer.denom.clone(),
+                    }],
+                    token_in: offer.to_string(),
+                }),
+            })?;
+        Uint128::from_str(swap_response.token_out_amount.as_str())
     }
 }
 

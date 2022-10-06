@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Decimal, Response};
+use cosmwasm_std::{Addr, Decimal, MessageInfo, Response, StdResult};
 use cosmwasm_std::{Deps, Uint128};
 use cw_asset::{Asset, AssetInfo, AssetList};
 
@@ -77,8 +77,9 @@ pub trait Pool {
     fn simulate_swap(
         &self,
         deps: Deps,
+        info: MessageInfo,
         offer_asset: Asset,
         ask_asset_info: AssetInfo,
         minimum_out_amount: Uint128,
-    ) -> Result<Uint128, CwDexError>;
+    ) -> StdResult<Uint128>;
 }
