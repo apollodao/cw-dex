@@ -78,7 +78,8 @@ impl Pool for OsmosisPool {
         let shares_out =
             osmosis_calculate_join_pool_shares(querier, self.pool_id, assets.to_vec())?;
 
-        let slippage_tolerance = slippage_tolerance.unwrap_or_else(|| Decimal::one());
+        let slippage_tolerance =
+            Decimal::one() - slippage_tolerance.unwrap_or_else(|| Decimal::one());
 
         // If provided asset is one of the pool assets, perform single sided join
         let join_msg =

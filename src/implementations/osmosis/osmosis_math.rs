@@ -4,11 +4,8 @@ use std::{
 };
 
 use apollo_proto_rust::{
-    osmosis::gamm::{
-        poolmodels::stableswap::v1beta1::PoolParams,
-        v1beta1::{
-            Pool as ProtoPool, PoolAsset as ProtoPoolAsset, QueryPoolRequest, QueryPoolResponse,
-        },
+    osmosis::gamm::v1beta1::{
+        Pool as ProtoPool, PoolAsset as ProtoPoolAsset, QueryPoolRequest, QueryPoolResponse,
     },
     utils::{decode, encode},
     OsmosisTypeURLs,
@@ -21,7 +18,7 @@ use osmo_bindings::{OsmosisQuery, PoolStateResponse};
 use num_rational::BigRational;
 use num_traits::ToPrimitive;
 
-use crate::{pool, CwDexError};
+use crate::CwDexError;
 
 use super::helpers::query_pool_params;
 
@@ -712,7 +709,7 @@ fn mul_mut(d: Decimal, d2: Decimal) -> StdResult<Decimal> {
     })
 }
 
-fn quo_mut(d: Decimal, d2: Decimal) -> StdResult<Decimal> {
+fn _quo_mut(d: Decimal, d2: Decimal) -> StdResult<Decimal> {
     // multiply precision twice
     // d.i.Mul(d.i, precisionReuse)
     // d.i.Mul(d.i, precisionReuse)
@@ -788,7 +785,6 @@ mod tests {
         let one_trillion_even_pool_assets: Vec<PoolAsset> =
             vec![default_osmo_pool_asset.clone(), default_atom_pool_asset.clone()];
 
-        let existing_pool_shares: Uint128 = Uint128::new(100_000_000_000_000_000_000);
         let calc_single_asset_join_test_cases: Vec<CalcJoinSharesTestCase> = vec![
         CalcJoinSharesTestCase {
             name:         "single tokens_in - equal weights with zero swap fee".to_string(),
