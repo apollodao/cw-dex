@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Response};
+use cosmwasm_std::{Addr, Decimal, MessageInfo, Response, StdResult};
 use cosmwasm_std::{Deps, Uint128};
 use cw_asset::{Asset, AssetInfo, AssetList};
 
@@ -9,11 +9,14 @@ pub trait Pool {
     /// Provide liquidity to the pool.
     ///
     /// Returns a Response with the necessary messages to provide liquidity to the pool.
+    /// `assets` must only contain the assets in the pool, but the ratio of
+    /// amounts does not need to be the same as the pool's ratio.
     fn provide_liquidity(
         &self,
         deps: Deps,
         assets: AssetList,
         recipient: Addr,
+        slippage_tolerance: Option<Decimal>,
     ) -> Result<Response, CwDexError>;
 
     /// Withdraw liquidity from the pool.
@@ -74,8 +77,9 @@ pub trait Pool {
     fn simulate_swap(
         &self,
         deps: Deps,
+        info: MessageInfo,
         offer_asset: Asset,
         ask_asset_info: AssetInfo,
         minimum_out_amount: Uint128,
-    ) -> Result<Uint128, CwDexError>;
+    ) -> StdResult<Uint128>;
 }

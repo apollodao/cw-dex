@@ -24,6 +24,9 @@ pub enum CwDexError {
     InvalidInAsset {
         a: Asset,
     },
+
+    #[error("Overflow when converting to from BigInt to Uint128")]
+    BigIntOverflow {},
 }
 
 impl From<CwDexError> for StdError {

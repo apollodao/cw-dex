@@ -3,7 +3,8 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use apollo_proto_rust::osmosis::gamm::v1beta1::{
-    MsgExitPool, MsgJoinPool, MsgSwapExactAmountIn, QueryTotalPoolLiquidityRequest,
+    MsgExitPool, MsgJoinPool, MsgJoinSwapExternAmountIn, MsgSwapExactAmountIn,
+    QuerySwapExactAmountInRequest, QuerySwapExactAmountInResponse, QueryTotalPoolLiquidityRequest,
     QueryTotalPoolLiquidityResponse, SwapAmountInRoute,
 };
 
@@ -17,11 +18,11 @@ use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    Addr, CosmosMsg, Deps, Event, QuerierWrapper, QueryRequest, Response, StdError, StdResult,
-    Uint128,
+    Addr, Coin, CosmosMsg, Decimal, Deps, Event, Fraction, MessageInfo, QuerierWrapper,
+    QueryRequest, Response, StdError, StdResult, Uint128,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
-use osmo_bindings::OsmosisQuery;
+use osmo_bindings::{OsmosisQuery, PoolStateResponse};
 
 use crate::osmosis::osmosis_math::{
     osmosis_calculate_exit_pool_amounts, osmosis_calculate_join_pool_shares,
@@ -30,8 +31,8 @@ use crate::utils::vec_into;
 use crate::{CwDexError, Pool, Staking};
 
 use super::helpers::{
-    assert_native_asset_info, assert_native_coin, assert_only_native_coins, query_lock,
-    ToProtobufDuration,
+    assert_native_asset_info, assert_native_coin, assert_only_native_coins, merge_assets,
+    query_lock, ToProtobufDuration,
 };
 
 /// Struct for interacting with Osmosis v1beta1 balancer pools. If `pool_id` maps to another type of pool this will fail.
@@ -59,27 +60,69 @@ impl Pool for OsmosisPool {
         deps: Deps,
         assets: AssetList,
         recipient: Addr,
+        slippage_tolerance: Option<Decimal>,
     ) -> Result<Response, CwDexError> {
-        let assets = assert_only_native_coins(assets)?;
+        let mut assets = assets;
+
+        // Remove all zero amount Coins, merge duplicates and assert that all assets are native.
+        let assets = assert_only_native_coins(merge_assets(assets.purge().deref())?)?;
 
         let querier = QuerierWrapper::<OsmosisQuery>::new(deps.querier.deref());
+
+        let pool_state =
+            querier.query::<PoolStateResponse>(&QueryRequest::Custom(OsmosisQuery::PoolState {
+                id: self.pool_id,
+            }))?;
 
         // TODO: Turn into stargate query
         let shares_out =
             osmosis_calculate_join_pool_shares(querier, self.pool_id, assets.to_vec())?;
 
-        let join_msg = CosmosMsg::Stargate {
-            type_url: OsmosisTypeURLs::JoinPool.to_string(),
-            value: encode(MsgJoinPool {
-                pool_id: self.pool_id,
-                sender: recipient.to_string(),
-                share_out_amount: shares_out.amount.to_string(),
-                token_in_maxs: assets
-                    .into_iter()
-                    .map(|coin| coin.into())
-                    .collect::<Vec<apollo_proto_rust::cosmos::base::v1beta1::Coin>>(),
-            }),
-        };
+        let slippage_tolerance =
+            Decimal::one() - slippage_tolerance.unwrap_or_else(|| Decimal::one());
+
+        // If provided asset is one of the pool assets, perform single sided join
+        let join_msg =
+            if assets.len() == 1 && pool_state.assets.iter().any(|c| c.denom == assets[0].denom) {
+                Ok(CosmosMsg::Stargate {
+                    type_url: OsmosisTypeURLs::JoinSwapExternAmountIn.to_string(),
+                    value: encode(MsgJoinSwapExternAmountIn {
+                        sender: recipient.to_string(),
+                        pool_id: self.pool_id,
+                        token_in: Some(assets[0].clone().into()),
+                        share_out_min_amount: (shares_out.amount * slippage_tolerance).to_string(),
+                    }),
+                })
+            } else if pool_state.assets.iter().all(|x| assets.iter().any(|y| x.denom == y.denom)) {
+                // Else if provided assets are the pool assets, perform a normal join
+                let inverted_slippage_tolerance = slippage_tolerance
+                    .inv()
+                    .ok_or(StdError::generic_err("Slippage tolerance must be greater than 0"))?;
+                Ok(CosmosMsg::Stargate {
+                    type_url: OsmosisTypeURLs::JoinPool.to_string(),
+                    value: encode::<MsgJoinPool>(
+                        MsgJoinPool {
+                            pool_id: self.pool_id,
+                            sender: recipient.to_string(),
+                            share_out_amount: shares_out.amount.to_string(),
+                            token_in_maxs: assets
+                                .into_iter()
+                                .map(|coin| {
+                                    let amount = coin.amount * inverted_slippage_tolerance;
+                                    Ok(Coin {
+                                        denom: coin.denom,
+                                        amount,
+                                    }
+                                    .into())
+                                })
+                                .collect::<StdResult<Vec<_>>>()?,
+                        }
+                        .into(),
+                    ),
+                })
+            } else {
+                Err(StdError::generic_err("Provided assets do not match pool assets"))
+            }?;
 
         let event = Event::new("apollo/cw-dex/provide_liquidity")
             .add_attribute("pool_id", self.pool_id.to_string())
@@ -204,13 +247,27 @@ impl Pool for OsmosisPool {
 
     fn simulate_swap(
         &self,
-        _deps: Deps,
-        _offer_asset: Asset,
+        deps: Deps,
+        info: MessageInfo,
+        offer: Asset,
         _ask_asset_info: AssetInfo,
         _minimum_out_amount: Uint128,
-    ) -> Result<Uint128, CwDexError> {
-        // TODO: How do we do this? I don't see a stargate query for it...
-        todo!()
+    ) -> StdResult<Uint128> {
+        let offer: Coin = offer.try_into()?;
+        let swap_response =
+            deps.querier.query::<QuerySwapExactAmountInResponse>(&QueryRequest::Stargate {
+                path: OsmosisTypeURLs::QuerySwapExactAmountIn.to_string(),
+                data: encode(QuerySwapExactAmountInRequest {
+                    sender: info.sender.to_string(),
+                    pool_id: self.pool_id,
+                    routes: vec![SwapAmountInRoute {
+                        pool_id: self.pool_id,
+                        token_out_denom: offer.denom.clone(),
+                    }],
+                    token_in: offer.to_string(),
+                }),
+            })?;
+        Uint128::from_str(swap_response.token_out_amount.as_str())
     }
 }
 

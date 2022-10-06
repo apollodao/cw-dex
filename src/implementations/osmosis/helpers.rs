@@ -25,10 +25,7 @@ pub(crate) fn query_pool_params<C: CustomQuery>(
     from_binary(
         &querier
             .query::<QueryPoolParamsResponse>(&QueryRequest::Stargate {
-                path: OsmosisTypeURLs::QueryPoolParams {
-                    pool_id,
-                }
-                .to_string(),
+                path: OsmosisTypeURLs::QueryPoolParams.to_string(),
                 data: encode(QueryPoolParamsRequest {
                     pool_id,
                 }),
@@ -61,10 +58,7 @@ pub(crate) fn query_lock<C: CustomQuery>(
 ) -> StdResult<PeriodLock> {
     let locks = querier
         .query::<AccountLockedLongerDurationNotUnlockingOnlyResponse>(&QueryRequest::Stargate {
-            path: OsmosisTypeURLs::QueryAccountLockedLongerDurationNotUnlockingOnly {
-                owner: owner.to_string(),
-            }
-            .to_string(),
+            path: OsmosisTypeURLs::QueryAccountLockedLongerDurationNotUnlockingOnly.to_string(),
             data: encode(AccountLockedLongerDurationNotUnlockingOnlyRequest {
                 owner: owner.to_string(),
                 duration: Some(duration.to_protobuf_duration()),
@@ -101,4 +95,13 @@ pub(crate) fn assert_native_asset_info(asset_info: &AssetInfo) -> Result<String,
         cw_asset::AssetInfoBase::Native(denom) => Ok(denom.clone()),
         _ => Err(CwDexError::InvalidOutAsset {}),
     }
+}
+
+pub(crate) fn merge_assets<'a, A: Into<&'a AssetList>>(assets: A) -> StdResult<AssetList> {
+    let asset_list = assets.into();
+    let mut merged = AssetList::new();
+    for asset in asset_list {
+        merged.add(asset)?;
+    }
+    Ok(merged)
 }
