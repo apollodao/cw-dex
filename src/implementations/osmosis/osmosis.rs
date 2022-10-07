@@ -67,69 +67,50 @@ impl Pool for OsmosisPool {
         // Remove all zero amount Coins, merge duplicates and assert that all assets are native.
         let assets = assert_only_native_coins(merge_assets(assets.purge().deref())?)?;
 
+        // Construct osmosis querier
         let querier = QuerierWrapper::<OsmosisQuery>::new(deps.querier.deref());
-
-        let pool_state =
-            querier.query::<PoolStateResponse>(&QueryRequest::Custom(OsmosisQuery::PoolState {
-                id: self.pool_id,
-            }))?;
-
-        // TODO: Turn into stargate query
-        let shares_out =
-            osmosis_calculate_join_pool_shares(querier, self.pool_id, assets.to_vec())?;
 
         let slippage_tolerance =
             Decimal::one() - slippage_tolerance.unwrap_or_else(|| Decimal::one());
 
-        // If provided asset is one of the pool assets, perform single sided join
-        let join_msg =
-            if assets.len() == 1 && pool_state.assets.iter().any(|c| c.denom == assets[0].denom) {
-                Ok(CosmosMsg::Stargate {
-                    type_url: OsmosisTypeURLs::JoinSwapExternAmountIn.to_string(),
-                    value: encode(MsgJoinSwapExternAmountIn {
-                        sender: recipient.to_string(),
-                        pool_id: self.pool_id,
-                        token_in: Some(assets[0].clone().into()),
-                        share_out_min_amount: (shares_out.amount * slippage_tolerance).to_string(),
-                    }),
-                })
-            } else if pool_state.assets.iter().all(|x| assets.iter().any(|y| x.denom == y.denom)) {
-                // Else if provided assets are the pool assets, perform a normal join
-                let inverted_slippage_tolerance = slippage_tolerance
-                    .inv()
-                    .ok_or(StdError::generic_err("Slippage tolerance must be greater than 0"))?;
-                Ok(CosmosMsg::Stargate {
-                    type_url: OsmosisTypeURLs::JoinPool.to_string(),
-                    value: encode::<MsgJoinPool>(
-                        MsgJoinPool {
-                            pool_id: self.pool_id,
+        // TODO: Provide liquidity double sided.
+        // For now we only provide liquidity single sided since the ratio of the underlying tokens
+        // needs to be exactly the same as the the pool ratio otherwise the remainder is returned
+        // and there are no queries yet
+        let (join_msgs, shares_out): (Vec<CosmosMsg>, Vec<Uint128>) = assets
+            .into_iter()
+            .map(|coin| {
+                // TODO: Turn into stargate query
+                let shares_out_min = slippage_tolerance
+                    * osmosis_calculate_join_pool_shares(
+                        querier,
+                        self.pool_id,
+                        vec![coin.clone()],
+                    )?
+                    .amount;
+                Ok((
+                    CosmosMsg::Stargate {
+                        type_url: OsmosisTypeURLs::JoinSwapExternAmountIn.to_string(),
+                        value: encode(MsgJoinSwapExternAmountIn {
                             sender: recipient.to_string(),
-                            share_out_amount: shares_out.amount.to_string(),
-                            token_in_maxs: assets
-                                .into_iter()
-                                .map(|coin| {
-                                    let amount = coin.amount * inverted_slippage_tolerance;
-                                    Ok(Coin {
-                                        denom: coin.denom,
-                                        amount,
-                                    }
-                                    .into())
-                                })
-                                .collect::<StdResult<Vec<_>>>()?,
-                        }
-                        .into(),
-                    ),
-                })
-            } else {
-                Err(StdError::generic_err("Provided assets do not match pool assets"))
-            }?;
+                            pool_id: self.pool_id,
+                            token_in: Some(coin.into()),
+                            share_out_min_amount: shares_out_min.to_string(),
+                        }),
+                    },
+                    shares_out_min,
+                ))
+            })
+            .collect::<StdResult<Vec<_>>>()?
+            .into_iter()
+            .unzip();
 
         let event = Event::new("apollo/cw-dex/provide_liquidity")
             .add_attribute("pool_id", self.pool_id.to_string())
-            .add_attribute("shares_out", shares_out.to_string())
+            .add_attribute("minimum_shares_out", shares_out.iter().sum::<Uint128>().to_string())
             .add_attribute("recipient", recipient.to_string());
 
-        Ok(Response::new().add_message(join_msg).add_event(event))
+        Ok(Response::new().add_messages(join_msgs).add_event(event))
     }
 
     fn withdraw_liquidity(
