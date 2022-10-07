@@ -28,7 +28,7 @@ use crate::osmosis::osmosis_math::{
     osmosis_calculate_exit_pool_amounts, osmosis_calculate_join_pool_shares,
 };
 use crate::utils::vec_into;
-use crate::{CwDexError, Pool, Staking};
+use crate::{CwDexError, Lockup, Pool, Staking};
 
 use super::helpers::{
     assert_native_asset_info, assert_native_coin, assert_only_native_coins, merge_assets,
@@ -350,6 +350,19 @@ impl Staking for OsmosisStaking {
             Event::new("apollo/cw-dex/claim_rewards").add_attribute("type", "osmosis_staking");
         Ok(Response::new().add_event(event))
     }
+}
+
+impl Lockup for OsmosisStaking {
+    fn force_unlock(
+        &self,
+        _deps: Deps,
+        _lockup_id: u64,
+        _assets: AssetList,
+        _recipient: Addr,
+    ) -> Result<Response, CwDexError> {
+        // TODO: Is the API stabilized yet? See open PR: https://github.com/osmosis-labs/osmosis/pull/2733
+        todo!();
+    }
 
     fn get_lockup_duration(&self) -> Result<CwDuration, CwDexError> {
         Ok(CwDuration::Time(self.lockup_duration.as_secs()))
@@ -411,6 +424,19 @@ impl Staking for OsmosisSuperfluidStaking {
         let event = Event::new("apollo/cw-dex/claim_rewards")
             .add_attribute("type", "osmosis_superfluid_staking");
         Ok(Response::new().add_event(event))
+    }
+}
+
+impl Lockup for OsmosisSuperfluidStaking {
+    fn force_unlock(
+        &self,
+        _deps: Deps,
+        _lockup_id: u64,
+        _assets: AssetList,
+        _recipient: Addr,
+    ) -> Result<Response, CwDexError> {
+        // TODO: Is the API stabilized yet? See open PR: https://github.com/osmosis-labs/osmosis/pull/2733
+        todo!();
     }
 
     fn get_lockup_duration(&self) -> Result<CwDuration, CwDexError> {
