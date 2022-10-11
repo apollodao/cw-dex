@@ -18,8 +18,8 @@ use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    Addr, Coin, CosmosMsg, Decimal, Deps, Event, Fraction, QuerierWrapper, QueryRequest, Response,
-    StdError, StdResult, Uint128,
+    Addr, Coin, CosmosMsg, Decimal, Deps, Event, Fraction, QuerierWrapper, QueryRequest, ReplyOn,
+    Response, StdError, StdResult, SubMsg, Uint128,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
 use osmo_bindings::{OsmosisQuery, PoolStateResponse};
@@ -282,6 +282,8 @@ impl OsmosisStaking {
     }
 }
 
+pub const OSMOSIS_LOCK_TOKENS_REPLY_ID: u64 = 123;
+
 impl Staking for OsmosisStaking {
     fn stake(&self, _deps: Deps, asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
         let asset = assert_native_coin(&asset)?;
@@ -301,7 +303,14 @@ impl Staking for OsmosisStaking {
             .add_attribute("recipient", recipient.to_string())
             .add_attribute("lockup_duration_secs", self.lockup_duration.as_secs().to_string());
 
-        Ok(Response::new().add_message(stake_msg).add_event(event))
+        Ok(Response::new()
+            .add_submessage(SubMsg {
+                id: OSMOSIS_LOCK_TOKENS_REPLY_ID,
+                msg: stake_msg,
+                gas_limit: None,
+                reply_on: ReplyOn::Success,
+            })
+            .add_event(event))
     }
 
     fn unstake(&self, _deps: Deps, asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
@@ -380,7 +389,14 @@ impl Staking for OsmosisSuperfluidStaking {
             .add_attribute("recipient", recipient.to_string())
             .add_attribute("validator_address", self.validator_address.to_string());
 
-        Ok(Response::new().add_message(stake_msg).add_event(event))
+        Ok(Response::new()
+            .add_submessage(SubMsg {
+                id: OSMOSIS_LOCK_TOKENS_REPLY_ID,
+                msg: stake_msg,
+                gas_limit: None,
+                reply_on: ReplyOn::Success,
+            })
+            .add_event(event))
     }
 
     fn unstake(&self, _deps: Deps, _asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
