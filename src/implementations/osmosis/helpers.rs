@@ -51,32 +51,6 @@ impl ToProtobufDuration for Duration {
     }
 }
 
-pub(crate) fn query_lock<C: CustomQuery>(
-    querier: QuerierWrapper<C>,
-    owner: &Addr,
-    duration: Duration,
-) -> StdResult<PeriodLock> {
-    let locks = querier
-        .query::<AccountLockedLongerDurationNotUnlockingOnlyResponse>(&QueryRequest::Stargate {
-            path: OsmosisTypeURLs::QueryAccountLockedLongerDurationNotUnlockingOnly.to_string(),
-            data: encode(AccountLockedLongerDurationNotUnlockingOnlyRequest {
-                owner: owner.to_string(),
-                duration: Some(duration.to_protobuf_duration()),
-            }),
-        })?
-        .locks;
-
-    // Unwrap PeriodLock object from response
-    // TODO: Generalize to support a user that has multiple locks in different lps or durations.
-    if locks.len() == 1 {
-        Ok(locks[0].clone())
-    } else if locks.len() == 0 {
-        Err(StdError::generic_err("osmosis error: no lock found".to_string()))
-    } else {
-        Err(StdError::generic_err("osmosis error: multiple locks found".to_string()))
-    }
-}
-
 pub(crate) fn assert_only_native_coins(assets: AssetList) -> Result<Vec<Coin>, CwDexError> {
     assets.into_iter().map(assert_native_coin).collect::<Result<Vec<Coin>, CwDexError>>()
 }

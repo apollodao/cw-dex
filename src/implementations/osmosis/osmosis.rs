@@ -32,7 +32,7 @@ use crate::{CwDexError, Lockup, Pool, Staking};
 
 use super::helpers::{
     assert_native_asset_info, assert_native_coin, assert_only_native_coins, merge_assets,
-    query_lock, ToProtobufDuration,
+    ToProtobufDuration,
 };
 
 /// Struct for interacting with Osmosis v1beta1 balancer pools. If `pool_id` maps to another type of pool this will fail.
@@ -259,6 +259,8 @@ impl Pool for OsmosisPool {
 pub struct OsmosisStaking {
     /// Lockup duration in nano seconds. Allowed values 1 day, 1 week or 2 weeks.
     pub lockup_duration: Duration,
+
+    pub lock_id: Option<u64>,
 }
 
 impl OsmosisStaking {
@@ -269,12 +271,13 @@ impl OsmosisStaking {
     ///
     /// Returns an error if `lockup_duration` is not one of the allowed values,
     /// 86400, 604800 or 1209600, representing 1 day, 1 week or 2 weeks respectively.
-    pub fn new(lockup_duration: u64) -> StdResult<Self> {
+    pub fn new(lockup_duration: u64, lock_id: Option<u64>) -> StdResult<Self> {
         if !(vec![86400u64, 604800u64, 1209600u64].contains(&lockup_duration)) {
             return Err(StdError::generic_err("osmosis error: invalid lockup duration"));
         }
         Ok(Self {
             lockup_duration: Duration::from_secs(lockup_duration),
+            lock_id,
         })
     }
 }
@@ -301,10 +304,10 @@ impl Staking for OsmosisStaking {
         Ok(Response::new().add_message(stake_msg).add_event(event))
     }
 
-    fn unstake(&self, deps: Deps, asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
+    fn unstake(&self, _deps: Deps, asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
         let asset = assert_native_coin(&asset)?;
 
-        let id = query_lock(deps.querier, &recipient, self.lockup_duration)?.id;
+        let id = self.lock_id.ok_or(StdError::generic_err("osmosis error: lock id not set"))?;
 
         let unstake_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::UnBondLP.to_string(),
@@ -354,6 +357,7 @@ impl Lockup for OsmosisStaking {
 #[cw_serde]
 pub struct OsmosisSuperfluidStaking {
     validator_address: Addr,
+    lock_id: Option<u64>,
 }
 
 const TWO_WEEKS_IN_SECS: u64 = 14 * 24 * 60 * 60;
@@ -379,9 +383,9 @@ impl Staking for OsmosisSuperfluidStaking {
         Ok(Response::new().add_message(stake_msg).add_event(event))
     }
 
-    fn unstake(&self, deps: Deps, _asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
+    fn unstake(&self, _deps: Deps, _asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
         let lock_id =
-            query_lock(deps.querier, &recipient, Duration::from_secs(TWO_WEEKS_IN_SECS))?.id;
+            self.lock_id.ok_or(StdError::generic_err("osmosis error: lock id not set"))?;
 
         let unstake_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::SuperfluidUnBondLP.to_string(),
