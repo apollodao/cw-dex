@@ -36,3 +36,6 @@ cw20-0_10_3 = { package = "cw20", version = "0.10.3" } # We must import this ver
 cw20-stake = { git = "https://github.com/DA0-DA0/dao-contracts" } # TODO: what version?
 stake-cw20-external-rewards = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"] } # TODO: what version?
 cw-utils-0_13_4 = { package = "cw-utils", version = "0.13.4" }
+
+# Astroport
+astroport-core = { package = "astroport", branch = "main", git = "https://github.com/astroport-fi/astroport-core.git" }
