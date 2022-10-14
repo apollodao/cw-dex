@@ -21,11 +21,29 @@ impl TryFrom<AssetList> for AstroAssetList {
     fn try_from(list: AssetList) -> StdResult<Self> {
         Ok(Self(
             list.into_iter()
+<<<<<<< HEAD
                 .map(|a| cw_asset_to_astro_asset(a))
+=======
+                .map(|a| {
+                    Ok(AstroAsset {
+                        info: match &a.info {
+                            AssetInfo::Native(denom) => Ok(AstroAssetInfo::NativeToken {
+                                denom: denom.to_string(),
+                            }),
+                            AssetInfo::Cw20(contract_addr) => Ok(AstroAssetInfo::Token {
+                                contract_addr: contract_addr.clone(),
+                            }),
+                            _ => Err(StdError::generic_err("Invalid asset info")),
+                        }?,
+                        amount: a.amount,
+                    })
+                })
+>>>>>>> 50e0106 (feat: add AstroAssetList helper struct)
                 .collect::<StdResult<Vec<AstroAsset>>>()?,
         ))
     }
 }
+<<<<<<< HEAD
 
 impl From<AstroAssetList> for AssetList {
     fn from(list: AstroAssetList) -> Self {
@@ -78,3 +96,5 @@ pub(crate) fn astro_asset_info_to_cw_asset_info(asset_info: &AstroAssetInfo) -> 
         } => AssetInfo::cw20(contract_addr.to_owned()),
     }
 }
+=======
+>>>>>>> 50e0106 (feat: add AstroAssetList helper struct)
