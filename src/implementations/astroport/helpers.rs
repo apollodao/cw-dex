@@ -1,6 +1,6 @@
 use astroport_core::asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo};
 use cosmwasm_std::{StdError, StdResult};
-use cw_asset::{AssetInfo, AssetList};
+use cw_asset::{Asset, AssetInfo, AssetList};
 
 pub(crate) struct AstroAssetList(pub(crate) Vec<AstroAsset>);
 
@@ -37,5 +37,25 @@ impl TryFrom<AssetList> for AstroAssetList {
                 })
                 .collect::<StdResult<Vec<AstroAsset>>>()?,
         ))
+    }
+}
+
+impl From<AstroAssetList> for AssetList {
+    fn from(list: AstroAssetList) -> Self {
+        list.0
+            .into_iter()
+            .map(|a| cw_asset::Asset {
+                info: match a.info {
+                    AstroAssetInfo::NativeToken {
+                        denom,
+                    } => AssetInfo::Native(denom),
+                    AstroAssetInfo::Token {
+                        contract_addr,
+                    } => AssetInfo::Cw20(contract_addr),
+                },
+                amount: a.amount,
+            })
+            .collect::<Vec<Asset>>()
+            .into()
     }
 }
