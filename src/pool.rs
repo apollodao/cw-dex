@@ -92,7 +92,7 @@ pub trait Pool {
 impl dyn Pool {
     pub fn get_pool_for_lp_token(
         _deps: Deps,
-        lp_token: AssetInfo,
+        lp_token: &AssetInfo,
     ) -> Result<Box<dyn Pool>, CwDexError> {
         match lp_token {
             cw_asset::AssetInfoBase::Native(lp_token_denom) => {
