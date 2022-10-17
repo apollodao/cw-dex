@@ -283,6 +283,7 @@ impl OsmosisStaking {
 }
 
 pub const OSMOSIS_LOCK_TOKENS_REPLY_ID: u64 = 123;
+pub const OSMOSIS_UNLOCK_TOKENS_REPLY_ID: u64 = 124;
 
 impl Staking for OsmosisStaking {
     fn stake(&self, _deps: Deps, asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
@@ -334,7 +335,14 @@ impl Staking for OsmosisStaking {
             .add_attribute("lockup_duration_secs", self.lockup_duration.as_secs().to_string())
             .add_attribute("lock_id", id.to_string());
 
-        Ok(Response::new().add_message(unstake_msg).add_event(event))
+        Ok(Response::new()
+            .add_submessage(SubMsg {
+                id: OSMOSIS_UNLOCK_TOKENS_REPLY_ID,
+                msg: unstake_msg,
+                gas_limit: None,
+                reply_on: ReplyOn::Success,
+            })
+            .add_event(event))
     }
 
     fn claim_rewards(&self, _recipient: Addr) -> Result<Response, CwDexError> {
