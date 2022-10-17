@@ -8,6 +8,8 @@ use astroport_core::pair::ExecuteMsg as PairExecMsg;
 use crate::pool::Pool;
 use crate::CwDexError;
 
+use super::helpers::AstroAssetList;
+
 pub struct AstroportPool {
     /// Information about assets in the pool
     pub asset_infos: Vec<AssetInfo>,
@@ -25,28 +27,7 @@ impl Pool for AstroportPool {
         recipient: Addr,
         slippage_tolerance: Option<Decimal>,
     ) -> Result<Response, CwDexError> {
-        let mut astro_assets: Vec<AstroAsset> = vec![];
-        for asset_base in assets.into_iter() {
-            let info = match &asset_base.info {
-                AssetInfoBase::Native(denom) => Ok(AstroAssetInfo::NativeToken {
-                    denom: denom.to_string(),
-                }),
-                AssetInfoBase::Cw20(addr) => Ok(AstroAssetInfo::Token {
-                    contract_addr: addr.to_owned(),
-                }),
-                AssetInfoBase::Cw1155(addr, _) => Ok(AstroAssetInfo::Token {
-                    contract_addr: addr.to_owned(),
-                }),
-                x => Err(CwDexError::InvalidInAsset {
-                    a: asset_base.to_owned(),
-                }),
-            }?;
-            let amount = asset_base.amount;
-            astro_assets.push(AstroAsset {
-                info,
-                amount,
-            })
-        }
+        let astro_assets: Vec<AstroAsset> = AstroAssetList::try_from(assets)?.into();
         let msg = PairExecMsg::ProvideLiquidity {
             assets: astro_assets.clone(),
             slippage_tolerance,
@@ -60,7 +41,7 @@ impl Pool for AstroportPool {
         });
         let event = Event::new("apollo/cw-dex/provide_liquidity")
             .add_attribute("factory_addr", &self.factory_addr)
-            .add_attribute("assets", format!("{:?}", astro_assets)) // This one is maybe unnecessary
+            .add_attribute("assets", format!("{:?}", astro_assets))
             .add_attribute("recipient", recipient.to_string());
         Ok(Response::new().add_message(liquidity).add_event(event))
     }
