@@ -27,6 +27,9 @@ pub enum CwDexError {
 
     #[error("Overflow when converting to from BigInt to Uint128")]
     BigIntOverflow {},
+
+    #[error("Asset is not an LP token")]
+    NotLpToken {},
 }
 
 impl From<CwDexError> for StdError {
