@@ -357,7 +357,7 @@ impl Lockup for OsmosisStaking {
     fn force_unlock(
         &self,
         _deps: Deps,
-        _lockup_id: u64,
+        _lockup_id: Option<u64>,
         _assets: AssetList,
         _recipient: Addr,
     ) -> Result<Response, CwDexError> {
@@ -440,7 +440,7 @@ impl Lockup for OsmosisSuperfluidStaking {
     fn force_unlock(
         &self,
         _deps: Deps,
-        _lockup_id: u64,
+        _lockup_id: Option<u64>,
         _assets: AssetList,
         _recipient: Addr,
     ) -> Result<Response, CwDexError> {

@@ -43,7 +43,7 @@ pub trait Lockup: Clone + Serialize + DeserializeOwned {
     fn force_unlock(
         &self,
         deps: Deps,
-        lockup_id: u64,
+        lockup_id: Option<u64>,
         assets: AssetList,
         recipient: Addr,
     ) -> Result<Response, CwDexError>;
