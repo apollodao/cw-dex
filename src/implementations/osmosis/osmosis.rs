@@ -10,7 +10,7 @@ use apollo_proto_rust::osmosis::gamm::v1beta1::{
 
 use cw_utils::Duration as CwDuration;
 
-use apollo_proto_rust::osmosis::lockup::{MsgBeginUnlocking, MsgLockTokens};
+use apollo_proto_rust::osmosis::lockup::{MsgBeginUnlocking, MsgForceUnlock, MsgLockTokens};
 use apollo_proto_rust::osmosis::superfluid::{
     MsgLockAndSuperfluidDelegate, MsgSuperfluidUnbondLock,
 };
@@ -356,13 +356,34 @@ impl Staking for OsmosisStaking {
 impl Lockup for OsmosisStaking {
     fn force_unlock(
         &self,
-        _deps: Deps,
-        _lockup_id: Option<u64>,
-        _assets: AssetList,
-        _recipient: Addr,
+        deps: Deps,
+        lockup_id: Option<u64>,
+        assets: AssetList,
+        recipient: Addr,
     ) -> Result<Response, CwDexError> {
-        // TODO: Is the API stabilized yet? See open PR: https://github.com/osmosis-labs/osmosis/pull/2733
-        todo!();
+        let lockup_id = match lockup_id {
+            Some(id) => Ok(id),
+            None => self.lock_id.ok_or(StdError::generic_err("osmosis error: lock id not set")),
+        }?;
+
+        let coins_to_unlock =
+            assets.into_iter().map(|a| a.try_into()).collect::<StdResult<Vec<Coin>>>()?;
+
+        let force_unlock_msg = CosmosMsg::Stargate {
+            type_url: OsmosisTypeURLs::SuperfluidUnBondLP.to_string(),
+            value: encode(MsgForceUnlock {
+                owner: recipient.to_string(),
+                id: lockup_id,
+                coins: coins_to_unlock.into_iter().map(|c| c.into()).collect(),
+            }),
+        };
+
+        let event = Event::new("apollo/cw-dex/force-unlock")
+            .add_attribute("type", "osmosis_staking")
+            .add_attribute("recipient", recipient.to_string())
+            .add_attribute("lockup_id", lockup_id.to_string());
+
+        Ok(Response::new().add_message(force_unlock_msg).add_event(event))
     }
 
     fn get_lockup_duration(&self) -> Result<CwDuration, CwDexError> {
@@ -440,12 +461,11 @@ impl Lockup for OsmosisSuperfluidStaking {
     fn force_unlock(
         &self,
         _deps: Deps,
-        _lockup_id: Option<u64>,
-        _assets: AssetList,
-        _recipient: Addr,
+        lockup_id: Option<u64>,
+        assets: AssetList,
+        recipient: Addr,
     ) -> Result<Response, CwDexError> {
-        // TODO: Is the API stabilized yet? See open PR: https://github.com/osmosis-labs/osmosis/pull/2733
-        todo!();
+        unimplemented!()
     }
 
     fn get_lockup_duration(&self) -> Result<CwDuration, CwDexError> {
