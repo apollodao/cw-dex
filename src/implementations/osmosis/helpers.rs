@@ -1,22 +1,16 @@
 use std::{convert::TryInto, time::Duration};
 
 use apollo_proto_rust::{
-    osmosis::{
-        gamm::v1beta1::{PoolParams, QueryPoolParamsRequest, QueryPoolParamsResponse},
-        lockup::{
-            AccountLockedLongerDurationNotUnlockingOnlyRequest,
-            AccountLockedLongerDurationNotUnlockingOnlyResponse, PeriodLock,
-        },
-    },
+    osmosis::gamm::v1beta1::{PoolParams, QueryPoolParamsRequest, QueryPoolParamsResponse},
     utils::encode,
     OsmosisTypeURLs,
 };
 use cosmwasm_std::{
-    from_binary, Addr, Coin, CustomQuery, QuerierWrapper, QueryRequest, StdError, StdResult,
+    from_binary, Coin, CustomQuery, QuerierWrapper, QueryRequest, StdError, StdResult,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
 
-use crate::CwDexError;
+use crate::error::CwDexError;
 
 pub(crate) fn query_pool_params<C: CustomQuery>(
     querier: QuerierWrapper<C>,

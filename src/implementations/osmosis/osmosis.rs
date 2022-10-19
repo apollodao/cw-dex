@@ -3,8 +3,8 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use apollo_proto_rust::osmosis::gamm::v1beta1::{
-    MsgExitPool, MsgJoinPool, MsgJoinSwapExternAmountIn, MsgSwapExactAmountIn,
-    QuerySwapExactAmountInRequest, QuerySwapExactAmountInResponse, QueryTotalPoolLiquidityRequest,
+    MsgExitPool, MsgJoinSwapExternAmountIn, MsgSwapExactAmountIn, QuerySwapExactAmountInRequest,
+    QuerySwapExactAmountInResponse, QueryTotalPoolLiquidityRequest,
     QueryTotalPoolLiquidityResponse, SwapAmountInRoute,
 };
 
@@ -18,17 +18,18 @@ use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    Addr, Coin, CosmosMsg, Decimal, Deps, Event, Fraction, QuerierWrapper, QueryRequest, ReplyOn,
-    Response, StdError, StdResult, SubMsg, Uint128,
+    Addr, Coin, CosmosMsg, Decimal, Deps, Event, QuerierWrapper, QueryRequest, ReplyOn, Response,
+    StdError, StdResult, SubMsg, Uint128,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
-use osmo_bindings::{OsmosisQuery, PoolStateResponse};
+use osmo_bindings::OsmosisQuery;
 
 use crate::osmosis::osmosis_math::{
     osmosis_calculate_exit_pool_amounts, osmosis_calculate_join_pool_shares,
 };
+use crate::traits::{Lockup, Pool, Staking};
 use crate::utils::vec_into;
-use crate::{CwDexError, Lockup, Pool, Staking};
+use crate::CwDexError;
 
 use super::helpers::{
     assert_native_asset_info, assert_native_coin, assert_only_native_coins, merge_assets,
