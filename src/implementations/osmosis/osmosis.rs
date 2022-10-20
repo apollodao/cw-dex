@@ -370,7 +370,7 @@ impl Lockup for OsmosisStaking {
             assets.into_iter().map(|a| a.try_into()).collect::<StdResult<Vec<Coin>>>()?;
 
         let force_unlock_msg = CosmosMsg::Stargate {
-            type_url: OsmosisTypeURLs::SuperfluidUnBondLP.to_string(),
+            type_url: OsmosisTypeURLs::ForceUnlock.to_string(),
             value: encode(MsgForceUnlock {
                 owner: recipient.to_string(),
                 id: lockup_id,

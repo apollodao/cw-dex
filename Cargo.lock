@@ -23,7 +23,7 @@ dependencies = [
 [[package]]
 name = "apollo-proto-rust"
 version = "0.2.0"
-source = "git+https://github.com/apollodao/apollo-proto-rust#7a7047f14ef558c3baec4745490359a22df69ea2"
+source = "git+https://github.com/apollodao/apollo-proto-rust#3c515f5bb384228bfe38d23668475f56508265e9"
 dependencies = [
  "cosmwasm-std",
  "prost",
@@ -52,9 +52,9 @@ checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
 name = "base64ct"
-version = "1.5.2"
+version = "1.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea2b2456fd614d856680dcd9fcc660a51a820fa09daef2e49772b56a193c8474"
+checksum = "b645a089122eccb6111b4f81cbc1a49f5900ac4666bb93ac027feaecf15607bf"
 
 [[package]]
 name = "block-buffer"
@@ -832,9 +832,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.86"
+version = "1.0.87"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41feea4228a6f1cd09ec7a3593a682276702cd67b5273544757dae23c096f074"
+checksum = "6ce777b7b150d76b9cf60d28b55f5847135a003f7d7350c6be7a773508ce7d45"
 dependencies = [
  "itoa",
  "ryu",
