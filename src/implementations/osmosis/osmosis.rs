@@ -290,7 +290,7 @@ impl Staking for OsmosisStaking {
         let asset = assert_native_coin(&asset)?;
 
         let stake_msg = CosmosMsg::Stargate {
-            type_url: OsmosisTypeURLs::BondLP.to_string(),
+            type_url: OsmosisTypeURLs::LockTokens.to_string(),
             value: encode(MsgLockTokens {
                 owner: recipient.to_string(),
                 duration: Some(self.lockup_duration.to_protobuf_duration()),
@@ -320,7 +320,7 @@ impl Staking for OsmosisStaking {
         let id = self.lock_id.ok_or(StdError::generic_err("osmosis error: lock id not set"))?;
 
         let unstake_msg = CosmosMsg::Stargate {
-            type_url: OsmosisTypeURLs::UnBondLP.to_string(),
+            type_url: OsmosisTypeURLs::BeginUnlocking.to_string(),
             value: encode(MsgBeginUnlocking {
                 owner: recipient.to_string(),
                 id,
@@ -376,7 +376,7 @@ impl Staking for OsmosisSuperfluidStaking {
     fn stake(&self, _deps: Deps, asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
         let asset = assert_native_coin(&asset)?;
         let stake_msg = CosmosMsg::Stargate {
-            type_url: OsmosisTypeURLs::SuperfluidBondLP.to_string(),
+            type_url: OsmosisTypeURLs::LockAndSuperfluidDelegate.to_string(),
             value: encode(MsgLockAndSuperfluidDelegate {
                 sender: recipient.to_string(),
                 coins: vec![asset.clone().into()],
@@ -405,7 +405,7 @@ impl Staking for OsmosisSuperfluidStaking {
             self.lock_id.ok_or(StdError::generic_err("osmosis error: lock id not set"))?;
 
         let unstake_msg = CosmosMsg::Stargate {
-            type_url: OsmosisTypeURLs::SuperfluidUnBondLP.to_string(),
+            type_url: OsmosisTypeURLs::SuperfluidUnbondLock.to_string(),
             value: encode(MsgSuperfluidUnbondLock {
                 sender: recipient.to_string(),
                 lock_id,

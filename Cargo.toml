@@ -12,19 +12,19 @@ default = ["osmosis"]
 osmosis = []
 
 [dependencies]
-cosmwasm-std = {version = "1.1.0", features = ["stargate"]}
+apollo-proto-rust = {git = "https://github.com/apollodao/apollo-proto-rust", tag = "v0.3.0"}
 cosmwasm-schema = "1.1.0"
-serde = {version = "1.0.137", default-features = false, features = ["derive"]}
-thiserror = {version = "1.0.31"}
-schemars = "0.8.8"
-cw-storage-plus = "0.15"
+cosmwasm-std = {version = "1.1.0", features = ["stargate"]}
 cw-asset = "2.3.0"
-apollo-proto-rust = { git = "https://github.com/apollodao/apollo-proto-rust" }
-cw-token = { git = "https://github.com/apollodao/cw-token.git" }
+cw-storage-plus = "0.15"
+cw-token = {git = "https://github.com/apollodao/cw-token.git"}
 cw-utils = "0.15"
 cw20 = "0.15"
 cw20-base = "0.15"
-osmo-bindings = "0.5.1"
-num-rational = "0.4"
 num-bigint = "0.4"
+num-rational = "0.4"
 num-traits = "0.2.15"
+osmo-bindings = "0.5.1"
+schemars = "0.8.8"
+serde = {version = "1.0.137", default-features = false, features = ["derive"]}
+thiserror = {version = "1.0.31"}
