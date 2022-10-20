@@ -51,15 +51,21 @@ impl From<AstroAssetList> for AssetList {
 
 pub(crate) fn cw_asset_to_astro_asset(asset: &Asset) -> StdResult<AstroAsset> {
     Ok(AstroAsset {
-        info: match &asset.info {
-            AssetInfo::Native(denom) => Ok(AstroAssetInfo::NativeToken {
-                denom: denom.to_string(),
-            }),
-            AssetInfo::Cw20(contract_addr) => Ok(AstroAssetInfo::Token {
-                contract_addr: contract_addr.clone(),
-            }),
-            _ => Err(StdError::generic_err("Invalid asset info")),
-        }?,
+        info: cw_asset_info_to_astro_asset_info(&asset.info)?,
         amount: asset.amount,
     })
+}
+
+pub(crate) fn cw_asset_info_to_astro_asset_info(
+    asset_info: &AssetInfo,
+) -> StdResult<AstroAssetInfo> {
+    match asset_info {
+        AssetInfo::Native(denom) => Ok(AstroAssetInfo::NativeToken {
+            denom: denom.to_string(),
+        }),
+        AssetInfo::Cw20(contract_addr) => Ok(AstroAssetInfo::Token {
+            contract_addr: contract_addr.clone(),
+        }),
+        _ => Err(StdError::generic_err("Invalid asset info")),
+    }
 }
