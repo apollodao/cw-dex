@@ -3,14 +3,14 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use apollo_proto_rust::osmosis::gamm::v1beta1::{
-    MsgExitPool, MsgJoinPool, MsgJoinSwapExternAmountIn, MsgSwapExactAmountIn,
-    QuerySwapExactAmountInRequest, QuerySwapExactAmountInResponse, QueryTotalPoolLiquidityRequest,
+    MsgExitPool, MsgJoinSwapExternAmountIn, MsgSwapExactAmountIn, QuerySwapExactAmountInRequest,
+    QuerySwapExactAmountInResponse, QueryTotalPoolLiquidityRequest,
     QueryTotalPoolLiquidityResponse, SwapAmountInRoute,
 };
 
 use cw_utils::Duration as CwDuration;
 
-use apollo_proto_rust::osmosis::lockup::{MsgBeginUnlocking, MsgLockTokens};
+use apollo_proto_rust::osmosis::lockup::{MsgBeginUnlocking, MsgForceUnlock, MsgLockTokens};
 use apollo_proto_rust::osmosis::superfluid::{
     MsgLockAndSuperfluidDelegate, MsgSuperfluidUnbondLock,
 };
@@ -18,11 +18,11 @@ use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    Addr, Coin, CosmosMsg, Decimal, Deps, Event, Fraction, QuerierWrapper, QueryRequest, ReplyOn,
-    Response, StdError, StdResult, SubMsg, Uint128,
+    Addr, Coin, CosmosMsg, Decimal, Deps, Event, QuerierWrapper, QueryRequest, ReplyOn, Response,
+    StdError, StdResult, SubMsg, Uint128,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
-use osmo_bindings::{OsmosisQuery, PoolStateResponse};
+use osmo_bindings::OsmosisQuery;
 
 use crate::osmosis::osmosis_math::{
     osmosis_calculate_exit_pool_amounts, osmosis_calculate_join_pool_shares,
@@ -290,7 +290,7 @@ impl Staking for OsmosisStaking {
         let asset = assert_native_coin(&asset)?;
 
         let stake_msg = CosmosMsg::Stargate {
-            type_url: OsmosisTypeURLs::BondLP.to_string(),
+            type_url: OsmosisTypeURLs::LockTokens.to_string(),
             value: encode(MsgLockTokens {
                 owner: recipient.to_string(),
                 duration: Some(self.lockup_duration.to_protobuf_duration()),
@@ -320,7 +320,7 @@ impl Staking for OsmosisStaking {
         let id = self.lock_id.ok_or(StdError::generic_err("osmosis error: lock id not set"))?;
 
         let unstake_msg = CosmosMsg::Stargate {
-            type_url: OsmosisTypeURLs::UnBondLP.to_string(),
+            type_url: OsmosisTypeURLs::BeginUnlocking.to_string(),
             value: encode(MsgBeginUnlocking {
                 owner: recipient.to_string(),
                 id,
@@ -357,12 +357,33 @@ impl Lockup for OsmosisStaking {
     fn force_unlock(
         &self,
         _deps: Deps,
-        _lockup_id: Option<u64>,
-        _assets: AssetList,
-        _recipient: Addr,
+        lockup_id: Option<u64>,
+        assets: AssetList,
+        recipient: Addr,
     ) -> Result<Response, CwDexError> {
-        // TODO: Is the API stabilized yet? See open PR: https://github.com/osmosis-labs/osmosis/pull/2733
-        todo!();
+        let lockup_id = match lockup_id {
+            Some(id) => Ok(id),
+            None => self.lock_id.ok_or(StdError::generic_err("osmosis error: lock id not set")),
+        }?;
+
+        let coins_to_unlock =
+            assets.into_iter().map(|a| a.try_into()).collect::<StdResult<Vec<Coin>>>()?;
+
+        let force_unlock_msg = CosmosMsg::Stargate {
+            type_url: OsmosisTypeURLs::ForceUnlock.to_string(),
+            value: encode(MsgForceUnlock {
+                owner: recipient.to_string(),
+                id: lockup_id,
+                coins: coins_to_unlock.into_iter().map(|c| c.into()).collect(),
+            }),
+        };
+
+        let event = Event::new("apollo/cw-dex/force-unlock")
+            .add_attribute("type", "osmosis_staking")
+            .add_attribute("recipient", recipient.to_string())
+            .add_attribute("lockup_id", lockup_id.to_string());
+
+        Ok(Response::new().add_message(force_unlock_msg).add_event(event))
     }
 
     fn get_lockup_duration(&self) -> Result<CwDuration, CwDexError> {
@@ -383,7 +404,7 @@ impl Staking for OsmosisSuperfluidStaking {
     fn stake(&self, _deps: Deps, asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
         let asset = assert_native_coin(&asset)?;
         let stake_msg = CosmosMsg::Stargate {
-            type_url: OsmosisTypeURLs::SuperfluidBondLP.to_string(),
+            type_url: OsmosisTypeURLs::LockAndSuperfluidDelegate.to_string(),
             value: encode(MsgLockAndSuperfluidDelegate {
                 sender: recipient.to_string(),
                 coins: vec![asset.clone().into()],
@@ -412,7 +433,7 @@ impl Staking for OsmosisSuperfluidStaking {
             self.lock_id.ok_or(StdError::generic_err("osmosis error: lock id not set"))?;
 
         let unstake_msg = CosmosMsg::Stargate {
-            type_url: OsmosisTypeURLs::SuperfluidUnBondLP.to_string(),
+            type_url: OsmosisTypeURLs::SuperfluidUnbondLock.to_string(),
             value: encode(MsgSuperfluidUnbondLock {
                 sender: recipient.to_string(),
                 lock_id,
@@ -444,8 +465,7 @@ impl Lockup for OsmosisSuperfluidStaking {
         _assets: AssetList,
         _recipient: Addr,
     ) -> Result<Response, CwDexError> {
-        // TODO: Is the API stabilized yet? See open PR: https://github.com/osmosis-labs/osmosis/pull/2733
-        todo!();
+        unimplemented!()
     }
 
     fn get_lockup_duration(&self) -> Result<CwDuration, CwDexError> {
