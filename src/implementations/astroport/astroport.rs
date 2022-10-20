@@ -72,19 +72,12 @@ impl AstroportXykPool {
                 msg: to_binary(&Cw20ExecuteMsg::Send {
                     contract: self.contract_addr.to_string(),
                     amount: Uint128::zero(), // Should this be `offer_asset.amount`?
-                    msg: Cw20ReceiveMsg {
-                        sender: recipient.to_string(),
-                        amount: offer_asset.amount,
-                        msg: to_binary(&Cw20HookMsg::Swap {
-                            ask_asset_info: Some(cw_asset_info_to_astro_asset_info(
-                                &ask_asset_info,
-                            )?),
-                            belief_price: Some(belief_price),
-                            max_spread: Some(Decimal::zero()),
-                            to: Some(recipient.into_string()),
-                        })?,
-                    }
-                    .into_binary()?,
+                    msg: to_binary(&Cw20HookMsg::Swap {
+                        ask_asset_info: Some(cw_asset_info_to_astro_asset_info(&ask_asset_info)?),
+                        belief_price: Some(belief_price),
+                        max_spread: Some(Decimal::zero()),
+                        to: Some(recipient.into_string()),
+                    })?,
                 })?,
                 funds: vec![],
             });
@@ -139,14 +132,9 @@ impl Pool for AstroportXykPool {
                 msg: to_binary(&Cw20ExecuteMsg::Send {
                     contract: self.contract_addr.to_string(),
                     amount: asset.amount,
-                    msg: Cw20ReceiveMsg {
-                        sender: recipient.to_string(),
-                        amount: asset.amount,
-                        msg: to_binary(&Cw20HookMsg::WithdrawLiquidity {
-                            assets: vec![],
-                        })?,
-                    }
-                    .into_binary()?,
+                    msg: to_binary(&Cw20HookMsg::WithdrawLiquidity {
+                        assets: vec![],
+                    })?,
                 })?,
                 funds: vec![],
             });
@@ -188,8 +176,11 @@ impl Pool for AstroportXykPool {
             }),
         }?;
         let event = Event::new("apollo/cw-dex/swap")
-            .add_attribute("offer_asset", format!("{:?}", offer_asset));
-        Ok(response)
+            .add_attribute("pair_addr", &self.contract_addr)
+            .add_attribute("ask_asset", format!("{:?}", ask_asset_info))
+            .add_attribute("offer_asset", format!("{:?}", offer_asset.info))
+            .add_attribute("minimum_out_amount", minimum_out_amount);
+        Ok(response.add_event(event))
     }
 
     fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {
