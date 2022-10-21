@@ -2,7 +2,7 @@ use cosmwasm_std::{Addr, Decimal, Response, StdResult};
 use cosmwasm_std::{Deps, Uint128};
 use cw_asset::{Asset, AssetInfo, AssetList};
 
-use crate::CwDexError;
+use crate::error::CwDexError;
 
 /// Trait to represent an AMM pool.
 pub trait Pool {

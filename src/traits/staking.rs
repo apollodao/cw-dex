@@ -3,7 +3,7 @@ use cw_asset::{Asset, AssetList};
 use cw_utils::Duration as CwDuration;
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::CwDexError;
+use crate::error::CwDexError;
 
 /// Trait to abstract interaction with a staking contract or module with an optional lockup time.
 pub trait Staking: Clone + Serialize + DeserializeOwned {

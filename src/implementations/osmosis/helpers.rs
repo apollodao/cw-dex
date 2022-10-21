@@ -10,7 +10,7 @@ use cosmwasm_std::{
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
 
-use crate::CwDexError;
+use crate::error::CwDexError;
 
 pub(crate) fn query_pool_params<C: CustomQuery>(
     querier: QuerierWrapper<C>,
