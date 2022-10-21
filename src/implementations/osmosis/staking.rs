@@ -139,7 +139,7 @@ impl Unlock for OsmosisStaking {
 }
 
 impl LockedStaking for OsmosisStaking {
-    fn get_lockup_duration(&self) -> Result<CwDuration, CwDexError> {
+    fn get_lockup_duration(&self, _deps: Deps) -> Result<CwDuration, CwDexError> {
         Ok(CwDuration::Time(self.lockup_duration.as_secs()))
     }
 }
@@ -272,7 +272,7 @@ impl Unlock for OsmosisSuperfluidStaking {
 }
 
 impl LockedStaking for OsmosisSuperfluidStaking {
-    fn get_lockup_duration(&self) -> Result<CwDuration, CwDexError> {
+    fn get_lockup_duration(&self, _deps: Deps) -> Result<CwDuration, CwDexError> {
         // Lockup time for superfluid staking is always 14 days.
         Ok(CwDuration::Time(TWO_WEEKS_IN_SECS))
     }

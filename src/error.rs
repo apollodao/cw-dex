@@ -1,6 +1,6 @@
 use std::num::TryFromIntError;
 
-use cosmwasm_std::StdError;
+use cosmwasm_std::{DivideByZeroError, OverflowError, StdError};
 use cw_asset::Asset;
 use thiserror::Error;
 
@@ -14,6 +14,12 @@ pub enum CwDexError {
 
     #[error("{0}")]
     TryFromIntError(#[from] TryFromIntError),
+
+    #[error("{0}")]
+    Overflow(#[from] OverflowError),
+
+    #[error("{0}")]
+    DivideByZero(#[from] DivideByZeroError),
 
     /// Invalid Reply ID Error
     #[error("invalid output asset")]
@@ -30,6 +36,9 @@ pub enum CwDexError {
 
     #[error("Asset is not an LP token")]
     NotLpToken {},
+
+    #[error("Expected no unbonding period")]
+    UnstakingDurationNotSupported {},
 }
 
 impl From<CwDexError> for StdError {
