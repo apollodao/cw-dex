@@ -1,5 +1,7 @@
 mod helpers;
-mod osmosis;
 mod osmosis_math;
+mod pool;
+mod staking;
 
-pub use osmosis::*;
+pub use pool::*;
+pub use staking::*;
