@@ -18,8 +18,8 @@ use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    Addr, Coin, CosmosMsg, Decimal, Deps, Event, QuerierWrapper, QueryRequest, ReplyOn, Response,
-    StdError, StdResult, SubMsg, Uint128,
+    Addr, Coin, CosmosMsg, Decimal, Deps, Env, Event, QuerierWrapper, QueryRequest, ReplyOn,
+    Response, StdError, StdResult, SubMsg, Uint128,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
 use osmo_bindings::OsmosisQuery;
@@ -357,10 +357,9 @@ impl Staking for OsmosisStaking {
 impl Lockup for OsmosisStaking {
     fn force_unlock(
         &self,
-        _deps: Deps,
+        env: &Env,
         lockup_id: Option<u64>,
-        assets: AssetList,
-        recipient: Addr,
+        assets: &AssetList,
     ) -> Result<Response, CwDexError> {
         let lockup_id = match lockup_id {
             Some(id) => Ok(id),
@@ -373,7 +372,7 @@ impl Lockup for OsmosisStaking {
         let force_unlock_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::ForceUnlock.to_string(),
             value: encode(MsgForceUnlock {
-                owner: recipient.to_string(),
+                owner: env.contract.address.to_string(),
                 id: lockup_id,
                 coins: coins_to_unlock.into_iter().map(|c| c.into()).collect(),
             }),
@@ -381,7 +380,6 @@ impl Lockup for OsmosisStaking {
 
         let event = Event::new("apollo/cw-dex/force-unlock")
             .add_attribute("type", "osmosis_staking")
-            .add_attribute("recipient", recipient.to_string())
             .add_attribute("lockup_id", lockup_id.to_string());
 
         Ok(Response::new().add_message(force_unlock_msg).add_event(event))
@@ -461,10 +459,9 @@ impl Staking for OsmosisSuperfluidStaking {
 impl Lockup for OsmosisSuperfluidStaking {
     fn force_unlock(
         &self,
-        _deps: Deps,
+        _env: &Env,
         _lockup_id: Option<u64>,
-        _assets: AssetList,
-        _recipient: Addr,
+        _assets: &AssetList,
     ) -> Result<Response, CwDexError> {
         unimplemented!()
     }

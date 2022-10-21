@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Deps, Response};
+use cosmwasm_std::{Addr, Deps, Env, Response};
 use cw_asset::{Asset, AssetList};
 use cw_utils::Duration as CwDuration;
 use serde::{de::DeserializeOwned, Serialize};
@@ -42,10 +42,9 @@ pub trait Lockup: Clone + Serialize + DeserializeOwned {
     /// `assets`: The assets to unlock. If empty, all assets are unlocked.
     fn force_unlock(
         &self,
-        deps: Deps,
+        env: &Env,
         lockup_id: Option<u64>,
-        assets: AssetList,
-        recipient: Addr,
+        assets: &AssetList,
     ) -> Result<Response, CwDexError>;
 
     // ====== Query functions ======
