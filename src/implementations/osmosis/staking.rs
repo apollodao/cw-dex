@@ -14,7 +14,7 @@ use cosmwasm_std::{
     Uint128,
 };
 
-use crate::traits::{ForceUnlock, LockedStaking, Rewards};
+use crate::traits::{ForceUnlock, LockedStaking, Rewards, Stake, Unlock};
 use crate::CwDexError;
 
 use super::helpers::ToProtobufDuration;
@@ -67,8 +67,8 @@ impl Rewards for OsmosisStaking {
     }
 }
 
-impl LockedStaking for OsmosisStaking {
-    fn lock(&self, _deps: Deps, env: &Env, amount: Uint128) -> Result<Response, CwDexError> {
+impl Stake for OsmosisStaking {
+    fn stake(&self, _deps: Deps, env: &Env, amount: Uint128) -> Result<Response, CwDexError> {
         let asset = Coin::new(amount.u128(), self.lp_token_denom.clone());
 
         let stake_msg = CosmosMsg::Stargate {
@@ -94,7 +94,9 @@ impl LockedStaking for OsmosisStaking {
             })
             .add_event(event))
     }
+}
 
+impl Unlock for OsmosisStaking {
     fn unlock(&self, _deps: Deps, env: &Env, amount: Uint128) -> Result<Response, CwDexError> {
         let asset = Coin::new(amount.u128(), self.lp_token_denom.clone());
 
@@ -125,10 +127,6 @@ impl LockedStaking for OsmosisStaking {
             .add_event(event))
     }
 
-    fn get_lockup_duration(&self) -> Result<CwDuration, CwDexError> {
-        Ok(CwDuration::Time(self.lockup_duration.as_secs()))
-    }
-
     fn withdraw_unlocked(
         &self,
         _deps: Deps,
@@ -137,6 +135,12 @@ impl LockedStaking for OsmosisStaking {
     ) -> Result<Response, CwDexError> {
         // Osmosis automatically sends the unlocked tokens after the lockup duration
         Ok(Response::new())
+    }
+}
+
+impl LockedStaking for OsmosisStaking {
+    fn get_lockup_duration(&self) -> Result<CwDuration, CwDexError> {
+        Ok(CwDuration::Time(self.lockup_duration.as_secs()))
     }
 }
 
@@ -206,8 +210,8 @@ impl Rewards for OsmosisSuperfluidStaking {
     }
 }
 
-impl LockedStaking for OsmosisSuperfluidStaking {
-    fn lock(&self, _deps: Deps, env: &Env, amount: Uint128) -> Result<Response, CwDexError> {
+impl Stake for OsmosisSuperfluidStaking {
+    fn stake(&self, _deps: Deps, env: &Env, amount: Uint128) -> Result<Response, CwDexError> {
         let asset = Coin::new(amount.u128(), self.lp_token_denom.clone());
 
         let stake_msg = CosmosMsg::Stargate {
@@ -233,7 +237,9 @@ impl LockedStaking for OsmosisSuperfluidStaking {
             })
             .add_event(event))
     }
+}
 
+impl Unlock for OsmosisSuperfluidStaking {
     fn unlock(&self, _deps: Deps, env: &Env, _amount: Uint128) -> Result<Response, CwDexError> {
         let lock_id =
             self.lock_id.ok_or(StdError::generic_err("osmosis error: lock id not set"))?;
@@ -263,7 +269,9 @@ impl LockedStaking for OsmosisSuperfluidStaking {
         // Osmosis automatically sends the unlocked tokens after the lockup duration
         Ok(Response::new())
     }
+}
 
+impl LockedStaking for OsmosisSuperfluidStaking {
     fn get_lockup_duration(&self) -> Result<CwDuration, CwDexError> {
         // Lockup time for superfluid staking is always 14 days.
         Ok(CwDuration::Time(TWO_WEEKS_IN_SECS))

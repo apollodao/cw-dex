@@ -14,7 +14,7 @@ pub trait Rewards {
 }
 
 /// Trait to abstract interaction with a staking contract or module with an optional lockup time.
-pub trait Staking: Rewards {
+pub trait Stake: Rewards {
     /// Stake the given assets.
     ///
     /// Arguments:
@@ -23,7 +23,9 @@ pub trait Staking: Rewards {
     ///
     /// Returns a Response containing the messages to stake the given asset.
     fn stake(&self, deps: Deps, env: &Env, amount: Uint128) -> Result<Response, CwDexError>;
+}
 
+pub trait Unstake {
     /// Unstake the given assets.
     ///
     /// Arguments:
@@ -33,10 +35,9 @@ pub trait Staking: Rewards {
     fn unstake(&self, deps: Deps, env: &Env, amount: Uint128) -> Result<Response, CwDexError>;
 }
 
-pub trait LockedStaking: Rewards {
-    /// Stake and lock `amount` of the asset.
-    fn lock(&self, deps: Deps, env: &Env, amount: Uint128) -> Result<Response, CwDexError>;
+pub trait Staking: Stake + Unstake + Rewards {}
 
+pub trait Unlock {
     /// Start unlocking `amount` of the locked asset. Depending on the implementation,
     /// some kind of unlocking ID will be returned in an event and you may need to handle
     /// this in a reply.
@@ -50,7 +51,9 @@ pub trait LockedStaking: Rewards {
         env: &Env,
         amount: Uint128,
     ) -> Result<Response, CwDexError>;
+}
 
+pub trait LockedStaking: Stake + Unlock + Rewards {
     /// Returns the lockup duration for the staked assets.
     fn get_lockup_duration(&self) -> Result<CwDuration, CwDexError>;
 }
