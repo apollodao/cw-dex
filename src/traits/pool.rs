@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Decimal, Response, StdResult};
+use cosmwasm_std::{Addr, Decimal, Env, MessageInfo, Response, StdResult};
 use cosmwasm_std::{Deps, Uint128};
 use cw_asset::{Asset, AssetInfo, AssetList};
 
@@ -14,6 +14,8 @@ pub trait Pool {
     fn provide_liquidity(
         &self,
         deps: Deps,
+        env: &Env,
+        info: &MessageInfo,
         assets: AssetList,
         recipient: Addr,
         slippage_tolerance: Option<Decimal>,

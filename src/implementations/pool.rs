@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::Deps;
+use cosmwasm_std::{Deps, Env, MessageInfo};
 use cw_asset::AssetInfo;
 use std::str::FromStr;
 
@@ -53,11 +53,13 @@ impl PoolTrait for Pool {
     fn provide_liquidity(
         &self,
         deps: Deps,
+        env: &Env,
+        info: &MessageInfo,
         assets: cw_asset::AssetList,
         recipient: cosmwasm_std::Addr,
         slippage_tolerance: Option<cosmwasm_std::Decimal>,
     ) -> Result<cosmwasm_std::Response, CwDexError> {
-        self.as_trait().provide_liquidity(deps, assets, recipient, slippage_tolerance)
+        self.as_trait().provide_liquidity(deps, env, info, assets, recipient, slippage_tolerance)
     }
 
     fn withdraw_liquidity(

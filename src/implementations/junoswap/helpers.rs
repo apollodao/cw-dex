@@ -1,6 +1,10 @@
-use cosmwasm_std::{StdError, StdResult, Uint128};
+use cosmwasm_std::{
+    to_binary, Addr, Coin, CosmosMsg, Env, MessageInfo, StdError, StdResult, Uint128, WasmMsg,
+};
+use cw20::Cw20ExecuteMsg;
 use cw20_0_10_3::Denom;
 use cw_asset::{Asset, AssetInfo, AssetList};
+use cw_utils::Expiration;
 
 use crate::CwDexError;
 
@@ -115,10 +119,61 @@ impl JunoAssetList {
     }
 }
 
+/// Prepare the `funds` vec to send native tokens to a contract and construct the
+/// messages to increase allowance for cw20 tokens.
+///
+/// ### Returns
+/// `(funds, messages)` tuple where,
+/// - `funds` is a `Vec<Coin> of the native tokens present in the `assets` list
+///                that were also exist in the `info.funds` list.
+/// - `increase_allowances` is a `Vec<CosmosMsg>` with the messages to increase
+///                allowance for the CW20 tokens in the `assets` list.
+pub(crate) fn prepare_funds_and_increase_allowances(
+    env: &Env,
+    info: &MessageInfo,
+    assets: AssetList,
+    spender: &Addr,
+) -> Result<(Vec<Coin>, Vec<CosmosMsg>), CwDexError> {
+    let mut increase_allowances = vec![];
+    let mut funds = vec![];
+    for asset in assets.into_iter() {
+        match &asset.info {
+            AssetInfo::Native(_) => {
+                let coin = asset.try_into()?;
+                if !info.funds.contains(&coin) {
+                    return Err(CwDexError::InvalidInAsset {
+                        a: asset.clone(),
+                    });
+                }
+                funds.push(coin)
+            }
+            AssetInfo::Cw20(addr) => increase_allowances.push(
+                WasmMsg::Execute {
+                    contract_addr: addr.to_string(),
+                    msg: to_binary(&Cw20ExecuteMsg::IncreaseAllowance {
+                        spender: spender.to_string(),
+                        amount: asset.amount,
+                        expires: Some(Expiration::AtHeight(env.block.height + 1)),
+                    })?,
+                    funds: vec![],
+                }
+                .into(),
+            ),
+            _ => {
+                return Err(CwDexError::InvalidInAsset {
+                    a: asset.clone(),
+                })
+            }
+        }
+    }
+
+    return Ok((funds, increase_allowances));
+}
+
 // ------------------ Junoswap math ----------------------
 
 /// Returns the amount lp tokens minted for a given amount of token1 on Junoswap
-/// 
+///
 /// Copied from WasmSwap source code:
 /// https://github.com/Wasmswap/wasmswap-contracts/blob/8781ab0da9de4a3bfcb071ffb59b6547e7215118/src/contract.rs#L206-L220
 pub(crate) fn juno_get_lp_token_amount_to_mint(
@@ -135,7 +190,7 @@ pub(crate) fn juno_get_lp_token_amount_to_mint(
 
 /// Returns the amount of token2 required to match the given amount of token1
 /// when providing liquidity on Junoswap
-/// 
+///
 /// Copied from WasmSwap source code:
 /// https://github.com/Wasmswap/wasmswap-contracts/blob/8781ab0da9de4a3bfcb071ffb59b6547e7215118/src/contract.rs#L222-L240
 pub(crate) fn juno_get_token2_amount_required(

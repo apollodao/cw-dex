@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, Decimal, Deps, Event, QuerierWrapper, QueryRequest, Response,
-    StdError, StdResult, Uint128, WasmMsg, WasmQuery,
+    to_binary, Addr, CosmosMsg, Decimal, Deps, Env, Event, MessageInfo, QuerierWrapper,
+    QueryRequest, Response, StdError, StdResult, Uint128, WasmMsg, WasmQuery,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
 use wasmswap::msg::{
@@ -11,8 +11,8 @@ use wasmswap::msg::{
 use crate::{traits::Pool, CwDexError};
 
 use super::helpers::{
-    juno_get_lp_token_amount_to_mint, juno_get_token2_amount_required, JunoAsset, JunoAssetInfo,
-    JunoAssetList,
+    juno_get_lp_token_amount_to_mint, juno_get_token2_amount_required,
+    prepare_funds_and_increase_allowances, JunoAsset, JunoAssetInfo, JunoAssetList,
 };
 
 #[cw_serde]
@@ -33,6 +33,8 @@ impl Pool for JunoswapPool {
     fn provide_liquidity(
         &self,
         deps: Deps,
+        env: &Env,
+        info: &MessageInfo,
         assets: AssetList,
         recipient: Addr,
         slippage_tolerance: Option<Decimal>,
@@ -40,7 +42,7 @@ impl Pool for JunoswapPool {
         let pool_info = self.query_info(&deps.querier)?;
 
         // Get the assets in the pool from the assets sent in
-        let juno_assets: JunoAssetList = assets.try_into()?;
+        let juno_assets: JunoAssetList = assets.clone().try_into()?;
         let token1 = juno_assets.find(pool_info.token1_denom.into())?;
         let token2 = juno_assets.find(pool_info.token2_denom.into())?;
 
@@ -51,12 +53,16 @@ impl Pool for JunoswapPool {
             pool_info.token1_reserve,
         )?;
 
-        let min_liquidity =
-            expected_lps * Decimal::one().checked_sub(slippage_tolerance.unwrap_or_else(|| Decimal::one()))?;
+        let min_liquidity = expected_lps
+            * Decimal::one().checked_sub(slippage_tolerance.unwrap_or_else(|| Decimal::one()))?;
+
+        // Increase allowance for cw20 tokens and add native tokens to the funds vec.
+        let (funds, increase_allowances) =
+            prepare_funds_and_increase_allowances(env, info, assets, &self.addr)?;
 
         let provide_liquidity = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.addr.to_string(),
-            funds: vec![],
+            funds,
             msg: to_binary(&ExecuteMsg::AddLiquidity {
                 token1_amount: token1.amount,
                 min_liquidity,
@@ -70,7 +76,10 @@ impl Pool for JunoswapPool {
             .add_attribute("assets", format!("{:?}", vec![token1, token2]))
             .add_attribute("recipient", recipient.to_string());
 
-        Ok(Response::new().add_message(provide_liquidity).add_event(event))
+        Ok(Response::new()
+            .add_messages(increase_allowances)
+            .add_message(provide_liquidity)
+            .add_event(event))
     }
 
     fn withdraw_liquidity(
