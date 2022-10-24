@@ -135,24 +135,17 @@ impl Pool for JunoswapPool {
 
     fn withdraw_liquidity(
         &self,
-        deps: cosmwasm_std::Deps,
+        _deps: Deps,
         asset: Asset,
         recipient: Addr,
-    ) -> Result<cosmwasm_std::Response, crate::CwDexError> {
-        let pool_info = self.query_info(&deps.querier)?;
-
-        // Calculate min tokens out
-        let share_ratio = Decimal::from_ratio(pool_info.lp_token_supply, asset.amount);
-        let min_token1 = (share_ratio * pool_info.token1_reserve).checked_sub(Uint128::one())?;
-        let min_token2 = (share_ratio * pool_info.token2_reserve).checked_sub(Uint128::one())?;
-
+    ) -> Result<Response, CwDexError> {
         let withdraw_liquidity = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.addr.to_string(),
             funds: vec![],
             msg: to_binary(&ExecuteMsg::RemoveLiquidity {
                 amount: asset.amount,
-                min_token1,
-                min_token2,
+                min_token1: Uint128::zero(),
+                min_token2: Uint128::zero(),
                 expiration: None,
             })?,
         });
