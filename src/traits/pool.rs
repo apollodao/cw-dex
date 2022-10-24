@@ -11,6 +11,8 @@ pub trait Pool {
     /// Returns a Response with the necessary messages to provide liquidity to the pool.
     /// `assets` must only contain the assets in the pool, but the ratio of
     /// amounts does not need to be the same as the pool's ratio.
+    ///
+    /// TODO: Document how slippage_tolerance works. When will it fail?
     fn provide_liquidity(
         &self,
         deps: Deps,

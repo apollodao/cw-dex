@@ -209,3 +209,18 @@ pub(crate) fn juno_get_token2_amount_required(
             .checked_add(Uint128::new(1))?)
     }
 }
+
+/// This is the reverse calculation of `juno_get_token2_amount_required`.
+/// This code does not exist in Junoswap codebase, but we need it to calculate
+/// how many assets to send when providing liquidity. See Junoswap
+/// `provide_liquidity` implementation for why.
+pub(crate) fn juno_get_token1_amount_required(
+    token2_amount: Uint128,
+    token2_reserve: Uint128,
+    token1_reserve: Uint128,
+) -> Result<Uint128, CwDexError> {
+    Ok(token2_amount
+        .checked_sub(Uint128::one())?
+        .checked_mul(token1_reserve)?
+        .checked_div(token2_reserve)?)
+}

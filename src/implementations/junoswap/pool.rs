@@ -11,8 +11,9 @@ use wasmswap::msg::{
 use crate::{traits::Pool, CwDexError};
 
 use super::helpers::{
-    juno_get_lp_token_amount_to_mint, juno_get_token2_amount_required,
-    prepare_funds_and_increase_allowances, JunoAsset, JunoAssetInfo, JunoAssetList,
+    juno_get_lp_token_amount_to_mint, juno_get_token1_amount_required,
+    juno_get_token2_amount_required, prepare_funds_and_increase_allowances, JunoAsset,
+    JunoAssetInfo, JunoAssetList,
 };
 
 #[cw_serde]
@@ -30,6 +31,9 @@ impl JunoswapPool {
 }
 
 impl Pool for JunoswapPool {
+    // TODO: Does not work when assets are unbalanced. We also need a function that
+    // balances the assets before providing liquidity so we can liquidate multiple rewards
+    // and provide liquidity.
     fn provide_liquidity(
         &self,
         deps: Deps,
@@ -46,6 +50,50 @@ impl Pool for JunoswapPool {
         let token1 = juno_assets.find(pool_info.token1_denom.into())?;
         let token2 = juno_assets.find(pool_info.token2_denom.into())?;
 
+        // Junoswap requires us to specify how many token1 we want to use and
+        // calculates itself how many token2 are needed to use the specified
+        // amount of token1. Therefore we send (or approve spend) at least this
+        // amount of token2 that Junoswap calculates internally. However,
+        // we don't want to send extra, nor approve spend on extra, and we want
+        // to use as much of both token1 and token2 as possible, so we must
+        // calculate exactly how much of each to send.
+        // Therefore, we must first check the ratio of assets in the pool and
+        // compare with the ratio of assets that are sent to this function to
+        // determine which of the assets to use all of and which to not use all of.
+        let pool_ratio =
+            Decimal::checked_from_ratio(pool_info.token1_reserve, pool_info.token2_reserve)
+                .unwrap_or_default();
+        let asset_ratio =
+            Decimal::checked_from_ratio(token1.amount, token2.amount).unwrap_or_default();
+
+        let token1_to_use;
+        let token2_to_use;
+
+        if pool_ratio < asset_ratio {
+            // We have a higher ratio of token 1 than the pool, so if we try to use
+            // all of our token1 we will get an error because we don't have enough
+            // token2. So we must calculate how much of token1 we should use
+            // assuming we want to use all of token2.
+            token2_to_use = token2.amount;
+            token1_to_use = juno_get_token1_amount_required(
+                token2_to_use,
+                pool_info.token1_reserve,
+                pool_info.token2_reserve,
+            )?;
+        } else {
+            // We have a higher ratio of token 2 than token1, so calculate how much
+            // token2 to use (and approve spend for, since we don't want to approve
+            // spend on any extra).
+            token1_to_use = token1.amount;
+            token2_to_use = juno_get_token2_amount_required(
+                token2.amount,
+                token1.amount,
+                pool_info.lp_token_supply,
+                pool_info.token2_reserve,
+                pool_info.token1_reserve,
+            )?;
+        }
+
         // Calculate minimum LPs from slippage tolerance
         let expected_lps = juno_get_lp_token_amount_to_mint(
             token1.amount,
@@ -53,6 +101,9 @@ impl Pool for JunoswapPool {
             pool_info.token1_reserve,
         )?;
 
+        // TODO: Is this the behavior of slippage_tolerance that we want? Right now
+        // It's a bit unclear what slippage_tolerance is supposed to do. We must
+        // define it more clearly in the trait doc comments.
         let min_liquidity = expected_lps
             * Decimal::one().checked_sub(slippage_tolerance.unwrap_or_else(|| Decimal::one()))?;
 
@@ -64,9 +115,9 @@ impl Pool for JunoswapPool {
             contract_addr: self.addr.to_string(),
             funds,
             msg: to_binary(&ExecuteMsg::AddLiquidity {
-                token1_amount: token1.amount,
+                token1_amount: token1_to_use,
                 min_liquidity,
-                max_token2: token2.amount, // TODO: correct?
+                max_token2: token2_to_use,
                 expiration: None,
             })?,
         });
