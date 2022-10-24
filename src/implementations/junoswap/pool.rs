@@ -51,9 +51,8 @@ impl Pool for JunoswapPool {
             pool_info.token1_reserve,
         )?;
 
-        // TODO: checked mul?
         let min_liquidity =
-            expected_lps * Decimal::one().checked_sub(slippage_tolerance.unwrap_or_default())?;
+            expected_lps * Decimal::one().checked_sub(slippage_tolerance.unwrap_or_else(|| Decimal::one()))?;
 
         let provide_liquidity = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.addr.to_string(),

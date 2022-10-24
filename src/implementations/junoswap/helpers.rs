@@ -46,10 +46,6 @@ impl PartialEq<AssetInfo> for JunoAssetInfo {
             },
         }
     }
-
-    fn ne(&self, other: &AssetInfo) -> bool {
-        !self.eq(other)
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -121,6 +117,10 @@ impl JunoAssetList {
 
 // ------------------ Junoswap math ----------------------
 
+/// Returns the amount lp tokens minted for a given amount of token1 on Junoswap
+/// 
+/// Copied from WasmSwap source code:
+/// https://github.com/Wasmswap/wasmswap-contracts/blob/8781ab0da9de4a3bfcb071ffb59b6547e7215118/src/contract.rs#L206-L220
 pub(crate) fn juno_get_lp_token_amount_to_mint(
     token1_amount: Uint128,
     liquidity_supply: Uint128,
@@ -133,6 +133,11 @@ pub(crate) fn juno_get_lp_token_amount_to_mint(
     }
 }
 
+/// Returns the amount of token2 required to match the given amount of token1
+/// when providing liquidity on Junoswap
+/// 
+/// Copied from WasmSwap source code:
+/// https://github.com/Wasmswap/wasmswap-contracts/blob/8781ab0da9de4a3bfcb071ffb59b6547e7215118/src/contract.rs#L222-L240
 pub(crate) fn juno_get_token2_amount_required(
     max_token: Uint128,
     token1_amount: Uint128,
