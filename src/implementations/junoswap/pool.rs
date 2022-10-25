@@ -266,19 +266,24 @@ impl Pool for JunoswapPool {
     ) -> Result<AssetList, CwDexError> {
         let pool_info = self.query_info(&deps.querier)?;
 
-        // Calculate min tokens out
-        let share_ratio = Decimal::from_ratio(pool_info.lp_token_supply, asset.amount);
-        let min_token1 = (share_ratio * pool_info.token1_reserve).checked_sub(Uint128::one())?;
-        let min_token2 = (share_ratio * pool_info.token2_reserve).checked_sub(Uint128::one())?;
+        // Calculate tokens out
+        let token1_amount = asset
+            .amount
+            .checked_mul(pool_info.token1_reserve)?
+            .checked_div(pool_info.lp_token_supply)?;
+        let token2_amount = asset
+            .amount
+            .checked_mul(pool_info.token2_reserve)?
+            .checked_div(pool_info.lp_token_supply)?;
 
         Ok(JunoAssetList(vec![
             JunoAsset {
                 info: pool_info.token1_denom.into(),
-                amount: min_token1,
+                amount: token1_amount,
             },
             JunoAsset {
                 info: pool_info.token2_denom.into(),
-                amount: min_token2,
+                amount: token2_amount,
             },
         ])
         .into())
