@@ -282,7 +282,6 @@ impl Pool for JunoswapPool {
         deps: Deps,
         offer_asset: Asset,
         ask_asset_info: AssetInfo,
-        minimum_out_amount: Uint128,
         //For some reason Osmosis requires us to send a sender address for simulation.
         //This obviously makes no sense and I guess we'll have to make a PR to
         //Osmosis to fix this, or perhaps copy their math and perform the calculation here...
@@ -324,13 +323,6 @@ impl Pool for JunoswapPool {
         } else {
             Err(StdError::generic_err("Offered asset is not in the pool"))
         }?;
-
-        if amount < minimum_out_amount {
-            return Err(StdError::generic_err(format!(
-                "Return amount is too low. {} < {}",
-                amount, minimum_out_amount
-            )));
-        }
 
         Ok(amount)
     }

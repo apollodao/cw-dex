@@ -107,9 +107,8 @@ impl PoolTrait for Pool {
         deps: Deps,
         offer_asset: cw_asset::Asset,
         ask_asset_info: AssetInfo,
-        minimum_out_amount: cosmwasm_std::Uint128,
         sender: Option<String>,
     ) -> cosmwasm_std::StdResult<cosmwasm_std::Uint128> {
-        self.as_trait().simulate_swap(deps, offer_asset, ask_asset_info, minimum_out_amount, sender)
+        self.as_trait().simulate_swap(deps, offer_asset, ask_asset_info, sender)
     }
 }

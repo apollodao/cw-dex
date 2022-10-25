@@ -223,7 +223,6 @@ impl Pool for OsmosisPool {
         deps: Deps,
         offer: Asset,
         _ask_asset_info: AssetInfo,
-        _minimum_out_amount: Uint128,
         sender: Option<String>,
     ) -> StdResult<Uint128> {
         let offer: Coin = offer.try_into()?;
