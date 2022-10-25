@@ -1,11 +1,15 @@
 use std::sync::mpsc::RecvError;
 
 use astroport_core::factory::PairType;
+use astroport_core::generator::{
+    Cw20HookMsg as GeneratorCw20HookMsg, ExecuteMsg as GeneratorExecuteMsg,
+};
 use astroport_core::querier::query_supply;
 use astroport_core::U256;
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Addr, Coin, CosmosMsg, Decimal, Querier, QuerierWrapper, QueryRequest, Response,
-    StdError, StdResult, WasmMsg, WasmQuery,
+    to_binary, Addr, Coin, CosmosMsg, Decimal, Querier, QuerierWrapper, QueryRequest, ReplyOn,
+    Response, StdError, StdResult, SubMsg, WasmMsg, WasmQuery,
 };
 use cosmwasm_std::{Deps, Event, Uint128};
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
@@ -18,14 +22,18 @@ use astroport_core::pair::{
 };
 
 use crate::pool::Pool;
-use crate::CwDexError;
+use crate::{CwDexError, Staking};
 
 use super::helpers::{cw_asset_info_to_astro_asset_info, cw_asset_to_astro_asset, AstroAssetList};
 
+#[cw_serde]
 pub struct AstroportXykPool {
     contract_addr: String,
     lp_token_addr: String,
+    generator_addr: String,
 }
+
+pub const ASTROPORT_LOCK_TOKENS_REPLY_ID: u64 = 234;
 
 impl AstroportXykPool {
     fn query_lp_token_supply(&self, querier: &QuerierWrapper) -> StdResult<Uint128> {
@@ -302,5 +310,71 @@ impl Pool for AstroportXykPool {
         let query_request = QueryRequest::Wasm(wasm_query);
         let resp = deps.querier.query::<SimulationResponse>(&query_request)?;
         Ok(resp.return_amount)
+    }
+}
+
+impl Staking for AstroportXykPool {
+    fn stake(&self, _deps: Deps, asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
+        let stake_msg = CosmosMsg::Wasm(
+            (WasmMsg::Execute {
+                contract_addr: self.lp_token_addr.to_string(),
+                msg: to_binary(&Cw20ExecuteMsg::Send {
+                    contract: self.generator_addr.to_string(),
+                    amount: asset.amount,
+                    msg: to_binary(&GeneratorCw20HookMsg::Deposit {})?,
+                })?,
+                funds: vec![],
+            }),
+        );
+
+        let event = Event::new("apollo/cw-dex/stake")
+            .add_attribute("type", "astroport_staking")
+            .add_attribute("asset", asset.to_string())
+            .add_attribute("recipient", recipient.to_string())
+            .add_attribute("generator_address", self.generator_addr.to_string());
+
+        Ok(Response::new()
+            .add_submessage(SubMsg {
+                id: ASTROPORT_LOCK_TOKENS_REPLY_ID,
+                msg: stake_msg,
+                gas_limit: None,
+                reply_on: ReplyOn::Success,
+            })
+            .add_event(event))
+    }
+
+    fn unstake(&self, _deps: Deps, asset: Asset, recipient: Addr) -> Result<Response, CwDexError> {
+        let unstake_msg = CosmosMsg::Wasm(
+            (WasmMsg::Execute {
+                contract_addr: self.lp_token_addr.to_string(),
+                msg: to_binary(&GeneratorExecuteMsg::Withdraw {
+                    lp_token: self.lp_token_addr.to_string(),
+                    amount: asset.amount,
+                })?,
+                funds: vec![],
+            }),
+        );
+
+        let event = Event::new("apollo/cw-dex/unstake")
+            .add_attribute("type", "astroport_staking")
+            .add_attribute("recipient", recipient.to_string());
+
+        Ok(Response::new().add_message(unstake_msg).add_event(event))
+    }
+
+    fn claim_rewards(&self, _recipient: Addr) -> Result<Response, CwDexError> {
+        let claim_rewards_msg = CosmosMsg::Wasm(
+            (WasmMsg::Execute {
+                contract_addr: self.generator_addr.to_string(),
+                msg: to_binary(&GeneratorExecuteMsg::ClaimRewards {
+                    lp_tokens: vec![self.lp_token_addr.to_string()],
+                })?,
+                funds: vec![],
+            }),
+        );
+
+        let event =
+            Event::new("apollo/cw-dex/claim_rewards").add_attribute("type", "astroport_staking");
+        Ok(Response::new().add_message(claim_rewards_msg).add_event(event))
     }
 }
