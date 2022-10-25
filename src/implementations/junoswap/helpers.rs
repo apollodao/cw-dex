@@ -1,10 +1,12 @@
 use cosmwasm_std::{
-    to_binary, Addr, Coin, CosmosMsg, Env, MessageInfo, StdError, StdResult, Uint128, WasmMsg,
+    to_binary, Addr, Coin, CosmosMsg, Decimal, Env, MessageInfo, StdError, StdResult, Uint128,
+    WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
 use cw20_0_10_3::Denom;
 use cw_asset::{Asset, AssetInfo, AssetList};
 use cw_utils::Expiration;
+use wasmswap::msg::InfoResponse;
 
 use crate::CwDexError;
 
@@ -131,7 +133,7 @@ impl JunoAssetList {
 pub(crate) fn prepare_funds_and_increase_allowances(
     env: &Env,
     info: &MessageInfo,
-    assets: AssetList,
+    assets: &AssetList,
     spender: &Addr,
 ) -> Result<(Vec<Coin>, Vec<CosmosMsg>), CwDexError> {
     let mut increase_allowances = vec![];
@@ -223,4 +225,82 @@ pub(crate) fn juno_get_token1_amount_required(
         .checked_sub(Uint128::one())?
         .checked_mul(token1_reserve)?
         .checked_div(token2_reserve)?)
+}
+
+pub(crate) struct JunoProvideLiquidityInfo {
+    pub token1_to_use: Asset,
+    pub token2_to_use: Asset,
+    pub lp_token_expected_amount: Uint128,
+}
+
+/// ### Returns
+/// The amount of token1 and token2 that should be sent to Junoswap to provide
+/// liquidity and the expected amount of lp tokens to be minted.
+pub(crate) fn juno_simulate_provide_liquidity(
+    assets: &JunoAssetList,
+    pool_info: InfoResponse,
+) -> Result<JunoProvideLiquidityInfo, CwDexError> {
+    let token1 = assets.find(pool_info.token1_denom.into())?;
+    let token2 = assets.find(pool_info.token2_denom.into())?;
+
+    // Junoswap requires us to specify how many token1 we want to use and
+    // calculates itself how many token2 are needed to use the specified
+    // amount of token1. Therefore we send (or approve spend) at least this
+    // amount of token2 that Junoswap calculates internally. However,
+    // we don't want to send extra, nor approve spend on extra, and we want
+    // to use as much of both token1 and token2 as possible, so we must
+    // calculate exactly how much of each to send.
+    // Therefore, we must first check the ratio of assets in the pool and
+    // compare with the ratio of assets that are sent to this function to
+    // determine which of the assets to use all of and which to not use all of.
+    let pool_ratio =
+        Decimal::checked_from_ratio(pool_info.token1_reserve, pool_info.token2_reserve)
+            .unwrap_or_default();
+    let asset_ratio = Decimal::checked_from_ratio(token1.amount, token2.amount).unwrap_or_default();
+
+    let token1_to_use;
+    let token2_to_use;
+
+    if pool_ratio < asset_ratio {
+        // We have a higher ratio of token 1 than the pool, so if we try to use
+        // all of our token1 we will get an error because we don't have enough
+        // token2. So we must calculate how much of token1 we should use
+        // assuming we want to use all of token2.
+        token2_to_use = token2.amount;
+        token1_to_use = juno_get_token1_amount_required(
+            token2_to_use,
+            pool_info.token1_reserve,
+            pool_info.token2_reserve,
+        )?;
+    } else {
+        // We have a higher ratio of token 2 than token1, so calculate how much
+        // token2 to use (and approve spend for, since we don't want to approve
+        // spend on any extra).
+        token1_to_use = token1.amount;
+        token2_to_use = juno_get_token2_amount_required(
+            token2.amount,
+            token1.amount,
+            pool_info.lp_token_supply,
+            pool_info.token2_reserve,
+            pool_info.token1_reserve,
+        )?;
+    }
+
+    let expected_lps = juno_get_lp_token_amount_to_mint(
+        token1_to_use,
+        pool_info.lp_token_supply,
+        pool_info.token1_reserve,
+    )?;
+
+    Ok(JunoProvideLiquidityInfo {
+        token1_to_use: Asset {
+            amount: token1_to_use,
+            info: token1.info.clone().into(),
+        },
+        token2_to_use: Asset {
+            amount: token2_to_use,
+            info: token2.info.clone().into(),
+        },
+        lp_token_expected_amount: expected_lps,
+    })
 }
