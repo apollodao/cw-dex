@@ -41,7 +41,6 @@ impl Pool for JunoswapPool {
         env: &Env,
         info: &MessageInfo,
         assets: AssetList,
-        recipient: Addr,
         slippage_tolerance: Option<Decimal>,
     ) -> Result<Response, CwDexError> {
         let pool_info = self.query_info(&deps.querier)?;
@@ -76,9 +75,7 @@ impl Pool for JunoswapPool {
             })?,
         });
 
-        let event = Event::new("apollo/cw-dex/provide_liquidity")
-            .add_attribute("type", "junoswap")
-            .add_attribute("recipient", recipient.to_string());
+        let event = Event::new("apollo/cw-dex/provide_liquidity").add_attribute("type", "junoswap");
 
         Ok(Response::new()
             .add_messages(increase_allowances)
@@ -89,8 +86,8 @@ impl Pool for JunoswapPool {
     fn withdraw_liquidity(
         &self,
         _deps: Deps,
+        _env: &Env,
         asset: Asset,
-        recipient: Addr,
     ) -> Result<Response, CwDexError> {
         let withdraw_liquidity = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.addr.to_string(),
@@ -105,8 +102,7 @@ impl Pool for JunoswapPool {
 
         let event = Event::new("apollo/cw-dex/withdraw_liquidity")
             .add_attribute("type", "junoswap")
-            .add_attribute("asset", format!("{:?}", asset))
-            .add_attribute("recipient", recipient.to_string());
+            .add_attribute("asset", format!("{:?}", asset));
 
         Ok(Response::new().add_message(withdraw_liquidity).add_event(event))
     }
@@ -114,10 +110,10 @@ impl Pool for JunoswapPool {
     fn swap(
         &self,
         deps: Deps,
+        _env: &Env,
         offer_asset: Asset,
         ask_asset_info: AssetInfo,
         minimum_out_amount: Uint128,
-        recipient: Addr,
     ) -> Result<Response, CwDexError> {
         let pool_info = self.query_info(&deps.querier)?;
 
@@ -151,8 +147,7 @@ impl Pool for JunoswapPool {
             .add_attribute("type", "junoswap")
             .add_attribute("offer_asset", format!("{:?}", offer_asset))
             .add_attribute("ask_asset_info", format!("{:?}", ask_asset_info))
-            .add_attribute("minimum_out_amount", minimum_out_amount.to_string())
-            .add_attribute("recipient", recipient.to_string());
+            .add_attribute("minimum_out_amount", minimum_out_amount.to_string());
 
         Ok(Response::new().add_message(swap).add_event(event))
     }

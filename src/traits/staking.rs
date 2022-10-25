@@ -7,7 +7,6 @@ pub trait Rewards {
     /// Claim the pending rewards from the staking contract.
     ///
     /// Arguments:
-    /// - `recipient`: the address to receive the claimed rewards.
     ///
     /// Returns a Response containing the messages to claim the pending rewards.
     fn claim_rewards(&self, deps: Deps, env: &Env) -> Result<Response, CwDexError>;
@@ -19,7 +18,6 @@ pub trait Stake: Rewards {
     ///
     /// Arguments:
     /// - `amount`: the amount of the asset to stake.
-    /// - `recipient`: the address to receive the staked assets.
     ///
     /// Returns a Response containing the messages to stake the given asset.
     fn stake(&self, deps: Deps, env: &Env, amount: Uint128) -> Result<Response, CwDexError>;

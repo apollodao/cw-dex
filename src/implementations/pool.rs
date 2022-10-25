@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Deps, Env, MessageInfo};
-use cw_asset::AssetInfo;
+use cosmwasm_std::{Decimal, Deps, Env, MessageInfo, Response, StdResult, Uint128};
+use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use std::str::FromStr;
 
 use crate::error::CwDexError;
@@ -28,7 +28,7 @@ impl Pool {
 
     pub fn get_pool_for_lp_token(_deps: Deps, lp_token: &AssetInfo) -> Result<Self, CwDexError> {
         match lp_token {
-            cw_asset::AssetInfoBase::Native(lp_token_denom) => {
+            AssetInfoBase::Native(lp_token_denom) => {
                 //The only Pool implementation that uses native denoms right now is Osmosis
                 if !lp_token_denom.starts_with("gamm/pool/") {
                     return Err(CwDexError::NotLpToken {});
@@ -57,60 +57,59 @@ impl PoolTrait for Pool {
         deps: Deps,
         env: &Env,
         info: &MessageInfo,
-        assets: cw_asset::AssetList,
-        recipient: cosmwasm_std::Addr,
-        slippage_tolerance: Option<cosmwasm_std::Decimal>,
-    ) -> Result<cosmwasm_std::Response, CwDexError> {
-        self.as_trait().provide_liquidity(deps, env, info, assets, recipient, slippage_tolerance)
+        assets: AssetList,
+        slippage_tolerance: Option<Decimal>,
+    ) -> Result<Response, CwDexError> {
+        self.as_trait().provide_liquidity(deps, env, info, assets, slippage_tolerance)
     }
 
     fn withdraw_liquidity(
         &self,
         deps: Deps,
-        asset: cw_asset::Asset,
-        recipient: cosmwasm_std::Addr,
-    ) -> Result<cosmwasm_std::Response, CwDexError> {
-        self.as_trait().withdraw_liquidity(deps, asset, recipient)
+        env: &Env,
+        asset: Asset,
+    ) -> Result<Response, CwDexError> {
+        self.as_trait().withdraw_liquidity(deps, env, asset)
     }
 
     fn swap(
         &self,
         deps: Deps,
-        offer_asset: cw_asset::Asset,
+        env: &Env,
+        offer_asset: Asset,
         ask_asset_info: AssetInfo,
-        minimum_out_amount: cosmwasm_std::Uint128,
-        recipient: cosmwasm_std::Addr,
-    ) -> Result<cosmwasm_std::Response, CwDexError> {
-        self.as_trait().swap(deps, offer_asset, ask_asset_info, minimum_out_amount, recipient)
+        minimum_out_amount: Uint128,
+    ) -> Result<Response, CwDexError> {
+        self.as_trait().swap(deps, env, offer_asset, ask_asset_info, minimum_out_amount)
     }
 
-    fn get_pool_liquidity(&self, deps: Deps) -> Result<cw_asset::AssetList, CwDexError> {
+    fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {
         self.as_trait().get_pool_liquidity(deps)
     }
 
     fn simulate_provide_liquidity(
         &self,
         deps: Deps,
-        asset: cw_asset::AssetList,
-    ) -> Result<cw_asset::Asset, CwDexError> {
+        asset: AssetList,
+    ) -> Result<Asset, CwDexError> {
         self.as_trait().simulate_provide_liquidity(deps, asset)
     }
 
     fn simulate_withdraw_liquidity(
         &self,
         deps: Deps,
-        asset: cw_asset::Asset,
-    ) -> Result<cw_asset::AssetList, CwDexError> {
+        asset: Asset,
+    ) -> Result<AssetList, CwDexError> {
         self.as_trait().simulate_withdraw_liquidity(deps, asset)
     }
 
     fn simulate_swap(
         &self,
         deps: Deps,
-        offer_asset: cw_asset::Asset,
+        offer_asset: Asset,
         ask_asset_info: AssetInfo,
         sender: Option<String>,
-    ) -> cosmwasm_std::StdResult<cosmwasm_std::Uint128> {
+    ) -> StdResult<Uint128> {
         self.as_trait().simulate_swap(deps, offer_asset, ask_asset_info, sender)
     }
 }

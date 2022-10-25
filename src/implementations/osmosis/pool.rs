@@ -11,7 +11,7 @@ use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    Addr, Coin, CosmosMsg, Decimal, Deps, Env, Event, MessageInfo, QuerierWrapper, QueryRequest,
+    Coin, CosmosMsg, Decimal, Deps, Env, Event, MessageInfo, QuerierWrapper, QueryRequest,
     Response, StdError, StdResult, Uint128,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
@@ -48,10 +48,9 @@ impl Pool for OsmosisPool {
     fn provide_liquidity(
         &self,
         deps: Deps,
-        _env: &Env,
+        env: &Env,
         _info: &MessageInfo,
         assets: AssetList,
-        recipient: Addr,
         slippage_tolerance: Option<Decimal>,
     ) -> Result<Response, CwDexError> {
         let mut assets = assets;
@@ -84,7 +83,7 @@ impl Pool for OsmosisPool {
                     CosmosMsg::Stargate {
                         type_url: OsmosisTypeURLs::JoinSwapExternAmountIn.to_string(),
                         value: encode(MsgJoinSwapExternAmountIn {
-                            sender: recipient.to_string(),
+                            sender: env.contract.address.to_string(),
                             pool_id: self.pool_id,
                             token_in: Some(coin.into()),
                             share_out_min_amount: shares_out_min.to_string(),
@@ -99,8 +98,7 @@ impl Pool for OsmosisPool {
 
         let event = Event::new("apollo/cw-dex/provide_liquidity")
             .add_attribute("pool_id", self.pool_id.to_string())
-            .add_attribute("minimum_shares_out", shares_out.iter().sum::<Uint128>().to_string())
-            .add_attribute("recipient", recipient.to_string());
+            .add_attribute("minimum_shares_out", shares_out.iter().sum::<Uint128>().to_string());
 
         Ok(Response::new().add_messages(join_msgs).add_event(event))
     }
@@ -108,8 +106,8 @@ impl Pool for OsmosisPool {
     fn withdraw_liquidity(
         &self,
         deps: Deps,
+        env: &Env,
         asset: Asset,
-        recipient: Addr,
     ) -> Result<Response, CwDexError> {
         let lp_token = assert_native_coin(&asset)?;
 
@@ -121,7 +119,7 @@ impl Pool for OsmosisPool {
         let exit_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::ExitPool.to_string(),
             value: encode(MsgExitPool {
-                sender: recipient.to_string(),
+                sender: env.contract.address.to_string(),
                 pool_id: self.pool_id,
                 share_in_amount: lp_token.amount.to_string(),
                 token_out_mins: vec_into(token_out_mins),
@@ -130,8 +128,7 @@ impl Pool for OsmosisPool {
 
         let event = Event::new("apollo/cw-dex/withdraw_liquidity")
             .add_attribute("pool_id", self.pool_id.to_string())
-            .add_attribute("lp_token", lp_token.to_string())
-            .add_attribute("recipient", recipient.to_string());
+            .add_attribute("lp_token", lp_token.to_string());
 
         Ok(Response::new().add_message(exit_msg).add_event(event))
     }
@@ -139,10 +136,10 @@ impl Pool for OsmosisPool {
     fn swap(
         &self,
         _deps: Deps,
+        env: &Env,
         offer_asset: Asset,
         ask_asset_info: AssetInfo,
         minimum_out_amount: Uint128,
-        recipient: Addr,
     ) -> Result<Response, CwDexError> {
         let offer = assert_native_coin(&offer_asset)?;
         let ask_denom = assert_native_asset_info(&ask_asset_info)?;
@@ -150,7 +147,7 @@ impl Pool for OsmosisPool {
         let swap_msg = CosmosMsg::Stargate {
             type_url: OsmosisTypeURLs::SwapExactAmountIn.to_string(),
             value: encode(MsgSwapExactAmountIn {
-                sender: recipient.to_string(),
+                sender: env.contract.address.to_string(),
                 routes: vec![SwapAmountInRoute {
                     pool_id: self.pool_id,
                     token_out_denom: ask_denom.clone(),
@@ -164,7 +161,6 @@ impl Pool for OsmosisPool {
             .add_attribute("pool_id", self.pool_id.to_string())
             .add_attribute("offer", offer.to_string())
             .add_attribute("ask", ask_denom)
-            .add_attribute("recipient", recipient.to_string())
             .add_attribute("token_out_min_amount", minimum_out_amount);
 
         Ok(Response::new().add_message(swap_msg).add_event(event))

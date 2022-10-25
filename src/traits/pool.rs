@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Decimal, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{Decimal, Env, MessageInfo, Response, StdResult};
 use cosmwasm_std::{Deps, Uint128};
 use cw_asset::{Asset, AssetInfo, AssetList};
 
@@ -19,7 +19,6 @@ pub trait Pool {
         env: &Env,
         info: &MessageInfo,
         assets: AssetList,
-        recipient: Addr,
         slippage_tolerance: Option<Decimal>,
     ) -> Result<Response, CwDexError>;
 
@@ -28,14 +27,13 @@ pub trait Pool {
     /// Arguments:
     /// - `asset`: the LP tokens to withdraw as an [`Asset`]. The `info` field must correspons
     ///       to the LP token of the pool. Else, an error is returned.
-    /// - `recipient`: the address to receive the withdrawn assets.
     ///
     /// Returns a Response containing the messages to withdraw liquidity from the pool.
     fn withdraw_liquidity(
         &self,
         deps: Deps,
+        env: &Env,
         asset: Asset,
-        recipient: Addr,
     ) -> Result<Response, CwDexError>;
 
     /// Swap assets in the pool.
@@ -43,16 +41,15 @@ pub trait Pool {
     /// Arguments:
     /// - `offer`: the offer asset
     /// - `ask`: the ask asset
-    /// - `recipient`: the address to receive the swapped assets.
     ///
     /// Returns a Response containing the messages to swap assets in the pool.
     fn swap(
         &self,
         deps: Deps,
+        env: &Env,
         offer_asset: Asset,
         ask_asset_info: AssetInfo,
         minimum_out_amount: Uint128,
-        recipient: Addr,
     ) -> Result<Response, CwDexError>;
 
     // === Query functions ===
