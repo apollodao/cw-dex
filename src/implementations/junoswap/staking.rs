@@ -91,7 +91,7 @@ impl Rewards for JunoswapStaking {
                         msg: to_binary(&StakeCw20ExternalRewardsExecuteMsg::Claim {})?,
                     }),
                     gas_limit: None,
-                    reply_on: ReplyOn::Never,
+                    reply_on: ReplyOn::Error,
                 })
             })
             .collect::<StdResult<Vec<SubMsg>>>()?;
