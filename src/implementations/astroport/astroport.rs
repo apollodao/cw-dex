@@ -1,6 +1,3 @@
-use std::sync::mpsc::RecvError;
-
-use astroport_core::factory::PairType;
 use astroport_core::generator::{
     Cw20HookMsg as GeneratorCw20HookMsg, ExecuteMsg as GeneratorExecuteMsg,
 };
@@ -8,23 +5,25 @@ use astroport_core::querier::query_supply;
 use astroport_core::U256;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Addr, Coin, CosmosMsg, Decimal, Querier, QuerierWrapper, QueryRequest, ReplyOn,
-    Response, StdError, StdResult, SubMsg, WasmMsg, WasmQuery,
+    to_binary, Addr, CosmosMsg, Decimal, QuerierWrapper, QueryRequest, ReplyOn, Response, StdError,
+    StdResult, SubMsg, WasmMsg, WasmQuery,
 };
 use cosmwasm_std::{Deps, Event, Uint128};
-use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
-use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList, AssetListBase};
+use cw20::Cw20ExecuteMsg;
+use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 
-use astroport_core::asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo};
+use astroport_core::asset::Asset as AstroAsset;
 use astroport_core::pair::{
-    ConfigResponse, Cw20HookMsg, ExecuteMsg as PairExecMsg, PoolResponse, QueryMsg,
-    SimulationResponse,
+    Cw20HookMsg, ExecuteMsg as PairExecMsg, PoolResponse, QueryMsg, SimulationResponse,
 };
 
 use crate::pool::Pool;
 use crate::{CwDexError, Staking};
 
-use super::helpers::{cw_asset_info_to_astro_asset_info, cw_asset_to_astro_asset, AstroAssetList};
+use super::helpers::{
+    astro_asset_info_to_cw_asset_info, cw_asset_info_to_astro_asset_info, cw_asset_to_astro_asset,
+    AstroAssetList,
+};
 
 #[cw_serde]
 pub struct AstroportXykPool {
@@ -38,14 +37,6 @@ pub const ASTROPORT_LOCK_TOKENS_REPLY_ID: u64 = 234;
 impl AstroportXykPool {
     fn query_lp_token_supply(&self, querier: &QuerierWrapper) -> StdResult<Uint128> {
         query_supply(querier, &self.lp_token_addr)
-    }
-
-    fn query_asset_supply(
-        &self,
-        querier: &QuerierWrapper,
-        asset_info: &AstroAssetInfo,
-    ) -> StdResult<Uint128> {
-        asset_info.query_pool(querier, &self.contract_addr)
     }
 
     fn swap_native_msg(
@@ -99,6 +90,16 @@ impl AstroportXykPool {
                 a: offer_asset.to_owned(),
             })
         }
+    }
+
+    fn get_pool_liquidity_impl(&self, querier: &QuerierWrapper) -> StdResult<PoolResponse> {
+        let query_msg = QueryMsg::Pool {};
+        let wasm_query = WasmQuery::Smart {
+            contract_addr: self.contract_addr.to_string(),
+            msg: to_binary(&query_msg)?,
+        };
+        let query_request = QueryRequest::Wasm(wasm_query);
+        querier.query::<PoolResponse>(&query_request)
     }
 }
 
@@ -196,13 +197,7 @@ impl Pool for AstroportXykPool {
     }
 
     fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {
-        let query_msg = QueryMsg::Pool {};
-        let wasm_query = WasmQuery::Smart {
-            contract_addr: self.contract_addr.to_string(),
-            msg: to_binary(&query_msg)?,
-        };
-        let query_request = QueryRequest::Wasm(wasm_query);
-        let resp = deps.querier.query::<PoolResponse>(&query_request)?;
+        let resp = self.get_pool_liquidity_impl(&deps.querier)?;
         Ok(AssetList::from(AstroAssetList(resp.assets)))
     }
 
@@ -288,7 +283,22 @@ impl Pool for AstroportXykPool {
         deps: Deps,
         asset: Asset,
     ) -> Result<AssetList, CwDexError> {
-        todo!()
+        let amount = asset.amount;
+        let total_share = self.query_lp_token_supply(&deps.querier)?;
+        let mut share_ratio = Decimal::zero();
+        if !total_share.is_zero() {
+            share_ratio = Decimal::from_ratio(amount, total_share);
+        }
+
+        let pools = self.get_pool_liquidity_impl(&deps.querier)?.assets;
+        Ok(pools
+            .iter()
+            .map(|a| Asset {
+                info: astro_asset_info_to_cw_asset_info(&a.info),
+                amount: a.amount * share_ratio,
+            })
+            .collect::<Vec<Asset>>()
+            .into())
     }
 
     fn simulate_swap(

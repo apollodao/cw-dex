@@ -69,3 +69,14 @@ pub(crate) fn cw_asset_info_to_astro_asset_info(
         _ => Err(StdError::generic_err("Invalid asset info")),
     }
 }
+
+pub(crate) fn astro_asset_info_to_cw_asset_info(asset_info: &AstroAssetInfo) -> AssetInfo {
+    match asset_info {
+        AstroAssetInfo::NativeToken {
+            denom,
+        } => AssetInfo::Native(denom.to_string()),
+        AstroAssetInfo::Token {
+            contract_addr,
+        } => AssetInfo::cw20(contract_addr.to_owned()),
+    }
+}
