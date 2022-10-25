@@ -1,10 +1,11 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::Deps;
+use cosmwasm_std::{Deps, Env, MessageInfo};
 use cw_asset::AssetInfo;
 use std::str::FromStr;
 
 use crate::error::CwDexError;
 use crate::implementations::osmosis::OsmosisPool;
+use crate::junoswap::JunoswapPool;
 use crate::traits::pool::Pool as PoolTrait;
 
 /// An enum with all known variants that implement the Pool trait.
@@ -12,15 +13,16 @@ use crate::traits::pool::Pool as PoolTrait;
 /// the caller can pass in any type that implements the Pool trait, but trait
 /// objects require us not to implement the Sized trait, which cw_serde requires.
 #[cw_serde]
-#[derive(Copy)]
 pub enum Pool {
     Osmosis(OsmosisPool),
+    Junoswap(JunoswapPool),
 }
 
 impl Pool {
     pub fn as_trait(&self) -> Box<dyn PoolTrait> {
         match self {
             Pool::Osmosis(x) => Box::new(x.clone()),
+            Pool::Junoswap(x) => Box::new(x.clone()),
         }
     }
 
@@ -53,11 +55,13 @@ impl PoolTrait for Pool {
     fn provide_liquidity(
         &self,
         deps: Deps,
+        env: &Env,
+        info: &MessageInfo,
         assets: cw_asset::AssetList,
         recipient: cosmwasm_std::Addr,
         slippage_tolerance: Option<cosmwasm_std::Decimal>,
     ) -> Result<cosmwasm_std::Response, CwDexError> {
-        self.as_trait().provide_liquidity(deps, assets, recipient, slippage_tolerance)
+        self.as_trait().provide_liquidity(deps, env, info, assets, recipient, slippage_tolerance)
     }
 
     fn withdraw_liquidity(
@@ -105,9 +109,8 @@ impl PoolTrait for Pool {
         deps: Deps,
         offer_asset: cw_asset::Asset,
         ask_asset_info: AssetInfo,
-        minimum_out_amount: cosmwasm_std::Uint128,
         sender: Option<String>,
     ) -> cosmwasm_std::StdResult<cosmwasm_std::Uint128> {
-        self.as_trait().simulate_swap(deps, offer_asset, ask_asset_info, minimum_out_amount, sender)
+        self.as_trait().simulate_swap(deps, offer_asset, ask_asset_info, sender)
     }
 }

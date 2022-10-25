@@ -55,7 +55,7 @@ pub trait Unlock {
 
 pub trait LockedStaking: Stake + Unlock + Rewards {
     /// Returns the lockup duration for the staked assets.
-    fn get_lockup_duration(&self) -> Result<CwDuration, CwDexError>;
+    fn get_lockup_duration(&self, deps: Deps) -> Result<CwDuration, CwDexError>;
 }
 
 pub trait ForceUnlock: LockedStaking {

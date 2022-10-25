@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Decimal, Response, StdResult};
+use cosmwasm_std::{Addr, Decimal, Env, MessageInfo, Response, StdResult};
 use cosmwasm_std::{Deps, Uint128};
 use cw_asset::{Asset, AssetInfo, AssetList};
 
@@ -11,9 +11,13 @@ pub trait Pool {
     /// Returns a Response with the necessary messages to provide liquidity to the pool.
     /// `assets` must only contain the assets in the pool, but the ratio of
     /// amounts does not need to be the same as the pool's ratio.
+    ///
+    /// TODO: Document how slippage_tolerance works. When will it fail?
     fn provide_liquidity(
         &self,
         deps: Deps,
+        env: &Env,
+        info: &MessageInfo,
         assets: AssetList,
         recipient: Addr,
         slippage_tolerance: Option<Decimal>,
@@ -79,7 +83,6 @@ pub trait Pool {
         deps: Deps,
         offer_asset: Asset,
         ask_asset_info: AssetInfo,
-        minimum_out_amount: Uint128,
         //For some reason Osmosis requires us to send a sender address for simulation.
         //This obviously makes no sense and I guess we'll have to make a PR to
         //Osmosis to fix this, or perhaps copy their math and perform the calculation here...

@@ -11,8 +11,8 @@ use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    Addr, Coin, CosmosMsg, Decimal, Deps, Event, QuerierWrapper, QueryRequest, Response, StdError,
-    StdResult, Uint128,
+    Addr, Coin, CosmosMsg, Decimal, Deps, Env, Event, MessageInfo, QuerierWrapper, QueryRequest,
+    Response, StdError, StdResult, Uint128,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
 use osmo_bindings::OsmosisQuery;
@@ -48,6 +48,8 @@ impl Pool for OsmosisPool {
     fn provide_liquidity(
         &self,
         deps: Deps,
+        _env: &Env,
+        _info: &MessageInfo,
         assets: AssetList,
         recipient: Addr,
         slippage_tolerance: Option<Decimal>,
@@ -221,7 +223,6 @@ impl Pool for OsmosisPool {
         deps: Deps,
         offer: Asset,
         _ask_asset_info: AssetInfo,
-        _minimum_out_amount: Uint128,
         sender: Option<String>,
     ) -> StdResult<Uint128> {
         let offer: Coin = offer.try_into()?;
