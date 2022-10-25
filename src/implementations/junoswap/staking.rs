@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, Deps, Env, Event, QueryRequest, ReplyOn, Response, StdError,
-    StdResult, SubMsg, Uint128, WasmMsg, WasmQuery,
+    to_binary, Addr, CosmosMsg, Deps, Env, Event, QueryRequest, ReplyOn, Response, StdResult,
+    SubMsg, Uint128, WasmMsg, WasmQuery,
 };
 use cw20::Cw20ExecuteMsg;
 
@@ -15,7 +15,7 @@ use cw20_stake::{
 use cw_utils::Duration;
 
 use crate::{
-    traits::{ForceUnlock, LockedStaking, Rewards, Stake, Unlock, Unstake},
+    traits::{LockedStaking, Rewards, Stake, Unlock, Unstake},
     CwDexError,
 };
 use stake_cw20_external_rewards::msg::ExecuteMsg as StakeCw20ExternalRewardsExecuteMsg;
@@ -136,18 +136,6 @@ impl Unlock for JunoswapStaking {
             .add_attribute("amount", amount.to_string());
 
         Ok(Response::new().add_message(unstake_msg).add_event(event))
-    }
-}
-
-impl ForceUnlock for JunoswapStaking {
-    fn force_unlock(
-        &self,
-        _deps: Deps,
-        _env: &Env,
-        _lockup_id: Option<u64>,
-        _amount: Uint128,
-    ) -> Result<Response, CwDexError> {
-        Err(CwDexError::Std(StdError::generic_err("Cannot force unlock on Junoswap staking")))
     }
 }
 
