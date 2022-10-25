@@ -5,6 +5,7 @@ use std::str::FromStr;
 
 use crate::error::CwDexError;
 use crate::implementations::osmosis::OsmosisPool;
+use crate::junoswap::JunoswapPool;
 use crate::traits::pool::Pool as PoolTrait;
 
 /// An enum with all known variants that implement the Pool trait.
@@ -12,15 +13,16 @@ use crate::traits::pool::Pool as PoolTrait;
 /// the caller can pass in any type that implements the Pool trait, but trait
 /// objects require us not to implement the Sized trait, which cw_serde requires.
 #[cw_serde]
-#[derive(Copy)]
 pub enum Pool {
     Osmosis(OsmosisPool),
+    Junoswap(JunoswapPool),
 }
 
 impl Pool {
     pub fn as_trait(&self) -> Box<dyn PoolTrait> {
         match self {
             Pool::Osmosis(x) => Box::new(x.clone()),
+            Pool::Junoswap(x) => Box::new(x.clone()),
         }
     }
 
