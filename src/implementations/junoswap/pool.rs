@@ -168,13 +168,20 @@ impl Pool for JunoswapPool {
     ) -> Result<Response, CwDexError> {
         let pool_info = self.query_info(&deps.querier)?;
 
-        let input_token = if JunoAssetInfo(pool_info.token1_denom) == offer_asset.info {
-            Ok(TokenSelect::Token1)
+        let output_token: AssetInfo;
+        let input_token;
+        if JunoAssetInfo(pool_info.token1_denom.clone()) == offer_asset.info {
+            input_token = TokenSelect::Token1;
+            output_token = JunoAssetInfo(pool_info.token2_denom).into();
         } else if JunoAssetInfo(pool_info.token2_denom) == offer_asset.info {
-            Ok(TokenSelect::Token2)
+            input_token = TokenSelect::Token2;
+            output_token = JunoAssetInfo(pool_info.token1_denom).into();
         } else {
-            Err(StdError::generic_err("Offered asset is not in the pool"))
-        }?;
+            return Err(CwDexError::Std(StdError::generic_err("Offered asset is not in the pool")));
+        };
+        if output_token != ask_asset_info {
+            return Err(CwDexError::Std(StdError::generic_err("Asked asset is not in the pool")));
+        }
 
         let swap = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.addr.to_string(),
