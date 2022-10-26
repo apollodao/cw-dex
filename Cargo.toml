@@ -17,7 +17,6 @@ cosmwasm-schema = "1.1.0"
 cosmwasm-std = {version = "1.1.0", features = ["stargate"]}
 cw-asset = "2.3.0"
 cw-storage-plus = "0.15"
-cw-token = {git = "https://github.com/apollodao/cw-token.git"}
 cw-utils = "0.15"
 cw20 = "0.15"
 cw20-base = "0.15"
