@@ -1,14 +1,12 @@
 use std::ops::Deref;
 use std::str::FromStr;
 
-use apollo_proto_rust::osmosis::gamm::v1beta1::{
-    MsgExitPool, MsgJoinSwapExternAmountIn, MsgSwapExactAmountIn, QuerySwapExactAmountInRequest,
-    QuerySwapExactAmountInResponse, QueryTotalPoolLiquidityRequest,
+use osmosis_std::types::osmosis::gamm::v1beta1::{
+    GammQuerier, MsgExitPool, MsgJoinSwapExternAmountIn, MsgSwapExactAmountIn,
+    QuerySwapExactAmountInRequest, QuerySwapExactAmountInResponse, QueryTotalPoolLiquidityRequest,
     QueryTotalPoolLiquidityResponse, SwapAmountInRoute,
 };
 
-use apollo_proto_rust::utils::encode;
-use apollo_proto_rust::OsmosisTypeURLs;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     Coin, CosmosMsg, Decimal, Deps, Env, Event, MessageInfo, QuerierWrapper, QueryRequest,
@@ -80,15 +78,13 @@ impl Pool for OsmosisPool {
                     )?
                     .amount;
                 Ok((
-                    CosmosMsg::Stargate {
-                        type_url: OsmosisTypeURLs::JoinSwapExternAmountIn.to_string(),
-                        value: encode(MsgJoinSwapExternAmountIn {
-                            sender: env.contract.address.to_string(),
-                            pool_id: self.pool_id,
-                            token_in: Some(coin.into()),
-                            share_out_min_amount: shares_out_min.to_string(),
-                        }),
-                    },
+                    MsgJoinSwapExternAmountIn {
+                        sender: env.contract.address.to_string(),
+                        pool_id: self.pool_id,
+                        token_in: Some(coin.into()),
+                        share_out_min_amount: shares_out_min.to_string(),
+                    }
+                    .into(),
                     shares_out_min,
                 ))
             })
@@ -116,14 +112,11 @@ impl Pool for OsmosisPool {
         // TODO: Query for exit pool amounts?
         let token_out_mins = osmosis_calculate_exit_pool_amounts(querier, self.pool_id, &lp_token)?;
 
-        let exit_msg = CosmosMsg::Stargate {
-            type_url: OsmosisTypeURLs::ExitPool.to_string(),
-            value: encode(MsgExitPool {
-                sender: env.contract.address.to_string(),
-                pool_id: self.pool_id,
-                share_in_amount: lp_token.amount.to_string(),
-                token_out_mins: vec_into(token_out_mins),
-            }),
+        let exit_msg = MsgExitPool {
+            sender: env.contract.address.to_string(),
+            pool_id: self.pool_id,
+            share_in_amount: lp_token.amount.to_string(),
+            token_out_mins: vec_into(token_out_mins),
         };
 
         let event = Event::new("apollo/cw-dex/withdraw_liquidity")
@@ -144,17 +137,14 @@ impl Pool for OsmosisPool {
         let offer = assert_native_coin(&offer_asset)?;
         let ask_denom = assert_native_asset_info(&ask_asset_info)?;
 
-        let swap_msg = CosmosMsg::Stargate {
-            type_url: OsmosisTypeURLs::SwapExactAmountIn.to_string(),
-            value: encode(MsgSwapExactAmountIn {
-                sender: env.contract.address.to_string(),
-                routes: vec![SwapAmountInRoute {
-                    pool_id: self.pool_id,
-                    token_out_denom: ask_denom.clone(),
-                }],
-                token_in: Some(offer.clone().into()),
-                token_out_min_amount: minimum_out_amount.to_string(),
-            }),
+        let swap_msg = MsgSwapExactAmountIn {
+            sender: env.contract.address.to_string(),
+            routes: vec![SwapAmountInRoute {
+                pool_id: self.pool_id,
+                token_out_denom: ask_denom.clone(),
+            }],
+            token_in: Some(offer.clone().into()),
+            token_out_min_amount: minimum_out_amount.to_string(),
         };
 
         let event = Event::new("apollo/cw-dex/swap")
@@ -167,13 +157,7 @@ impl Pool for OsmosisPool {
     }
 
     fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {
-        let pool_assets =
-            deps.querier.query::<QueryTotalPoolLiquidityResponse>(&QueryRequest::Stargate {
-                path: OsmosisTypeURLs::QueryTotalPoolLiquidity.to_string(),
-                data: encode(QueryTotalPoolLiquidityRequest {
-                    pool_id: self.pool_id,
-                }),
-            })?;
+        let pool_assets = GammQuerier::new(&deps.querier).total_pool_liquidity(self.pool_id)?;
 
         let asset_list: AssetList = pool_assets
             .liquidity
@@ -222,20 +206,15 @@ impl Pool for OsmosisPool {
         sender: Option<String>,
     ) -> StdResult<Uint128> {
         let offer: Coin = offer.try_into()?;
-        let swap_response =
-            deps.querier.query::<QuerySwapExactAmountInResponse>(&QueryRequest::Stargate {
-                path: OsmosisTypeURLs::QuerySwapExactAmountIn.to_string(),
-                data: encode(QuerySwapExactAmountInRequest {
-                    sender: sender
-                        .ok_or(StdError::generic_err("sender is required for osmosis"))?,
-                    pool_id: self.pool_id,
-                    routes: vec![SwapAmountInRoute {
-                        pool_id: self.pool_id,
-                        token_out_denom: offer.denom.clone(),
-                    }],
-                    token_in: offer.to_string(),
-                }),
-            })?;
+        let swap_response = GammQuerier::new(&deps.querier).estimate_swap_exact_amount_in(
+            sender.ok_or(StdError::generic_err("sender is required for osmosis"))?,
+            self.pool_id,
+            offer.denom.clone(),
+            vec![SwapAmountInRoute {
+                pool_id: self.pool_id,
+                token_out_denom: offer.denom.clone(),
+            }],
+        )?;
         Uint128::from_str(swap_response.token_out_amount.as_str())
     }
 }
