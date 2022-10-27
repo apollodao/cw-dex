@@ -25,7 +25,7 @@ pub trait Pool {
     /// Withdraw liquidity from the pool.
     ///
     /// Arguments:
-    /// - `asset`: the LP tokens to withdraw as an [`Asset`]. The `info` field must correspons
+    /// - `asset`: the LP tokens to withdraw as an [`Asset`]. The `info` field must correspond
     ///       to the LP token of the pool. Else, an error is returned.
     ///
     /// Returns a Response containing the messages to withdraw liquidity from the pool.
