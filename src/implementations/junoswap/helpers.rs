@@ -5,7 +5,6 @@ use cosmwasm_std::{
 use cw20::Cw20ExecuteMsg;
 use cw20_0_10_3::Denom;
 use cw_asset::{Asset, AssetInfo, AssetList};
-use cw_utils::Expiration;
 use wasmswap::msg::InfoResponse;
 
 use crate::CwDexError;
@@ -155,7 +154,7 @@ pub(crate) fn prepare_funds_and_increase_allowances(
                     msg: to_binary(&Cw20ExecuteMsg::IncreaseAllowance {
                         spender: spender.to_string(),
                         amount: asset.amount,
-                        expires: Some(Expiration::AtHeight(env.block.height + 1)),
+                        expires: Some(cw20::Expiration::AtHeight(env.block.height + 1)),
                     })?,
                     funds: vec![],
                 }
