@@ -1,4 +1,5 @@
-use cosmwasm_std::{Deps, Env, Response, Uint128};
+use cosmwasm_std::{Addr, Deps, Env, QuerierWrapper, Response, Uint128};
+use cw_asset::AssetList;
 use cw_utils::Duration as CwDuration;
 
 use crate::error::CwDexError;
@@ -10,6 +11,14 @@ pub trait Rewards {
     ///
     /// Returns a Response containing the messages to claim the pending rewards.
     fn claim_rewards(&self, deps: Deps, env: &Env) -> Result<Response, CwDexError>;
+
+    //// Query the pending rewards in the staking contract that can be claimed by
+    /// `user` by calling `claim_rewards`.
+    fn query_pending_rewards(
+        &self,
+        querier: &QuerierWrapper,
+        user: &Addr,
+    ) -> Result<AssetList, CwDexError>;
 }
 
 /// Trait to abstract interaction with a staking contract or module with an optional lockup time.
