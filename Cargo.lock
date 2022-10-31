@@ -20,6 +20,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "216261ddc8289130e551ddcd5ce8a064710c0d064a4d2895c67151c92b5443f6"
 
 [[package]]
+name = "apollo-utils"
+version = "0.1.0"
+source = "git+https://github.com/apollodao/apollo-utils.git#b9caacbb112f92eaf486694759d5cf7de8af172d"
+dependencies = [
+ "cosmwasm-std",
+ "cw-asset",
+ "cw20 0.16.0",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -252,6 +262,7 @@ dependencies = [
 name = "cw-dex"
 version = "0.0.1"
 dependencies = [
+ "apollo-utils",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-asset",
