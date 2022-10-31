@@ -10,13 +10,6 @@ use osmosis_std::types::osmosis::gamm::v1beta1::{
 
 use crate::error::CwDexError;
 
-pub(crate) fn query_pool_params<C: CustomQuery>(
-    querier: QuerierWrapper<C>,
-    pool_id: u64,
-) -> StdResult<QueryPoolParamsResponse> {
-    GammQuerier::new(&querier).pool_params(pool_id)
-}
-
 pub(crate) trait ToProtobufDuration {
     fn to_protobuf_duration(&self) -> osmosis_std::shim::Duration;
 }

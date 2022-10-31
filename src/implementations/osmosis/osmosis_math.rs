@@ -18,8 +18,6 @@ use num_traits::ToPrimitive;
 
 use crate::CwDexError;
 
-use super::helpers::query_pool_params;
-
 pub fn osmosis_calculate_join_pool_shares(
     querier: QuerierWrapper<OsmosisQuery>,
     pool_id: u64,
