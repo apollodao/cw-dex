@@ -271,9 +271,13 @@ pub fn calc_single_asset_join(
         return Err(StdError::generic_err("pool misconfigured, total weight = 0"));
     }
 
-    let normalized_weight = Decimal::from_ratio(Uint128::from_str(&token_in_pool_asset.weight)?, total_weight);
+    let normalized_weight =
+        Decimal::from_ratio(Uint128::from_str(&token_in_pool_asset.weight)?, total_weight);
     calc_pool_shares_out_given_single_asset_in(
-        Decimal::from_ratio(Uint128::from_str(&token_in_pool_asset.token.as_ref().unwrap().amount)?, Uint128::from(1u128)),
+        Decimal::from_ratio(
+            Uint128::from_str(&token_in_pool_asset.token.as_ref().unwrap().amount)?,
+            Uint128::from(1u128),
+        ),
         normalized_weight,
         Decimal::from_ratio(total_shares, Uint128::from(1u128)),
         Decimal::from_ratio(token_in.amount, Uint128::from(1u128)),
@@ -755,333 +759,333 @@ fn _osmosis_abs_difference_with_sign(a: Decimal, b: Decimal) -> (Decimal, bool) 
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    // use super::*;
 
-    // // #[test_case(1, vec!["uosmo".to_string(), "uatom".to_string()], Decimal::from_ratio(1u8,50u8), Decimal::from_ratio(1u8,500u8), 1, 0.5;"test_join_pool_calculation_single_sided")]
-    // // fn test_join_pool_calculation_single_sided(
-    // //     num_accounts: u64,
-    // //     pool_names: Vec<String>,
-    // //     base: Decimal,
-    // //     precision: Decimal,
-    // //     exp: Decimal,
-    // //     expected: Decimal,
-    // // ) {
-    // //     let actual = join_pool_calculation(num_accounts, pool_names, base, precision, exp, false);
-    // //     assert_eq!(actual, expected);
-    // // }
+    // // // #[test_case(1, vec!["uosmo".to_string(), "uatom".to_string()], Decimal::from_ratio(1u8,50u8), Decimal::from_ratio(1u8,500u8), 1, 0.5;"test_join_pool_calculation_single_sided")]
+    // // // fn test_join_pool_calculation_single_sided(
+    // // //     num_accounts: u64,
+    // // //     pool_names: Vec<String>,
+    // // //     base: Decimal,
+    // // //     precision: Decimal,
+    // // //     exp: Decimal,
+    // // //     expected: Decimal,
+    // // // ) {
+    // // //     let actual = join_pool_calculation(num_accounts, pool_names, base, precision, exp, false);
+    // // //     assert_eq!(actual, expected);
+    // // // }
 
-    #[derive(Clone)]
-    struct CalcJoinSharesTestCase {
-        pub name: String,
-        pub swap_fee: Decimal,
-        pub pool_assets: Vec<PoolAsset>,
-        pub tokens_in: Vec<Coin>,
-        pub expect_shares: Uint128,
-    }
+    // #[derive(Clone)]
+    // struct CalcJoinSharesTestCase {
+    //     pub name: String,
+    //     pub swap_fee: Decimal,
+    //     pub pool_assets: Vec<PoolAsset>,
+    //     pub tokens_in: Vec<Coin>,
+    //     pub expect_shares: Uint128,
+    // }
 
-    #[test]
-    fn test_osmosis_calculate_join_pool_shares_single_sided() {
-        let one_trillion: u128 = 1e12 as u128;
-        let default_osmo_pool_asset: PoolAsset = PoolAsset {
-            token: Coin::new(one_trillion, "uosmo").into(),
-            weight: Uint128::new(100),
-        };
-        let default_atom_pool_asset: PoolAsset = PoolAsset {
-            token: Coin::new(one_trillion, "uatom").into(),
-            weight: Uint128::new(100),
-        };
-        let one_trillion_even_pool_assets: Vec<PoolAsset> =
-            vec![default_osmo_pool_asset.clone(), default_atom_pool_asset.clone()];
+    // #[test]
+    // fn test_osmosis_calculate_join_pool_shares_single_sided() {
+    //     let one_trillion: u128 = 1e12 as u128;
+    //     let default_osmo_pool_asset: PoolAsset = PoolAsset {
+    //         token: Coin::new(one_trillion, "uosmo").into(),
+    //         weight: Uint128::new(100),
+    //     };
+    //     let default_atom_pool_asset: PoolAsset = PoolAsset {
+    //         token: Coin::new(one_trillion, "uatom").into(),
+    //         weight: Uint128::new(100),
+    //     };
+    //     let one_trillion_even_pool_assets: Vec<PoolAsset> =
+    //         vec![default_osmo_pool_asset.clone(), default_atom_pool_asset.clone()];
 
-        let calc_single_asset_join_test_cases: Vec<CalcJoinSharesTestCase> = vec![
-        CalcJoinSharesTestCase {
-            name:         "single tokens_in - equal weights with zero swap fee".to_string(),
-            swap_fee:      Decimal::zero(),
-            pool_assets:   one_trillion_even_pool_assets.clone(),
-            tokens_in:     vec![Coin::new(50_000, "uosmo")],
-            expect_shares: Uint128::new(2_499_999_968_750),
-        },
-        CalcJoinSharesTestCase {
-            name:         "single tokens_in - equal weights with 0.01 swap fee".to_string(),
-            swap_fee:      Decimal::from_str("0.01").unwrap(),
-            pool_assets:   one_trillion_even_pool_assets.clone(),
-            tokens_in:     vec![Coin::new(50_000, "uosmo")],
-            expect_shares: Uint128::new(2_487_500_000_000),
-        },
-        CalcJoinSharesTestCase {
-            name:         "single tokens_in - equal weights with 0.99 swap fee".to_string(),
-            swap_fee:      Decimal::from_str("0.99").unwrap(),
-            pool_assets:   one_trillion_even_pool_assets.clone(),
-            tokens_in:     vec![Coin::new(50_000, "uosmo")],
-            expect_shares: Uint128::new(1_262_500_000_000),
-        },
-        CalcJoinSharesTestCase {
-            name:    "single tokens_in - unequal weights with 0.99 swap fee".to_string(),
-            swap_fee: Decimal::from_str("0.99").unwrap(),
-            pool_assets: vec![
-                default_osmo_pool_asset.clone(),
-                PoolAsset {
-                    token:  Coin::new(one_trillion, "uatom"),
-                    weight: Uint128::new(300),
-                },
-            ],
-            tokens_in:     vec![Coin::new(50_000, "uosmo")],
-            expect_shares: Uint128::new(321_875_000_000),
-        },
-        CalcJoinSharesTestCase {
-            name:    "single asset - token in weight is greater than the other token, with zero swap fee".to_string(),
-            swap_fee: Decimal::zero(),
-            pool_assets: vec![
-                PoolAsset {
-                    token:  Coin::new(one_trillion, "uosmo"),
-                    weight: Uint128::new(500),
-                },
-                default_atom_pool_asset.clone(),
-            ],
-            tokens_in:     vec![Coin::new(50_000, "uosmo")],
-            expect_shares: Uint128::new(4_166_666_649_306),
-        },
-        CalcJoinSharesTestCase {
-            name:    "single asset - token in weight is greater than the other token, with non-zero swap fee".to_string(),
-            swap_fee: Decimal::from_str("0.01").unwrap(),
-            pool_assets: vec![
-                PoolAsset {
-                    token:  Coin::new(one_trillion, "uosmo"),
-                    weight: Uint128::new(500),
-                },
-                default_atom_pool_asset.clone(),
-            ],
-            tokens_in:     vec![Coin::new(50_000, "uosmo")],
-            expect_shares: Uint128::new(4_159_722_200_000),
-        },
-        CalcJoinSharesTestCase {
-            name:    "single asset - token in weight is smaller than the other token, with zero swap fee".to_string(),
-            swap_fee: Decimal::from_str("0").unwrap(),
-            pool_assets: vec![
-                PoolAsset {
-                    token:  Coin::new(one_trillion, "uosmo"),
-                    weight: Uint128::new(200),
-                },
-                PoolAsset {
-                    token:  Coin::new(one_trillion, "uatom"),
-                    weight: Uint128::new(1000),
-                },
-            ],
-            tokens_in:     vec![Coin::new(50_000, "uosmo")],
-            expect_shares: Uint128::new(833_333_315_972),
-        },
-        CalcJoinSharesTestCase {
-            name:    "single asset - token in weight is smaller than the other token, with non-zero swap fee".to_string(),
-            swap_fee: Decimal::from_str("0.02").unwrap(),
-            pool_assets: vec![
-                PoolAsset {
-                    token:  Coin::new(one_trillion, "uosmo"),
-                    weight: Uint128::new(200),
-                },
-                PoolAsset {
-                    token:  Coin::new(one_trillion, "uatom"),
-                    weight: Uint128::new(1000),
-                },
-            ],
-            tokens_in:     vec![Coin::new(50_000, "uosmo")],
-            expect_shares: Uint128::new(819_444_430_000),
-        },
-        CalcJoinSharesTestCase {
-            name:    "single asset - tokenIn is large relative to liquidity, token in weight is smaller than the other token, with zero swap fee".to_string(),
-            swap_fee: Decimal::from_str("0").unwrap(),
-            pool_assets: vec![
-                PoolAsset {
-                    token:  Coin::new(156_736, "uosmo"),
-                    weight: Uint128::new(200),
-                },
-                PoolAsset {
-                    token:  Coin::new(one_trillion, "uatom"),
-                    weight: Uint128::new(1000),
-                },
-            ],
-            // 156_736 * 3 / 4 = 117552
-            tokens_in: vec![Coin::new(117552, "uosmo")],
-            expect_shares: Uint128::new(9_775_731_930_496_140_648),
-        },
-        CalcJoinSharesTestCase {
-            name:    "single asset - tokenIn is large relative to liquidity, token in weight is smaller than the other token, with non-zero swap fee".to_string(),
-            swap_fee: Decimal::from_str("0.02").unwrap(),
-            pool_assets: vec![
-                PoolAsset {
-                    token:  Coin::new(156_736, "uosmo"),
-                    weight: Uint128::new(200),
-                },
-                PoolAsset {
-                    token:  Coin::new(one_trillion, "uatom"),
-                    weight: Uint128::new(1000),
-                },
-            ],
-            // 156_736 / 4 * 3 = 117552
-            tokens_in: vec![Coin::new(117552, "uosmo")],
-            expect_shares: Uint128::new(9_644_655_900_000_000_000),
-        },
-        CalcJoinSharesTestCase {
-            name:    "single asset - (almost 1 == tokenIn / liquidity ratio), token in weight is smaller than the other token, with zero swap fee".to_string(),
-            swap_fee: Decimal::from_str("0").unwrap(),
-            pool_assets: vec![
-                PoolAsset {
-                    token:  Coin::new(500_000, "uosmo"),
-                    weight: Uint128::new(100),
-                },
-                PoolAsset {
-                    token:  Coin::new(one_trillion, "uatom"),
-                    weight: Uint128::new(1000),
-                },
-            ],
-            tokens_in: vec![Coin::new(499_999, "uosmo")],
-            expect_shares: Uint128::new(6_504_099_261_800_144_638),
-        },
-        // TODO: Handle error and panic cases
-        // CalcJoinSharesTestCase {
-        //     // Currently, our Pow approximation function does not work correctly when one tries
-        //     // to add liquidity that is larger than the existing liquidity.
-        //     // The ratio of tokenIn / existing liquidity that is larger than or equal to 1 causes a panic.
-        //     // This has been deemed as acceptable since it causes code complexity to fix
-        //     // & only affects UX in an edge case (user has to split up single asset joins)
-        //     name:    "single asset - (exactly 1 == tokenIn / liquidity ratio - failure), token in weight is smaller than the other token, with zero swap fee".to_string(),
-        //     swap_fee: Decimal::from_str("0").unwrap(),
-        //     pool_assets: vec![
-        //         PoolAsset {
-        //             token:  Coin::new(500_000, "uosmo"),
-        //             weight: Uint128::new(100),
-        //         },
-        //         PoolAsset {
-        //             token:  Coin::new(one_trillion, "uatom"),
-        //             weight: Uint128::new(1000),
-        //         },
-        //     ],
-        //     tokens_in: vec![Coin::new(500_000, "uosmo")],
-        //     expect_shares: Uint128::new(6_504_099_261_800_144_638),
-        //     expectPanic:  true,
-        // },
-        // CalcJoinSharesTestCase {
-        //     name:         "tokenIn asset does not exist in pool",
-        //     swap_fee:      Decimal::from_str("0"),
-        //     pool_assets:   one_trillion_even_pool_assets,
-        //     tokens_in:     vec![](Uint128::new64Coin(doesNotExistDenom, 50_000)),
-        //     expect_shares: sdk.ZeroInt(),
-        //     expErr:       sdkerrors.Wrapf(types.ErrDenomNotFoundInPool, fmt.Sprintf(balancer.ErrMsgFormatNoPoolAssetFound, doesNotExistDenom)),
-        // },
-        CalcJoinSharesTestCase {
-            // Pool liquidity is changed by 1e-12 / 2
-            // P_issued = 1e20 * 1e-12 / 2 = 1e8 / 2 = 50_000_000
-            name:    "minimum input single asset equal liquidity".to_string(),
-            swap_fee: Decimal::from_str("0").unwrap(),
-            pool_assets: vec![
-                PoolAsset {
-                    token:  Coin::new(one_trillion, "uosmo"),
-                    weight: Uint128::new(100),
-                },
-                PoolAsset {
-                    token:  Coin::new(one_trillion, "uatom"),
-                    weight: Uint128::new(100),
-                },
-            ],
-            tokens_in: vec![Coin::new(1, "uosmo")],
-            expect_shares: Uint128::new(50_000_000),
-        },
-        CalcJoinSharesTestCase {
-            // P_issued should be 1/10th that of the previous test
-            // p_issued = 50_000_000 / 10 = 5_000_000
-            name:    "minimum input single asset imbalanced liquidity".to_string(),
-            swap_fee: Decimal::from_str("0").unwrap(),
-            pool_assets: vec![
-                PoolAsset {
-                    token:  Coin::new(10_000_000_000_000, "uosmo"),
-                    weight: Uint128::new(100),
-                },
-                PoolAsset {
-                    token:  Coin::new(1_000_000_000_000, "uatom"),
-                    weight: Uint128::new(100),
-                },
-            ],
-            tokens_in: vec![Coin::new(1, "uosmo")],
-            expect_shares: Uint128::new(5_000_000),
-        }];
+    //     let calc_single_asset_join_test_cases: Vec<CalcJoinSharesTestCase> = vec![
+    //     CalcJoinSharesTestCase {
+    //         name:         "single tokens_in - equal weights with zero swap fee".to_string(),
+    //         swap_fee:      Decimal::zero(),
+    //         pool_assets:   one_trillion_even_pool_assets.clone(),
+    //         tokens_in:     vec![Coin::new(50_000, "uosmo")],
+    //         expect_shares: Uint128::new(2_499_999_968_750),
+    //     },
+    //     CalcJoinSharesTestCase {
+    //         name:         "single tokens_in - equal weights with 0.01 swap fee".to_string(),
+    //         swap_fee:      Decimal::from_str("0.01").unwrap(),
+    //         pool_assets:   one_trillion_even_pool_assets.clone(),
+    //         tokens_in:     vec![Coin::new(50_000, "uosmo")],
+    //         expect_shares: Uint128::new(2_487_500_000_000),
+    //     },
+    //     CalcJoinSharesTestCase {
+    //         name:         "single tokens_in - equal weights with 0.99 swap fee".to_string(),
+    //         swap_fee:      Decimal::from_str("0.99").unwrap(),
+    //         pool_assets:   one_trillion_even_pool_assets.clone(),
+    //         tokens_in:     vec![Coin::new(50_000, "uosmo")],
+    //         expect_shares: Uint128::new(1_262_500_000_000),
+    //     },
+    //     CalcJoinSharesTestCase {
+    //         name:    "single tokens_in - unequal weights with 0.99 swap fee".to_string(),
+    //         swap_fee: Decimal::from_str("0.99").unwrap(),
+    //         pool_assets: vec![
+    //             default_osmo_pool_asset.clone(),
+    //             PoolAsset {
+    //                 token:  Coin::new(one_trillion, "uatom"),
+    //                 weight: Uint128::new(300),
+    //             },
+    //         ],
+    //         tokens_in:     vec![Coin::new(50_000, "uosmo")],
+    //         expect_shares: Uint128::new(321_875_000_000),
+    //     },
+    //     CalcJoinSharesTestCase {
+    //         name:    "single asset - token in weight is greater than the other token, with zero swap fee".to_string(),
+    //         swap_fee: Decimal::zero(),
+    //         pool_assets: vec![
+    //             PoolAsset {
+    //                 token:  Coin::new(one_trillion, "uosmo"),
+    //                 weight: Uint128::new(500),
+    //             },
+    //             default_atom_pool_asset.clone(),
+    //         ],
+    //         tokens_in:     vec![Coin::new(50_000, "uosmo")],
+    //         expect_shares: Uint128::new(4_166_666_649_306),
+    //     },
+    //     CalcJoinSharesTestCase {
+    //         name:    "single asset - token in weight is greater than the other token, with non-zero swap fee".to_string(),
+    //         swap_fee: Decimal::from_str("0.01").unwrap(),
+    //         pool_assets: vec![
+    //             PoolAsset {
+    //                 token:  Coin::new(one_trillion, "uosmo"),
+    //                 weight: Uint128::new(500),
+    //             },
+    //             default_atom_pool_asset.clone(),
+    //         ],
+    //         tokens_in:     vec![Coin::new(50_000, "uosmo")],
+    //         expect_shares: Uint128::new(4_159_722_200_000),
+    //     },
+    //     CalcJoinSharesTestCase {
+    //         name:    "single asset - token in weight is smaller than the other token, with zero swap fee".to_string(),
+    //         swap_fee: Decimal::from_str("0").unwrap(),
+    //         pool_assets: vec![
+    //             PoolAsset {
+    //                 token:  Coin::new(one_trillion, "uosmo"),
+    //                 weight: Uint128::new(200),
+    //             },
+    //             PoolAsset {
+    //                 token:  Coin::new(one_trillion, "uatom"),
+    //                 weight: Uint128::new(1000),
+    //             },
+    //         ],
+    //         tokens_in:     vec![Coin::new(50_000, "uosmo")],
+    //         expect_shares: Uint128::new(833_333_315_972),
+    //     },
+    //     CalcJoinSharesTestCase {
+    //         name:    "single asset - token in weight is smaller than the other token, with non-zero swap fee".to_string(),
+    //         swap_fee: Decimal::from_str("0.02").unwrap(),
+    //         pool_assets: vec![
+    //             PoolAsset {
+    //                 token:  Coin::new(one_trillion, "uosmo"),
+    //                 weight: Uint128::new(200),
+    //             },
+    //             PoolAsset {
+    //                 token:  Coin::new(one_trillion, "uatom"),
+    //                 weight: Uint128::new(1000),
+    //             },
+    //         ],
+    //         tokens_in:     vec![Coin::new(50_000, "uosmo")],
+    //         expect_shares: Uint128::new(819_444_430_000),
+    //     },
+    //     CalcJoinSharesTestCase {
+    //         name:    "single asset - tokenIn is large relative to liquidity, token in weight is smaller than the other token, with zero swap fee".to_string(),
+    //         swap_fee: Decimal::from_str("0").unwrap(),
+    //         pool_assets: vec![
+    //             PoolAsset {
+    //                 token:  Coin::new(156_736, "uosmo"),
+    //                 weight: Uint128::new(200),
+    //             },
+    //             PoolAsset {
+    //                 token:  Coin::new(one_trillion, "uatom"),
+    //                 weight: Uint128::new(1000),
+    //             },
+    //         ],
+    //         // 156_736 * 3 / 4 = 117552
+    //         tokens_in: vec![Coin::new(117552, "uosmo")],
+    //         expect_shares: Uint128::new(9_775_731_930_496_140_648),
+    //     },
+    //     CalcJoinSharesTestCase {
+    //         name:    "single asset - tokenIn is large relative to liquidity, token in weight is smaller than the other token, with non-zero swap fee".to_string(),
+    //         swap_fee: Decimal::from_str("0.02").unwrap(),
+    //         pool_assets: vec![
+    //             PoolAsset {
+    //                 token:  Coin::new(156_736, "uosmo"),
+    //                 weight: Uint128::new(200),
+    //             },
+    //             PoolAsset {
+    //                 token:  Coin::new(one_trillion, "uatom"),
+    //                 weight: Uint128::new(1000),
+    //             },
+    //         ],
+    //         // 156_736 / 4 * 3 = 117552
+    //         tokens_in: vec![Coin::new(117552, "uosmo")],
+    //         expect_shares: Uint128::new(9_644_655_900_000_000_000),
+    //     },
+    //     CalcJoinSharesTestCase {
+    //         name:    "single asset - (almost 1 == tokenIn / liquidity ratio), token in weight is smaller than the other token, with zero swap fee".to_string(),
+    //         swap_fee: Decimal::from_str("0").unwrap(),
+    //         pool_assets: vec![
+    //             PoolAsset {
+    //                 token:  Coin::new(500_000, "uosmo"),
+    //                 weight: Uint128::new(100),
+    //             },
+    //             PoolAsset {
+    //                 token:  Coin::new(one_trillion, "uatom"),
+    //                 weight: Uint128::new(1000),
+    //             },
+    //         ],
+    //         tokens_in: vec![Coin::new(499_999, "uosmo")],
+    //         expect_shares: Uint128::new(6_504_099_261_800_144_638),
+    //     },
+    //     // TODO: Handle error and panic cases
+    //     // CalcJoinSharesTestCase {
+    //     //     // Currently, our Pow approximation function does not work correctly when one tries
+    //     //     // to add liquidity that is larger than the existing liquidity.
+    //     //     // The ratio of tokenIn / existing liquidity that is larger than or equal to 1 causes a panic.
+    //     //     // This has been deemed as acceptable since it causes code complexity to fix
+    //     //     // & only affects UX in an edge case (user has to split up single asset joins)
+    //     //     name:    "single asset - (exactly 1 == tokenIn / liquidity ratio - failure), token in weight is smaller than the other token, with zero swap fee".to_string(),
+    //     //     swap_fee: Decimal::from_str("0").unwrap(),
+    //     //     pool_assets: vec![
+    //     //         PoolAsset {
+    //     //             token:  Coin::new(500_000, "uosmo"),
+    //     //             weight: Uint128::new(100),
+    //     //         },
+    //     //         PoolAsset {
+    //     //             token:  Coin::new(one_trillion, "uatom"),
+    //     //             weight: Uint128::new(1000),
+    //     //         },
+    //     //     ],
+    //     //     tokens_in: vec![Coin::new(500_000, "uosmo")],
+    //     //     expect_shares: Uint128::new(6_504_099_261_800_144_638),
+    //     //     expectPanic:  true,
+    //     // },
+    //     // CalcJoinSharesTestCase {
+    //     //     name:         "tokenIn asset does not exist in pool",
+    //     //     swap_fee:      Decimal::from_str("0"),
+    //     //     pool_assets:   one_trillion_even_pool_assets,
+    //     //     tokens_in:     vec![](Uint128::new64Coin(doesNotExistDenom, 50_000)),
+    //     //     expect_shares: sdk.ZeroInt(),
+    //     //     expErr:       sdkerrors.Wrapf(types.ErrDenomNotFoundInPool, fmt.Sprintf(balancer.ErrMsgFormatNoPoolAssetFound, doesNotExistDenom)),
+    //     // },
+    //     CalcJoinSharesTestCase {
+    //         // Pool liquidity is changed by 1e-12 / 2
+    //         // P_issued = 1e20 * 1e-12 / 2 = 1e8 / 2 = 50_000_000
+    //         name:    "minimum input single asset equal liquidity".to_string(),
+    //         swap_fee: Decimal::from_str("0").unwrap(),
+    //         pool_assets: vec![
+    //             PoolAsset {
+    //                 token:  Coin::new(one_trillion, "uosmo"),
+    //                 weight: Uint128::new(100),
+    //             },
+    //             PoolAsset {
+    //                 token:  Coin::new(one_trillion, "uatom"),
+    //                 weight: Uint128::new(100),
+    //             },
+    //         ],
+    //         tokens_in: vec![Coin::new(1, "uosmo")],
+    //         expect_shares: Uint128::new(50_000_000),
+    //     },
+    //     CalcJoinSharesTestCase {
+    //         // P_issued should be 1/10th that of the previous test
+    //         // p_issued = 50_000_000 / 10 = 5_000_000
+    //         name:    "minimum input single asset imbalanced liquidity".to_string(),
+    //         swap_fee: Decimal::from_str("0").unwrap(),
+    //         pool_assets: vec![
+    //             PoolAsset {
+    //                 token:  Coin::new(10_000_000_000_000, "uosmo"),
+    //                 weight: Uint128::new(100),
+    //             },
+    //             PoolAsset {
+    //                 token:  Coin::new(1_000_000_000_000, "uatom"),
+    //                 weight: Uint128::new(100),
+    //             },
+    //         ],
+    //         tokens_in: vec![Coin::new(1, "uosmo")],
+    //         expect_shares: Uint128::new(5_000_000),
+    //     }];
 
-        // func assertExpectedSharesErrRatio(t *testing.T, expectedShares, actualShares sdk.Int) {
-        //     allowedErrRatioDec, err := sdk.NewDecFromStr(allowedErrRatio)
-        //     require.NoError(t, err)
+    //     // func assertExpectedSharesErrRatio(t *testing.T, expectedShares, actualShares sdk.Int) {
+    //     //     allowedErrRatioDec, err := sdk.NewDecFromStr(allowedErrRatio)
+    //     //     require.NoError(t, err)
 
-        //     errTolerance := osmoutils.ErrTolerance{
-        //         MultiplicativeTolerance: allowedErrRatioDec,
-        //     }
+    //     //     errTolerance := osmoutils.ErrTolerance{
+    //     //         MultiplicativeTolerance: allowedErrRatioDec,
+    //     //     }
 
-        //     require.Equal(
-        //         t,
-        //         0,
-        //         errTolerance.Compare(expectedShares, actualShares),
-        //         fmt.Sprintf("expectedShares: %s, actualShares: %s", expectedShares.String(), actualShares.String()))
-        // }
+    //     //     require.Equal(
+    //     //         t,
+    //     //         0,
+    //     //         errTolerance.Compare(expectedShares, actualShares),
+    //     //         fmt.Sprintf("expectedShares: %s, actualShares: %s", expectedShares.String(), actualShares.String()))
+    //     // }
 
-        fn assert_expected_shares_err_ratio(expected_shares: Uint128, actual_shares: Uint128) {
-            fn compare(expected: Uint128, actual: Uint128) -> i8 {
-                let allowed_err_ratio_dec = Decimal::from_str("0.0000001").unwrap();
-                let multiplicative_tolerance = allowed_err_ratio_dec;
-                let diff = if expected > actual {
-                    expected - actual
-                } else {
-                    actual - expected
-                };
+    //     fn assert_expected_shares_err_ratio(expected_shares: Uint128, actual_shares: Uint128) {
+    //         fn compare(expected: Uint128, actual: Uint128) -> i8 {
+    //             let allowed_err_ratio_dec = Decimal::from_str("0.0000001").unwrap();
+    //             let multiplicative_tolerance = allowed_err_ratio_dec;
+    //             let diff = if expected > actual {
+    //                 expected - actual
+    //             } else {
+    //                 actual - expected
+    //             };
 
-                let comparison_sign = if expected > actual {
-                    1
-                } else {
-                    -1
-                };
+    //             let comparison_sign = if expected > actual {
+    //                 1
+    //             } else {
+    //                 -1
+    //             };
 
-                //Check multiplicative tolerance equations
-                if !multiplicative_tolerance.is_zero() {
-                    // let err_term = diff.to_decimal() / Decimal::from(expected.min(actual));
-                    let err_term = Decimal::from_ratio(diff, expected.min(actual));
-                    if err_term > multiplicative_tolerance {
-                        return comparison_sign;
-                    }
-                }
-                return 0;
-            }
+    //             //Check multiplicative tolerance equations
+    //             if !multiplicative_tolerance.is_zero() {
+    //                 // let err_term = diff.to_decimal() / Decimal::from(expected.min(actual));
+    //                 let err_term = Decimal::from_ratio(diff, expected.min(actual));
+    //                 if err_term > multiplicative_tolerance {
+    //                     return comparison_sign;
+    //                 }
+    //             }
+    //             return 0;
+    //         }
 
-            assert_eq!(0, compare(expected_shares, actual_shares));
-        }
+    //         assert_eq!(0, compare(expected_shares, actual_shares));
+    //     }
 
-        for (id, test_case) in calc_single_asset_join_test_cases.into_iter().enumerate() {
-            let expected_new_liquidity = test_case.tokens_in.clone();
+    //     for (id, test_case) in calc_single_asset_join_test_cases.into_iter().enumerate() {
+    //         let expected_new_liquidity = test_case.tokens_in.clone();
 
-            let one_share = Uint128::from(10u128.pow(18));
-            let init_pool_shares_supply = one_share * Uint128::from(100u128);
+    //         let one_share = Uint128::from(10u128.pow(18));
+    //         let init_pool_shares_supply = one_share * Uint128::from(100u128);
 
-            let pool = Pool {
-                assets: test_case.pool_assets.clone(),
-                total_weight: test_case.pool_assets.iter().map(|a| a.weight).sum(),
-                total_shares: Coin {
-                    denom: test_case
-                        .pool_assets
-                        .iter()
-                        .fold("".to_string(), |acc, a| acc + &a.token.denom + " "),
-                    amount: init_pool_shares_supply,
-                },
-                swap_fee: test_case.swap_fee,
-            };
+    //         let pool = Pool {
+    //             assets: test_case.pool_assets.clone(),
+    //             total_weight: test_case.pool_assets.iter().map(|a| a.weight).sum(),
+    //             total_shares: Coin {
+    //                 denom: test_case
+    //                     .pool_assets
+    //                     .iter()
+    //                     .fold("".to_string(), |acc, a| acc + &a.token.denom + " "),
+    //                 amount: init_pool_shares_supply,
+    //             },
+    //             swap_fee: test_case.swap_fee,
+    //         };
 
-            let (total_num_shares, total_new_liquidity) = calc_join_single_asset_tokens_in(
-                pool.clone(),
-                test_case.tokens_in,
-                pool.total_shares.amount,
-                test_case.pool_assets,
-                test_case.swap_fee,
-            )
-            .unwrap();
+    //         let (total_num_shares, total_new_liquidity) = calc_join_single_asset_tokens_in(
+    //             pool.clone(),
+    //             test_case.tokens_in,
+    //             pool.total_shares.amount,
+    //             test_case.pool_assets,
+    //             test_case.swap_fee,
+    //         )
+    //         .unwrap();
 
-            println!("Running test for Test case id {}, name: {}", id, test_case.name);
+    //         println!("Running test for Test case id {}, name: {}", id, test_case.name);
 
-            assert_eq!(expected_new_liquidity, total_new_liquidity);
+    //         assert_eq!(expected_new_liquidity, total_new_liquidity);
 
-            assert_expected_shares_err_ratio(test_case.expect_shares, total_num_shares);
-        }
-    }
+    //         assert_expected_shares_err_ratio(test_case.expect_shares, total_num_shares);
+    //     }
+    // }
 }
