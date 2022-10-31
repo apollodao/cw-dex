@@ -1,19 +1,15 @@
-use std::time::Duration;
-
-use cw_asset::AssetList;
-use cw_utils::Duration as CwDuration;
-
-use apollo_proto_rust::osmosis::lockup::{MsgBeginUnlocking, MsgForceUnlock, MsgLockTokens};
-use apollo_proto_rust::osmosis::superfluid::{
-    MsgLockAndSuperfluidDelegate, MsgSuperfluidUnbondLock,
-};
-use apollo_proto_rust::utils::encode;
-use apollo_proto_rust::OsmosisTypeURLs;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    Addr, Coin, CosmosMsg, Deps, Env, Event, QuerierWrapper, ReplyOn, Response, StdError,
-    StdResult, SubMsg, Uint128,
+    Addr, Coin, Deps, Env, Event, QuerierWrapper, ReplyOn, Response, StdError, StdResult, SubMsg,
+    Uint128,
 };
+use cw_asset::AssetList;
+use cw_utils::Duration as CwDuration;
+use osmosis_std::types::osmosis::lockup::{MsgBeginUnlocking, MsgForceUnlock, MsgLockTokens};
+use osmosis_std::types::osmosis::superfluid::{
+    MsgLockAndSuperfluidDelegate, MsgSuperfluidUnbondLock,
+};
+use std::time::Duration;
 
 use crate::traits::{ForceUnlock, LockedStaking, Rewards, Stake, Unlock};
 use crate::CwDexError;
@@ -83,13 +79,10 @@ impl Stake for OsmosisStaking {
     fn stake(&self, _deps: Deps, env: &Env, amount: Uint128) -> Result<Response, CwDexError> {
         let asset = Coin::new(amount.u128(), self.lp_token_denom.clone());
 
-        let stake_msg = CosmosMsg::Stargate {
-            type_url: OsmosisTypeURLs::LockTokens.to_string(),
-            value: encode(MsgLockTokens {
-                owner: env.contract.address.to_string(),
-                duration: Some(self.lockup_duration.to_protobuf_duration()),
-                coins: vec![asset.clone().into()],
-            }),
+        let stake_msg = MsgLockTokens {
+            owner: env.contract.address.to_string(),
+            duration: Some(self.lockup_duration.to_protobuf_duration()),
+            coins: vec![asset.clone().into()],
         };
 
         let event = Event::new("apollo/cw-dex/stake")
@@ -100,7 +93,7 @@ impl Stake for OsmosisStaking {
         Ok(Response::new()
             .add_submessage(SubMsg {
                 id: OSMOSIS_LOCK_TOKENS_REPLY_ID,
-                msg: stake_msg,
+                msg: stake_msg.into(),
                 gas_limit: None,
                 reply_on: ReplyOn::Success,
             })
@@ -114,13 +107,10 @@ impl Unlock for OsmosisStaking {
 
         let id = self.lock_id.ok_or(StdError::generic_err("osmosis error: lock id not set"))?;
 
-        let unstake_msg = CosmosMsg::Stargate {
-            type_url: OsmosisTypeURLs::BeginUnlocking.to_string(),
-            value: encode(MsgBeginUnlocking {
-                owner: env.contract.address.to_string(),
-                id,
-                coins: vec![asset.clone().into()],
-            }),
+        let unstake_msg = MsgBeginUnlocking {
+            owner: env.contract.address.to_string(),
+            id,
+            coins: vec![asset.clone().into()],
         };
 
         let event = Event::new("apollo/cw-dex/unstake")
@@ -132,7 +122,7 @@ impl Unlock for OsmosisStaking {
         Ok(Response::new()
             .add_submessage(SubMsg {
                 id: OSMOSIS_UNLOCK_TOKENS_REPLY_ID,
-                msg: unstake_msg,
+                msg: unstake_msg.into(),
                 gas_limit: None,
                 reply_on: ReplyOn::Success,
             })
@@ -171,13 +161,10 @@ impl ForceUnlock for OsmosisStaking {
 
         let coin_to_unlock = Coin::new(amount.u128(), self.lp_token_denom.clone());
 
-        let force_unlock_msg = CosmosMsg::Stargate {
-            type_url: OsmosisTypeURLs::ForceUnlock.to_string(),
-            value: encode(MsgForceUnlock {
-                owner: env.contract.address.to_string(),
-                id: lockup_id,
-                coins: vec![coin_to_unlock.into()],
-            }),
+        let force_unlock_msg = MsgForceUnlock {
+            owner: env.contract.address.to_string(),
+            id: lockup_id,
+            coins: vec![coin_to_unlock.into()],
         };
 
         let event = Event::new("apollo/cw-dex/force-unlock")
@@ -237,13 +224,10 @@ impl Stake for OsmosisSuperfluidStaking {
     fn stake(&self, _deps: Deps, env: &Env, amount: Uint128) -> Result<Response, CwDexError> {
         let asset = Coin::new(amount.u128(), self.lp_token_denom.clone());
 
-        let stake_msg = CosmosMsg::Stargate {
-            type_url: OsmosisTypeURLs::LockAndSuperfluidDelegate.to_string(),
-            value: encode(MsgLockAndSuperfluidDelegate {
-                sender: env.contract.address.to_string(),
-                coins: vec![asset.clone().into()],
-                val_addr: self.validator_address.to_string(),
-            }),
+        let stake_msg = MsgLockAndSuperfluidDelegate {
+            sender: env.contract.address.to_string(),
+            coins: vec![asset.clone().into()],
+            val_addr: self.validator_address.to_string(),
         };
 
         let event = Event::new("apollo/cw-dex/stake")
@@ -254,7 +238,7 @@ impl Stake for OsmosisSuperfluidStaking {
         Ok(Response::new()
             .add_submessage(SubMsg {
                 id: OSMOSIS_LOCK_TOKENS_REPLY_ID,
-                msg: stake_msg,
+                msg: stake_msg.into(),
                 gas_limit: None,
                 reply_on: ReplyOn::Success,
             })
@@ -267,12 +251,9 @@ impl Unlock for OsmosisSuperfluidStaking {
         let lock_id =
             self.lock_id.ok_or(StdError::generic_err("osmosis error: lock id not set"))?;
 
-        let unstake_msg = CosmosMsg::Stargate {
-            type_url: OsmosisTypeURLs::SuperfluidUnbondLock.to_string(),
-            value: encode(MsgSuperfluidUnbondLock {
-                sender: env.contract.address.to_string(),
-                lock_id,
-            }),
+        let unstake_msg = MsgSuperfluidUnbondLock {
+            sender: env.contract.address.to_string(),
+            lock_id,
         };
 
         let event = Event::new("apollo/cw-dex/unstake")
