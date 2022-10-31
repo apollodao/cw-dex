@@ -1,14 +1,36 @@
 use astroport_core::querier::query_supply;
+use crate::error::CwDexError;
+use astroport_core::generator::{
+    Cw20HookMsg as GeneratorCw20HookMsg, ExecuteMsg as GeneratorExecuteMsg,
+};
+use astroport_core::querier::query_supply;
+use astroport_core::querier::{query_fee_info, query_token_precision};
+use astroport_core::U256;
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_binary, Addr, CosmosMsg, Decimal, Querier, QuerierWrapper, Response, StdResult, WasmMsg,
 };
+use cosmwasm_std::{Decimal256, Env};
 use cosmwasm_std::{Deps, Event, Uint128};
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use cw_asset::{Asset, AssetInfo, AssetList, AssetListBase};
 
 use astroport_core::asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo};
 use astroport_core::pair::{Cw20HookMsg, ExecuteMsg as PairExecMsg};
+use cw20::Cw20ExecuteMsg;
+use astroport_core::asset::{AssetInfo as AstroAssetInfo, DecimalAsset};
+use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
+use itertools::Itertools;
 
+use astroport_core::asset::{
+    Asset as AstroAsset, Decimal256Ext, PairInfo, MINIMUM_LIQUIDITY_AMOUNT,
+};
+use astroport_core::pair::{
+    Cw20HookMsg, ExecuteMsg as PairExecMsg, PoolResponse, QueryMsg, SimulationResponse,
+};
+
+use crate::astroport::helpers::{compute_current_amp, compute_d};
+use crate::astroport::querier::query_pair_config;
 use crate::pool::Pool;
 use crate::CwDexError;
 
@@ -146,6 +168,7 @@ impl Pool for AstroportPool {
     fn simulate_provide_liquidity(
         &self,
         deps: Deps,
+        env: Env,
         asset: AssetList,
     ) -> Result<Asset, CwDexError> {
         todo!()
@@ -154,6 +177,7 @@ impl Pool for AstroportPool {
     fn simulate_withdraw_liquidity(
         &self,
         deps: Deps,
+        env: Env,
         asset: Asset,
     ) -> Result<AssetList, CwDexError> {
         todo!()
@@ -351,14 +375,16 @@ impl Pool for AstroportStableSwapPool {
     fn simulate_provide_liquidity(
         &self,
         deps: Deps,
+        env: Env,
         assets: AssetList,
     ) -> Result<Asset, CwDexError> {
         let astro_assets: AstroAssetList = assets.try_into()?;
         let mut pools = vec![];
         for asset in astro_assets.0.clone() {
-            pools.push(AstroAsset {
+            pools.push(AstroStableSwapAsset {
                 info: asset.info.clone(),
                 amount: asset.info.query_pool(&deps.querier, self.contract_addr.to_string())?,
+                precision: query_token_precision(&deps.querier, &asset.info)?,
             })
         }
 
@@ -381,43 +407,101 @@ impl Pool for AstroportStableSwapPool {
             return Err(StdError::generic_err("Either asset cannot be zero").into());
         };
 
-        // map over pools
+        let mut non_zero_flag = false;
+
+        let assets_collection = assets_collection
+        .iter()
+        .cloned()
+        .map(|(asset, pool)| {
+            let coin_precision = query_token_precision(&deps.querier, &asset.info)?;
+            Ok((
+                asset.to_decimal_asset(coin_precision)?,
+                Decimal256::with_precision(pool, coin_precision)?,
+            ))
+        })
+        .collect::<StdResult<Vec<(DecimalAsset, Decimal256)>>>()?;
+
+        let config = query_pair_config(&deps.querier, &Addr::unchecked(self.contract_addr))?;
+
+        let amp = compute_current_amp(deps, &env, config)?;
+
+        // Initial invariant (D)
+        let old_balances = pools.iter().map(|pool| pool.amount).collect_vec();
+        let init_d = compute_d(amp, &old_balances, config.greatest_precision)?;
+
         for (i, pool) in pools.iter_mut().enumerate() {
             pool.amount =
                 pool.amount.checked_sub(deposits[i]).map_err(|_| CwDexError::BigIntOverflow {})?;
         }
-        const MINIMUM_LIQUIDITY_AMOUNT: Uint128 = Uint128::new(1_000);
-        let total_share = self.query_lp_token_supply(&deps.querier)?;
+        let old_balances = assets_collection.iter().map(|(_, pool)| *pool).collect_vec();
+
+        let deposit_d = compute_d(amp, &new_balances, config.greatest_precision)?;
+
+        let pair_info: PairInfo =
+            deps.querier.query_wasm_smart(self.contract_addr, &QueryMsg::Pair {})?;
+
+        let n_coins = pair_info.asset_infos.len() as u8;
+
+        // Initial invariant (D)
+        let old_balances = assets_collection.iter().map(|(_, pool)| *pool).collect_vec();
+        let init_d = compute_d(amp, &old_balances, config.greatest_precision)?;
+
+        let deposit_d = compute_d(amp, &new_balances, config.greatest_precision)?;
+
+        let total_share = query_supply(&deps.querier, &config.pair_info.liquidity_token)?;
         let share = if total_share.is_zero() {
-            // Initial share = collateral amount
-            let share = Uint128::new(
-                (U256::from(deposits[0].u128()) * U256::from(deposits[1].u128()))
-                    .integer_sqrt()
-                    .as_u128(),
-            )
-            .saturating_sub(MINIMUM_LIQUIDITY_AMOUNT);
+            let share = deposit_d
+                .to_uint128_with_precision(config.greatest_precision)?
+                .checked_sub(MINIMUM_LIQUIDITY_AMOUNT)
+                .map_err(|_| StdError::generic_err("Either asset cannot be zero"))?;
+
             // share cannot become zero after minimum liquidity subtraction
             if share.is_zero() {
-                return Err(StdError::generic_err(
-                    "Share cannot be less than minimum liquidity amount",
-                )
-                .into());
+                return Err(error::CwDexError::Std(StdError::generic_err(
+                    "Either asset cannot be zero",
+                )));
             }
+
             share
         } else {
-            // Assert slippage tolerance
-            // assert_slippage_tolerance(slippage_tolerance, &deposits, &pools)?;
+            // Get fee info from the factory
+            let fee_info = query_fee_info(
+                &deps.querier,
+                &config.factory_addr,
+                config.pair_info.pair_type.clone(),
+            )?;
 
-            // min(1, 2)
-            // 1. sqrt(deposit_0 * exchange_rate_0_to_1 * deposit_0) * (total_share / sqrt(pool_0 * pool_0))
-            // == deposit_0 * total_share / pool_0
-            // 2. sqrt(deposit_1 * exchange_rate_1_to_0 * deposit_1) * (total_share / sqrt(pool_1 * pool_1))
-            // == deposit_1 * total_share / pool_1
-            std::cmp::min(
-                deposits[0].multiply_ratio(total_share, pools[0].amount),
-                deposits[1].multiply_ratio(total_share, pools[1].amount),
-            )
+            // total_fee_rate * N_COINS / (4 * (N_COINS - 1))
+            let fee = fee_info
+                .total_fee_rate
+                .checked_mul(Decimal::from_ratio(n_coins, 4 * (n_coins - 1)))?;
+
+            let fee = Decimal256::new(fee.atomics().into());
+
+            for i in 0..n_coins as usize {
+                let ideal_balance = deposit_d.checked_multiply_ratio(old_balances[i], init_d)?;
+                let difference = if ideal_balance > new_balances[i] {
+                    ideal_balance - new_balances[i]
+                } else {
+                    new_balances[i] - ideal_balance
+                };
+                // Fee will be charged only during imbalanced provide i.e. if invariant D was changed
+                new_balances[i] -= fee.checked_mul(difference)?;
+            }
+
+            let after_fee_d = compute_d(amp, &new_balances, config.greatest_precision)?;
+
+            let share = Decimal256::with_precision(total_share, config.greatest_precision)?
+                .checked_multiply_ratio(after_fee_d.saturating_sub(init_d), init_d)?
+                .to_uint128_with_precision(config.greatest_precision)?;
+
+            if share.is_zero() {
+                return Err(ContractError::LiquidityAmountTooSmall {});
+            }
+
+            share
         };
+
         let lp_token = Asset {
             info: AssetInfoBase::Cw20(Addr::unchecked(self.lp_token_addr.to_string())),
             amount: share,
@@ -534,4 +618,15 @@ impl Staking for AstroportStableSwapPool {
             Event::new("apollo/cw-dex/claim_rewards").add_attribute("type", "astroport_staking");
         Ok(Response::new().add_message(claim_rewards_msg).add_event(event))
     }
+}
+
+/// This enum describes a Terra asset (native or CW20).
+#[cw_serde]
+pub struct AstroStableSwapAsset {
+    /// Information about an asset stored in a [`AssetInfo`] struct
+    pub info: AstroAssetInfo,
+    /// A token amount
+    pub amount: Uint128,
+    /// decimal precision
+    pub precision: u8,
 }

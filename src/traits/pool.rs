@@ -61,8 +61,12 @@ pub trait Pool {
     ///
     /// Arguments:
     /// - `assets`: the assets to provide liquidity with.
-    fn simulate_provide_liquidity(&self, deps: Deps, asset: AssetList)
-        -> Result<Asset, CwDexError>;
+    fn simulate_provide_liquidity(
+        &self,
+        deps: Deps,
+        env: Env,
+        asset: AssetList,
+    ) -> Result<Asset, CwDexError>;
 
     /// Returns an estimated number of assets to be returned for withdrawing the given LP tokens.
     ///
@@ -72,6 +76,7 @@ pub trait Pool {
     fn simulate_withdraw_liquidity(
         &self,
         deps: Deps,
+        env: Env,
         asset: Asset,
     ) -> Result<AssetList, CwDexError>;
 

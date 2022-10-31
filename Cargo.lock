@@ -304,7 +304,7 @@ dependencies = [
 [[package]]
 name = "cw-paginate"
 version = "0.2.0"
-source = "git+https://github.com/DA0-DA0/dao-contracts#355f8c813d2182fc27bdb8d564d459fcfd21165f"
+source = "git+https://github.com/DA0-DA0/dao-contracts#9e496379a1c1e89e00133865c9a1041dfdb20612"
 dependencies = [
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -546,7 +546,7 @@ dependencies = [
 [[package]]
 name = "cw20-stake"
 version = "0.2.6"
-source = "git+https://github.com/DA0-DA0/dao-contracts#355f8c813d2182fc27bdb8d564d459fcfd21165f"
+source = "git+https://github.com/DA0-DA0/dao-contracts#9e496379a1c1e89e00133865c9a1041dfdb20612"
 dependencies = [
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -1113,7 +1113,7 @@ dependencies = [
 [[package]]
 name = "stake-cw20-external-rewards"
 version = "0.2.6"
-source = "git+https://github.com/DA0-DA0/dao-contracts#355f8c813d2182fc27bdb8d564d459fcfd21165f"
+source = "git+https://github.com/DA0-DA0/dao-contracts#9e496379a1c1e89e00133865c9a1041dfdb20612"
 dependencies = [
  "cosmwasm-std",
  "cosmwasm-storage",
