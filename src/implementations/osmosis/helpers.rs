@@ -1,12 +1,7 @@
 use std::{convert::TryInto, time::Duration};
 
-use cosmwasm_std::{
-    from_binary, Coin, CustomQuery, QuerierWrapper, QueryRequest, StdError, StdResult,
-};
+use cosmwasm_std::{Coin, StdError, StdResult};
 use cw_asset::{Asset, AssetInfo, AssetList};
-use osmosis_std::types::osmosis::gamm::v1beta1::{
-    GammQuerier, PoolParams, QueryPoolParamsRequest, QueryPoolParamsResponse,
-};
 
 use crate::error::CwDexError;
 

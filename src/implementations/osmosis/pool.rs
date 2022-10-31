@@ -2,15 +2,13 @@ use std::ops::Deref;
 use std::str::FromStr;
 
 use osmosis_std::types::osmosis::gamm::v1beta1::{
-    GammQuerier, MsgExitPool, MsgJoinSwapExternAmountIn, MsgSwapExactAmountIn,
-    QuerySwapExactAmountInRequest, QuerySwapExactAmountInResponse, QueryTotalPoolLiquidityRequest,
-    QueryTotalPoolLiquidityResponse, SwapAmountInRoute,
+    GammQuerier, MsgExitPool, MsgJoinSwapExternAmountIn, MsgSwapExactAmountIn, SwapAmountInRoute,
 };
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    Coin, CosmosMsg, Decimal, Deps, Env, Event, MessageInfo, QuerierWrapper, QueryRequest,
-    Response, StdError, StdResult, Uint128,
+    Coin, CosmosMsg, Decimal, Deps, Env, Event, MessageInfo, QuerierWrapper, Response, StdError,
+    StdResult, Uint128,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
 use osmo_bindings::OsmosisQuery;

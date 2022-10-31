@@ -8,10 +8,7 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Coin, Decimal, QuerierWrapper, QueryRequest, StdError, StdResult, Uint128};
 use num_bigint::BigInt;
 use osmo_bindings::{OsmosisQuery, PoolStateResponse};
-use osmosis_std::types::osmosis::gamm::v1beta1::{
-    GammQuerier, Pool as ProtoPool, PoolAsset as ProtoPoolAsset, PoolAsset, QueryPoolRequest,
-    QueryPoolResponse,
-};
+use osmosis_std::types::osmosis::gamm::v1beta1::{GammQuerier, Pool as ProtoPool, PoolAsset};
 
 use num_rational::BigRational;
 use num_traits::ToPrimitive;
