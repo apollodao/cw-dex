@@ -1,8 +1,9 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    Addr, Coin, CosmosMsg, Deps, Env, Event, ReplyOn, Response, StdError, StdResult, SubMsg,
+    Addr, Coin, Deps, Env, Event, QuerierWrapper, ReplyOn, Response, StdError, StdResult, SubMsg,
     Uint128,
 };
+use cw_asset::AssetList;
 use cw_utils::Duration as CwDuration;
 use osmosis_std::types::osmosis::lockup::{MsgBeginUnlocking, MsgForceUnlock, MsgLockTokens};
 use osmosis_std::types::osmosis::superfluid::{
@@ -60,6 +61,17 @@ impl Rewards for OsmosisStaking {
         let event =
             Event::new("apollo/cw-dex/claim_rewards").add_attribute("type", "osmosis_staking");
         Ok(Response::new().add_event(event))
+    }
+
+    fn query_pending_rewards(
+        &self,
+        _querier: &QuerierWrapper,
+        _user: &Addr,
+    ) -> Result<AssetList, CwDexError> {
+        // Rewards are automatically distributed to stakers every epoch.
+        // There is no currently no way to query how many have accumulated since
+        // last epoch.
+        Ok(AssetList::new())
     }
 }
 
@@ -194,6 +206,17 @@ impl Rewards for OsmosisSuperfluidStaking {
         let event = Event::new("apollo/cw-dex/claim_rewards")
             .add_attribute("type", "osmosis_superfluid_staking");
         Ok(Response::new().add_event(event))
+    }
+
+    fn query_pending_rewards(
+        &self,
+        _querier: &QuerierWrapper,
+        _user: &Addr,
+    ) -> Result<AssetList, CwDexError> {
+        // Rewards are automatically distributed to stakers every epoch.
+        // There is no currently no way to query how many have accumulated since
+        // last epoch.
+        Ok(AssetList::new())
     }
 }
 

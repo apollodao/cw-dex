@@ -1,9 +1,9 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, Deps, Env, Event, QueryRequest, ReplyOn, Response, StdResult,
-    SubMsg, Uint128, WasmMsg, WasmQuery,
+    to_binary, Addr, CosmosMsg, Deps, Env, Event, QuerierWrapper, QueryRequest, ReplyOn, Response,
+    StdResult, SubMsg, Uint128, WasmMsg, WasmQuery,
 };
-use cw20::Cw20ExecuteMsg;
+use cw20::{Cw20ExecuteMsg, Denom};
 
 use cw20_stake::{
     msg::{
@@ -12,13 +12,17 @@ use cw20_stake::{
     },
     state::Config,
 };
+use cw_asset::{Asset, AssetInfo, AssetList};
 use cw_utils::Duration;
 
 use crate::{
     traits::{LockedStaking, Rewards, Stake, Unlock, Unstake},
     CwDexError,
 };
-use stake_cw20_external_rewards::msg::ExecuteMsg as StakeCw20ExternalRewardsExecuteMsg;
+use stake_cw20_external_rewards::msg::{
+    ExecuteMsg as StakeCw20ExternalRewardsExecuteMsg, PendingRewardsResponse,
+    QueryMsg as StakeCw20ExternalRewardsQueryMsg,
+};
 
 #[cw_serde]
 pub struct JunoswapStaking {
@@ -99,6 +103,44 @@ impl Rewards for JunoswapStaking {
         let event = Event::new("apollo/cw-dex/claim_rewards").add_attribute("type", "junoswap");
 
         Ok(Response::new().add_submessages(claim_messages).add_event(event))
+    }
+
+    fn query_pending_rewards(
+        &self,
+        querier: &QuerierWrapper,
+        user: &Addr,
+    ) -> Result<AssetList, CwDexError> {
+        let hooks = querier
+            .query::<GetHooksResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
+                contract_addr: self.addr.to_string(),
+                msg: to_binary(&Cw20StakeQueryMsg::GetHooks {})?,
+            }))?
+            .hooks;
+
+        let mut assets = AssetList::new();
+        for hook in hooks {
+            // Since we can't be sure that the hook is actually a reward contract we must
+            // do .ok() and match only on `Some` values to avoid failing the entire query.
+            let pending_rewards = querier
+                .query::<PendingRewardsResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
+                    contract_addr: hook.to_string(),
+                    msg: to_binary(&StakeCw20ExternalRewardsQueryMsg::GetPendingRewards {
+                        address: user.to_string(),
+                    })?,
+                }))
+                .ok();
+
+            if let Some(pending_rewards) = pending_rewards {
+                let asset_info = match pending_rewards.denom {
+                    Denom::Native(x) => AssetInfo::Native(x),
+                    Denom::Cw20(x) => AssetInfo::Cw20(x),
+                };
+
+                assets.add(&Asset::new(asset_info, pending_rewards.pending_rewards))?;
+            }
+        }
+
+        Ok(assets)
     }
 }
 
