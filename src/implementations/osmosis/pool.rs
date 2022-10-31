@@ -1,6 +1,9 @@
 use std::ops::Deref;
 use std::str::FromStr;
 
+use apollo_utils::assets::{
+    assert_native_asset_info, assert_native_coin, assert_only_native_coins, merge_assets,
+};
 use osmosis_std::types::osmosis::gamm::v1beta1::{
     GammQuerier, MsgExitPool, MsgJoinSwapExternAmountIn, MsgSwapExactAmountIn, SwapAmountInRoute,
 };
@@ -19,10 +22,6 @@ use crate::osmosis::osmosis_math::{
 use crate::traits::Pool;
 use crate::utils::vec_into;
 use crate::CwDexError;
-
-use super::helpers::{
-    assert_native_asset_info, assert_native_coin, assert_only_native_coins, merge_assets,
-};
 
 /// Struct for interacting with Osmosis v1beta1 balancer pools. If `pool_id` maps to another type of pool this will fail.
 #[cw_serde]
