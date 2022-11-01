@@ -2,8 +2,6 @@ use astroport_core::asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo};
 use cosmwasm_std::{StdError, StdResult};
 use cw_asset::{Asset, AssetInfo, AssetList};
 
-use crate::CwDexError;
-
 pub(crate) struct AstroAssetList(pub(crate) Vec<AstroAsset>);
 
 impl From<AstroAssetList> for Vec<AstroAsset> {
