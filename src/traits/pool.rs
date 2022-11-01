@@ -1,4 +1,4 @@
-use cosmwasm_std::{Decimal, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{Decimal, Env, Response, StdResult};
 use cosmwasm_std::{Deps, Uint128};
 use cw_asset::{Asset, AssetInfo, AssetList};
 
@@ -17,7 +17,6 @@ pub trait Pool {
         &self,
         deps: Deps,
         env: &Env,
-        info: &MessageInfo,
         assets: AssetList,
         slippage_tolerance: Option<Decimal>,
     ) -> Result<Response, CwDexError>;
