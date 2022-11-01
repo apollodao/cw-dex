@@ -1,6 +1,6 @@
+use apollo_utils::assets::separate_natives_and_cw20s;
 use cosmwasm_std::{
-    to_binary, Addr, Coin, CosmosMsg, Decimal, Env, MessageInfo, StdError, StdResult, Uint128,
-    WasmMsg,
+    to_binary, Addr, Coin, CosmosMsg, Decimal, Env, StdError, StdResult, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
 use cw20_0_10_3::Denom;
@@ -131,44 +131,29 @@ impl JunoAssetList {
 ///                allowance for the CW20 tokens in the `assets` list.
 pub(crate) fn prepare_funds_and_increase_allowances(
     env: &Env,
-    info: &MessageInfo,
     assets: &AssetList,
     spender: &Addr,
 ) -> Result<(Vec<Coin>, Vec<CosmosMsg>), CwDexError> {
-    let mut increase_allowances = vec![];
-    let mut funds = vec![];
-    for asset in assets.into_iter() {
-        match &asset.info {
-            AssetInfo::Native(_) => {
-                let coin = asset.try_into()?;
-                if !info.funds.contains(&coin) {
-                    return Err(CwDexError::InvalidInAsset {
-                        a: asset.clone(),
-                    });
-                }
-                funds.push(coin)
-            }
-            AssetInfo::Cw20(addr) => increase_allowances.push(
-                WasmMsg::Execute {
-                    contract_addr: addr.to_string(),
-                    msg: to_binary(&Cw20ExecuteMsg::IncreaseAllowance {
-                        spender: spender.to_string(),
-                        amount: asset.amount,
-                        expires: Some(cw20::Expiration::AtHeight(env.block.height + 1)),
-                    })?,
-                    funds: vec![],
-                }
-                .into(),
-            ),
-            _ => {
-                return Err(CwDexError::InvalidInAsset {
-                    a: asset.clone(),
-                })
-            }
-        }
-    }
+    let (funds, cw20s) = separate_natives_and_cw20s(assets);
 
-    return Ok((funds, increase_allowances));
+    // Build increase allowance messages for cw20 tokens
+    let increase_allowances = cw20s
+        .into_iter()
+        .map(|cw20| {
+            Ok(WasmMsg::Execute {
+                contract_addr: cw20.address,
+                msg: to_binary(&Cw20ExecuteMsg::IncreaseAllowance {
+                    spender: spender.to_string(),
+                    amount: cw20.amount,
+                    expires: Some(cw20::Expiration::AtHeight(env.block.height + 1)),
+                })?,
+                funds: vec![],
+            }
+            .into())
+        })
+        .collect::<StdResult<Vec<CosmosMsg>>>()?;
+
+    Ok((funds, increase_allowances))
 }
 
 // ------------------ Junoswap math ----------------------
