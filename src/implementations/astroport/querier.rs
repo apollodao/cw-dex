@@ -20,14 +20,14 @@ pub fn query_pair_config(querier: &QuerierWrapper, pair: &Addr) -> StdResult<Con
 }
 
 // needed to simualate provide liquidity
-pub fn query_pool_precision(
+pub fn query_asset_precision(
     querier: &QuerierWrapper,
     pair: &Addr,
     asset: AssetInfo,
 ) -> StdResult<u8> {
     if let Some(res) = querier.query_wasm_raw(
         pair,
-        Binary::from(concat(&to_length_prefixed(b"config"), asset.to_string().as_bytes())),
+        Binary::from(concat(&to_length_prefixed(b"precisions"), asset.to_string().as_bytes())),
     )? {
         let precision: u8 = from_slice(&res)?;
         Ok(precision)

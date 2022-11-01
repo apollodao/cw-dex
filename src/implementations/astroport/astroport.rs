@@ -7,7 +7,7 @@ use astroport_core::generator::{
     Cw20HookMsg as GeneratorCw20HookMsg, ExecuteMsg as GeneratorExecuteMsg,
 };
 use astroport_core::querier::query_supply;
-use astroport_core::querier::{query_fee_info, query_token_precision};
+use astroport_core::querier::{query_fee_info};
 use astroport_core::U256;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
@@ -180,8 +180,9 @@ impl Pool for AstroportPool {
     fn simulate_withdraw_liquidity(
         &self,
         deps: Deps,
-        env: Env,
+        _env: Env,
         asset: Asset,
+        _withdraw_assets: AssetList,
     ) -> Result<AssetList, CwDexError> {
         todo!()
     }
@@ -387,10 +388,15 @@ impl Pool for AstroportStableSwapPool {
             pools.push(AstroStableSwapAsset {
                 info: asset.info.clone(),
                 amount: asset.info.query_pool(&deps.querier, self.contract_addr.to_string())?,
-                precision: query_token_precision(&deps.querier, &asset.info)?,
+                precision: query_asset_precision(
+                    &deps.querier,
+                    &Addr::unchecked(self.contract_addr.to_string()),
+                    asset.info,
+                )?,
             })
         }
-        let config = query_pair_config(&deps.querier, &Addr::unchecked(self.contract_addr.to_string()))?;
+        let config =
+            query_pair_config(&deps.querier, &Addr::unchecked(self.contract_addr.to_string()))?;
 
         if assets.len() > config.pair_info.asset_infos.len() {
             return Err(CwDexError::Std(StdError::generic_err("Invalid number of assets. The Astroport supports at least 2 and at most 5 assets within a stable pool")));
@@ -448,7 +454,11 @@ impl Pool for AstroportStableSwapPool {
             .iter()
             .cloned()
             .map(|(asset, pool)| {
-                let coin_precision = query_token_precision(&deps.querier, &asset.info)?;
+                let coin_precision = query_asset_precision(
+                    &deps.querier,
+                    &Addr::unchecked(self.contract_addr.to_string()),
+                    asset.to_owned().info,
+                )?;
                 Ok((
                     asset.to_decimal_asset(coin_precision)?,
                     Decimal256::with_precision(pool, coin_precision)?,
@@ -480,13 +490,21 @@ impl Pool for AstroportStableSwapPool {
             let share = deposit_d
                 .to_uint128_with_precision(config.greatest_precision)?
                 .checked_sub(MINIMUM_LIQUIDITY_AMOUNT)
-                .map_err(|_| CwDexError::Std(StdError::generic_err(format!("Initial liquidity must be more than {}", MINIMUM_LIQUIDITY_AMOUNT))))?;
-    
+                .map_err(|_| {
+                    CwDexError::Std(StdError::generic_err(format!(
+                        "Initial liquidity must be more than {}",
+                        MINIMUM_LIQUIDITY_AMOUNT
+                    )))
+                })?;
+
             // share cannot become zero after minimum liquidity subtraction
             if share.is_zero() {
-                return Err(CwDexError::Std(StdError::generic_err(format!("Initial liquidity must be more than {}", MINIMUM_LIQUIDITY_AMOUNT))));
+                return Err(CwDexError::Std(StdError::generic_err(format!(
+                    "Initial liquidity must be more than {}",
+                    MINIMUM_LIQUIDITY_AMOUNT
+                ))));
             }
-    
+
             share
         } else {
             // Get fee info from the factory
@@ -495,14 +513,14 @@ impl Pool for AstroportStableSwapPool {
                 &config.factory_addr,
                 config.pair_info.pair_type.clone(),
             )?;
-    
+
             // total_fee_rate * N_COINS / (4 * (N_COINS - 1))
             let fee = fee_info
                 .total_fee_rate
                 .checked_mul(Decimal::from_ratio(n_coins, 4 * (n_coins - 1)))?;
-    
+
             let fee = Decimal256::new(fee.atomics().into());
-    
+
             for i in 0..n_coins as usize {
                 let ideal_balance = deposit_d.checked_multiply_ratio(old_balances[i], init_d)?;
                 let difference = if ideal_balance > new_balances[i] {
@@ -513,17 +531,19 @@ impl Pool for AstroportStableSwapPool {
                 // Fee will be charged only during imbalanced provide i.e. if invariant D was changed
                 new_balances[i] -= fee.checked_mul(difference)?;
             }
-    
+
             let after_fee_d = compute_d(amp, &new_balances, config.greatest_precision)?;
-    
+
             let share = Decimal256::with_precision(total_share, config.greatest_precision)?
                 .checked_multiply_ratio(after_fee_d.saturating_sub(init_d), init_d)?
                 .to_uint128_with_precision(config.greatest_precision)?;
-    
+
             if share.is_zero() {
-                return Err(CwDexError::Std(StdError::generic_err("Insufficient amount of liquidity")));
+                return Err(CwDexError::Std(StdError::generic_err(
+                    "Insufficient amount of liquidity",
+                )));
             }
-    
+
             share
         };
 
@@ -539,20 +559,34 @@ impl Pool for AstroportStableSwapPool {
         deps: Deps,
         env: Env,
         asset: Asset,
+        withdraw_assets: AssetList,
     ) -> Result<AssetList, CwDexError> {
-        let amount = asset.amount;
-        let total_share = self.query_lp_token_supply(&deps.querier)?;
-        let mut share_ratio = Decimal::zero();
-        if !total_share.is_zero() {
-            share_ratio = Decimal::from_ratio(amount, total_share);
+        let config =
+            query_pair_config(&deps.querier, &Addr::unchecked(self.contract_addr.to_string()))?;
+        let withdraw_assets: AstroAssetList = withdraw_assets.to_owned().try_into()?;
+
+        let _burn_amount;
+        let refund_assets;
+        let amount = &asset.amount;
+        let pools = config.pair_info.query_pools(&deps.querier, self.contract_addr.to_string())?;
+        let total_share = query_supply(&deps.querier, &config.pair_info.liquidity_token)?;
+
+        if withdraw_assets.0.is_empty() {
+            _burn_amount = asset.amount;
+            refund_assets = get_share_in_assets(&pools, *amount, total_share);
+        } else {
+            // Imbalanced withdraw
+            _burn_amount =
+                imbalanced_withdraw(deps, &env, &config, *amount, &withdraw_assets.0.to_vec())?;
+
+            refund_assets = withdraw_assets.into();
         }
 
-        let pools = self.get_pool_liquidity_impl(&deps.querier)?.assets;
-        Ok(pools
+        Ok(refund_assets
             .iter()
             .map(|a| Asset {
                 info: astro_asset_info_to_cw_asset_info(&a.info),
-                amount: a.amount * share_ratio,
+                amount: a.amount,
             })
             .collect::<Vec<Asset>>()
             .into())

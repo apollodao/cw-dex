@@ -73,11 +73,14 @@ pub trait Pool {
     /// Arguments:
     /// - `asset`: the LP tokens to withdraw as an [`Asset`]. The `info` field must correspond to the
     ///       LP token of the pool. Else, an error is returned.
+    /// - `withdraw_assets`: optional array which specifies the assets amount to withdraw
+
     fn simulate_withdraw_liquidity(
         &self,
         deps: Deps,
         env: Env,
         asset: Asset,
+        withdraw_assets: AssetList
     ) -> Result<AssetList, CwDexError>;
 
     fn simulate_swap(

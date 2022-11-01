@@ -3,7 +3,7 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use apollo_proto_rust::osmosis::gamm::v1beta1::{
-    MsgExitPool, MsgJoinPool, MsgJoinSwapExternAmountIn, MsgSwapExactAmountIn,
+    MsgExitPool, MsgJoinSwapExternAmountIn, MsgSwapExactAmountIn,
     QuerySwapExactAmountInRequest, QuerySwapExactAmountInResponse, QueryTotalPoolLiquidityRequest,
     QueryTotalPoolLiquidityResponse, SwapAmountInRoute,
 };
@@ -18,11 +18,11 @@ use apollo_proto_rust::utils::encode;
 use apollo_proto_rust::OsmosisTypeURLs;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    Addr, Coin, CosmosMsg, Decimal, Deps, Event, Fraction, QuerierWrapper, QueryRequest, ReplyOn,
+    Addr, Coin, CosmosMsg, Decimal, Deps, Event, QuerierWrapper, QueryRequest, ReplyOn,
     Response, StdError, StdResult, SubMsg, Uint128, Env,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
-use osmo_bindings::{OsmosisQuery, PoolStateResponse};
+use osmo_bindings::{OsmosisQuery};
 
 use crate::osmosis::osmosis_math::{
     osmosis_calculate_exit_pool_amounts, osmosis_calculate_join_pool_shares,
@@ -220,8 +220,9 @@ impl Pool for OsmosisPool {
     fn simulate_withdraw_liquidity(
         &self,
         deps: Deps,
-        env: Env,
+        _env: Env,
         asset: Asset,
+        _withdraw_assets: AssetList
     ) -> Result<AssetList, CwDexError> {
         let querier = QuerierWrapper::<OsmosisQuery>::new(deps.querier.deref());
         let lp_token = assert_native_coin(&asset)?;

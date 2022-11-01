@@ -1,5 +1,8 @@
 use std::num::TryFromIntError;
-use cosmwasm_std::{DivideByZeroError, OverflowError, StdError};
+
+use cosmwasm_std::{
+    CheckedMultiplyRatioError, ConversionOverflowError, DivideByZeroError, OverflowError, StdError,
+};
 use cw_asset::Asset;
 use thiserror::Error;
 /// ## Description
@@ -18,6 +21,12 @@ pub enum CwDexError {
 
     #[error("{0}")]
     DivideByZero(#[from] DivideByZeroError),
+
+    #[error("{0}")]
+    CheckedMultiplyRatioError(#[from] CheckedMultiplyRatioError),
+
+    #[error("{0}")]
+    ConversionOverflowErrorError(#[from] ConversionOverflowError),
 
     /// Invalid Reply ID Error
     #[error("invalid output asset")]
