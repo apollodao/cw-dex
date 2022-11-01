@@ -27,9 +27,9 @@ use super::helpers::{
 
 #[cw_serde]
 pub struct AstroportXykPool {
-    contract_addr: String,
-    lp_token_addr: String,
-    generator_addr: String,
+    contract_addr: Addr,
+    lp_token_addr: Addr,
+    generator_addr: Addr,
 }
 
 pub const ASTROPORT_LOCK_TOKENS_REPLY_ID: u64 = 234;
@@ -111,10 +111,10 @@ impl Pool for AstroportXykPool {
         recipient: Addr,
         slippage_tolerance: Option<Decimal>,
     ) -> Result<Response, CwDexError> {
-        let astro_assets: Vec<AstroAsset> = AstroAssetList::try_from(assets)?.into();
+        let astro_assets: AstroAssetList = assets.try_into()?;
 
         let msg = PairExecMsg::ProvideLiquidity {
-            assets: astro_assets.clone(),
+            assets: astro_assets.into(),
             slippage_tolerance,
             auto_stake: Some(false), // Should this be true?
             receiver: Some(recipient.to_string()),
@@ -153,6 +153,7 @@ impl Pool for AstroportXykPool {
             });
 
             let event = Event::new("apollo/cw-dex/withdraw_liquidity")
+                .add_attribute("type", "astroport_xyk")
                 .add_attribute("pair_addr", &self.contract_addr)
                 .add_attribute("asset", format!("{:?}", asset))
                 .add_attribute("token_amount", asset.amount)
@@ -189,6 +190,7 @@ impl Pool for AstroportXykPool {
             }),
         }?;
         let event = Event::new("apollo/cw-dex/swap")
+            .add_attribute("type", "astroport_xyk")
             .add_attribute("pair_addr", &self.contract_addr)
             .add_attribute("ask_asset", format!("{:?}", ask_asset_info))
             .add_attribute("offer_asset", format!("{:?}", offer_asset.info))
@@ -272,7 +274,7 @@ impl Pool for AstroportXykPool {
             )
         };
         let lp_token = Asset {
-            info: AssetInfoBase::Cw20(Addr::unchecked(self.lp_token_addr.to_string())),
+            info: AssetInfoBase::Cw20(self.lp_token_addr),
             amount: share,
         };
         Ok(lp_token)
