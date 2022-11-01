@@ -124,7 +124,7 @@ impl Pool for AstroportXykPool {
     ) -> Result<Response, CwDexError> {
         // Setting belief price to the minimium acceptable return and max spread to zero simplifies things
         // Astroport will make the best possible swap that returns at least minimum_out_amount
-        let belief_price = Decimal::from_ratio(minimum_out_amount, 1u128);
+        let belief_price = Some(Decimal::from_ratio(offer_asset.amount, minimum_out_amount));
         let swap_msg = match &offer_asset.info {
             AssetInfo::Native(_) => {
                 let asset = cw_asset_to_astro_asset(&offer_asset)?;
@@ -133,7 +133,7 @@ impl Pool for AstroportXykPool {
                     msg: to_binary(&PairExecMsg::Swap {
                         offer_asset: asset,
                         ask_asset_info: Some(cw_asset_info_to_astro_asset_info(&ask_asset_info)?),
-                        belief_price: Some(belief_price),
+                        belief_price,
                         max_spread: Some(Decimal::zero()),
                         to: Some(env.contract.address.to_string()),
                     })?,
@@ -150,7 +150,7 @@ impl Pool for AstroportXykPool {
                             ask_asset_info: Some(cw_asset_info_to_astro_asset_info(
                                 &ask_asset_info,
                             )?),
-                            belief_price: Some(belief_price),
+                            belief_price,
                             max_spread: Some(Decimal::zero()),
                             to: Some(env.contract.address.to_string()),
                         })?,
