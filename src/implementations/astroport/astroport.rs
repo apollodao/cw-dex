@@ -1,5 +1,6 @@
 use astroport_core::generator::{
-    Cw20HookMsg as GeneratorCw20HookMsg, ExecuteMsg as GeneratorExecuteMsg,
+    Cw20HookMsg as GeneratorCw20HookMsg, ExecuteMsg as GeneratorExecuteMsg, PendingTokenResponse,
+    QueryMsg as GeneratorQueryMsg,
 };
 use astroport_core::querier::query_supply;
 use astroport_core::U256;
@@ -29,6 +30,7 @@ pub struct AstroportXykPool {
     contract_addr: Addr,
     lp_token_addr: Addr,
     generator_addr: Addr,
+    astro_addr: Addr,
 }
 
 pub const ASTROPORT_LOCK_TOKENS_REPLY_ID: u64 = 234;
@@ -387,7 +389,28 @@ impl Rewards for AstroportXykPool {
         querier: &QuerierWrapper,
         user: &Addr,
     ) -> Result<AssetList, CwDexError> {
-        todo!()
+        let PendingTokenResponse {
+            pending: pending_astro,
+            pending_on_proxy,
+        } = querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: self.generator_addr.to_string(),
+            msg: to_binary(&GeneratorQueryMsg::PendingToken {
+                lp_token: self.lp_token_addr.to_string(),
+                user: user.to_string(),
+            })?,
+        }))?;
+
+        let pending_rewards: AstroAssetList = pending_on_proxy
+            .unwrap_or_default()
+            .into_iter()
+            .chain(vec![cw_asset_to_astro_asset(&Asset::cw20(
+                self.astro_addr.clone(),
+                pending_astro,
+            ))?])
+            .collect::<Vec<_>>()
+            .into();
+
+        Ok(pending_rewards.into())
     }
 }
 
