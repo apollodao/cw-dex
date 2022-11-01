@@ -65,7 +65,7 @@ pub trait Pool {
         &self,
         deps: Deps,
         env: Env,
-        asset: AssetList,
+        assets: AssetList,
     ) -> Result<Asset, CwDexError>;
 
     /// Returns an estimated number of assets to be returned for withdrawing the given LP tokens.

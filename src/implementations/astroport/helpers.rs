@@ -1,5 +1,6 @@
 use crate::CwDexError;
 use astroport_core::asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo, Decimal256Ext};
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal256, Deps, Env, StdError, StdResult, Uint128, Uint64};
 use cw_asset::{Asset, AssetInfo, AssetList};
 
@@ -9,6 +10,7 @@ use super::querier::{query_pair_config, Config};
 const ITERATIONS: u8 = 32;
 pub const AMP_PRECISION: u64 = 100;
 
+#[cw_serde]
 pub(crate) struct AstroAssetList(pub(crate) Vec<AstroAsset>);
 
 impl From<AstroAssetList> for Vec<AstroAsset> {

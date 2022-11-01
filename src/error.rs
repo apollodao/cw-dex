@@ -1,13 +1,7 @@
 use std::num::TryFromIntError;
-
-<<<<<<< HEAD
 use cosmwasm_std::{DivideByZeroError, OverflowError, StdError};
-=======
-use cosmwasm_std::{DivideByZeroError, StdError};
->>>>>>> e178f9b (Add withdraw_liquidity)
 use cw_asset::Asset;
 use thiserror::Error;
-
 /// ## Description
 /// This enum describes router-test contract errors!
 #[derive(Error, Debug, PartialEq)]

@@ -1,5 +1,8 @@
 use astroport_core::querier::query_supply;
+use std::collections::HashMap;
+
 use crate::error::CwDexError;
+use astroport_core::asset::{AssetInfo as AstroAssetInfo, DecimalAsset};
 use astroport_core::generator::{
     Cw20HookMsg as GeneratorCw20HookMsg, ExecuteMsg as GeneratorExecuteMsg,
 };
@@ -18,7 +21,6 @@ use cw_asset::{Asset, AssetInfo, AssetList, AssetListBase};
 use astroport_core::asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo};
 use astroport_core::pair::{Cw20HookMsg, ExecuteMsg as PairExecMsg};
 use cw20::Cw20ExecuteMsg;
-use astroport_core::asset::{AssetInfo as AstroAssetInfo, DecimalAsset};
 use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use itertools::Itertools;
 
@@ -33,6 +35,7 @@ use crate::astroport::helpers::{compute_current_amp, compute_d};
 use crate::astroport::querier::query_pair_config;
 use crate::pool::Pool;
 use crate::CwDexError;
+use crate::Staking;
 
 pub struct AstroportPool {
     contract_addr: String,
@@ -378,7 +381,7 @@ impl Pool for AstroportStableSwapPool {
         env: Env,
         assets: AssetList,
     ) -> Result<Asset, CwDexError> {
-        let astro_assets: AstroAssetList = assets.try_into()?;
+        let astro_assets: AstroAssetList = assets.to_owned().try_into()?;
         let mut pools = vec![];
         for asset in astro_assets.0.clone() {
             pools.push(AstroStableSwapAsset {
@@ -387,81 +390,103 @@ impl Pool for AstroportStableSwapPool {
                 precision: query_token_precision(&deps.querier, &asset.info)?,
             })
         }
+        let config = query_pair_config(&deps.querier, &Addr::unchecked(self.contract_addr.to_string()))?;
 
-        let deposits = [
-            astro_assets
-                .0
-                .iter()
-                .find(|a| a.info.equal(&pools[0].info))
-                .map(|a| a.amount)
-                .expect("Wrong asset info is given"),
-            astro_assets
-                .0
-                .iter()
-                .find(|a| a.info.equal(&pools[1].info))
-                .map(|a| a.amount)
-                .expect("Wrong asset info is given"),
-        ];
+        if assets.len() > config.pair_info.asset_infos.len() {
+            return Err(CwDexError::Std(StdError::generic_err("Invalid number of assets. The Astroport supports at least 2 and at most 5 assets within a stable pool")));
+        }
 
-        if deposits[0].is_zero() || deposits[1].is_zero() {
-            return Err(StdError::generic_err("Either asset cannot be zero").into());
-        };
+        let pools: HashMap<_, _> = config
+            .pair_info
+            .query_pools(&deps.querier, &env.contract.address)?
+            .into_iter()
+            .map(|pool| (pool.info, pool.amount))
+            .collect();
 
         let mut non_zero_flag = false;
 
+        let mut assets_collection = astro_assets
+            .clone()
+            .0
+            .into_iter()
+            .map(|asset| {
+                // Check that at least one asset is non-zero
+                if !asset.amount.is_zero() {
+                    non_zero_flag = true;
+                }
+
+                // Get appropriate pool
+                let pool = pools.get(&asset.info).copied().ok_or_else(|| {
+                    StdError::generic_err(format!(
+                        "The asset {:?} does not belong to the pair",
+                        asset
+                    ))
+                })?;
+
+                Ok((asset, pool))
+            })
+            .collect::<Result<Vec<_>, CwDexError>>()?;
+
+        // If some assets are omitted then add them explicitly with 0 deposit
+        pools.iter().for_each(|(pool_info, pool_amount)| {
+            if !astro_assets.0.iter().any(|asset| asset.info.eq(pool_info)) {
+                assets_collection.push((
+                    AstroAsset {
+                        amount: Uint128::zero(),
+                        info: pool_info.clone(),
+                    },
+                    *pool_amount,
+                ));
+            }
+        });
+
+        if !non_zero_flag {
+            return Err(CwDexError::Std(StdError::generic_err("Event of zero transfer")));
+        }
+
         let assets_collection = assets_collection
-        .iter()
-        .cloned()
-        .map(|(asset, pool)| {
-            let coin_precision = query_token_precision(&deps.querier, &asset.info)?;
-            Ok((
-                asset.to_decimal_asset(coin_precision)?,
-                Decimal256::with_precision(pool, coin_precision)?,
-            ))
-        })
-        .collect::<StdResult<Vec<(DecimalAsset, Decimal256)>>>()?;
+            .iter()
+            .cloned()
+            .map(|(asset, pool)| {
+                let coin_precision = query_token_precision(&deps.querier, &asset.info)?;
+                Ok((
+                    asset.to_decimal_asset(coin_precision)?,
+                    Decimal256::with_precision(pool, coin_precision)?,
+                ))
+            })
+            .collect::<StdResult<Vec<(DecimalAsset, Decimal256)>>>()?;
 
-        let config = query_pair_config(&deps.querier, &Addr::unchecked(self.contract_addr))?;
-
-        let amp = compute_current_amp(deps, &env, config)?;
+        let amp = compute_current_amp(deps, &env, config.to_owned())?;
 
         // Initial invariant (D)
-        let old_balances = pools.iter().map(|pool| pool.amount).collect_vec();
+        let old_balances = assets_collection.iter().map(|(_, pool)| *pool).collect_vec();
         let init_d = compute_d(amp, &old_balances, config.greatest_precision)?;
 
-        for (i, pool) in pools.iter_mut().enumerate() {
-            pool.amount =
-                pool.amount.checked_sub(deposits[i]).map_err(|_| CwDexError::BigIntOverflow {})?;
-        }
-        let old_balances = assets_collection.iter().map(|(_, pool)| *pool).collect_vec();
+        // Invariant (D) after deposit added
+        let mut new_balances = assets_collection
+            .iter()
+            .map(|(deposit, pool)| Ok(pool + deposit.amount))
+            .collect::<StdResult<Vec<_>>>()?;
 
         let deposit_d = compute_d(amp, &new_balances, config.greatest_precision)?;
 
         let pair_info: PairInfo =
-            deps.querier.query_wasm_smart(self.contract_addr, &QueryMsg::Pair {})?;
+            deps.querier.query_wasm_smart(self.contract_addr.to_string(), &QueryMsg::Pair {})?;
 
         let n_coins = pair_info.asset_infos.len() as u8;
-
-        // Initial invariant (D)
-        let old_balances = assets_collection.iter().map(|(_, pool)| *pool).collect_vec();
-        let init_d = compute_d(amp, &old_balances, config.greatest_precision)?;
-
-        let deposit_d = compute_d(amp, &new_balances, config.greatest_precision)?;
 
         let total_share = query_supply(&deps.querier, &config.pair_info.liquidity_token)?;
         let share = if total_share.is_zero() {
             let share = deposit_d
                 .to_uint128_with_precision(config.greatest_precision)?
                 .checked_sub(MINIMUM_LIQUIDITY_AMOUNT)
-                .map_err(|_| StdError::generic_err("Either asset cannot be zero"))?;
-
+                .map_err(|_| CwDexError::Std(StdError::generic_err(format!("Initial liquidity must be more than {}", MINIMUM_LIQUIDITY_AMOUNT))))?;
+    
             // share cannot become zero after minimum liquidity subtraction
             if share.is_zero() {
-                return Err(error::CwDexError::Std(StdError::generic_err(
-                    "Either asset cannot be zero",
-                )));
+                return Err(CwDexError::Std(StdError::generic_err(format!("Initial liquidity must be more than {}", MINIMUM_LIQUIDITY_AMOUNT))));
             }
-
+    
             share
         } else {
             // Get fee info from the factory
@@ -470,14 +495,14 @@ impl Pool for AstroportStableSwapPool {
                 &config.factory_addr,
                 config.pair_info.pair_type.clone(),
             )?;
-
+    
             // total_fee_rate * N_COINS / (4 * (N_COINS - 1))
             let fee = fee_info
                 .total_fee_rate
                 .checked_mul(Decimal::from_ratio(n_coins, 4 * (n_coins - 1)))?;
-
+    
             let fee = Decimal256::new(fee.atomics().into());
-
+    
             for i in 0..n_coins as usize {
                 let ideal_balance = deposit_d.checked_multiply_ratio(old_balances[i], init_d)?;
                 let difference = if ideal_balance > new_balances[i] {
@@ -488,17 +513,17 @@ impl Pool for AstroportStableSwapPool {
                 // Fee will be charged only during imbalanced provide i.e. if invariant D was changed
                 new_balances[i] -= fee.checked_mul(difference)?;
             }
-
+    
             let after_fee_d = compute_d(amp, &new_balances, config.greatest_precision)?;
-
+    
             let share = Decimal256::with_precision(total_share, config.greatest_precision)?
                 .checked_multiply_ratio(after_fee_d.saturating_sub(init_d), init_d)?
                 .to_uint128_with_precision(config.greatest_precision)?;
-
+    
             if share.is_zero() {
-                return Err(ContractError::LiquidityAmountTooSmall {});
+                return Err(CwDexError::Std(StdError::generic_err("Insufficient amount of liquidity")));
             }
-
+    
             share
         };
 
@@ -512,6 +537,7 @@ impl Pool for AstroportStableSwapPool {
     fn simulate_withdraw_liquidity(
         &self,
         deps: Deps,
+        env: Env,
         asset: Asset,
     ) -> Result<AssetList, CwDexError> {
         let amount = asset.amount;
