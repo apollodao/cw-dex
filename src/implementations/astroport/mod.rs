@@ -1,4 +1,3 @@
-mod astroport;
 mod helpers;
-
-pub use astroport::*;
+pub mod staking;
+pub mod xyk;

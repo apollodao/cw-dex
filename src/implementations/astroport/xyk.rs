@@ -1,13 +1,9 @@
-use astroport_core::generator::{
-    Cw20HookMsg as GeneratorCw20HookMsg, ExecuteMsg as GeneratorExecuteMsg, PendingTokenResponse,
-    QueryMsg as GeneratorQueryMsg,
-};
 use astroport_core::querier::query_supply;
 use astroport_core::U256;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, Decimal, Env, MessageInfo, QuerierWrapper, QueryRequest, ReplyOn,
-    Response, StdError, StdResult, SubMsg, WasmMsg, WasmQuery,
+    to_binary, Addr, CosmosMsg, Decimal, Env, MessageInfo, QuerierWrapper, QueryRequest, Response,
+    StdError, StdResult, WasmMsg, WasmQuery,
 };
 use cosmwasm_std::{Deps, Event, Uint128};
 use cw20::Cw20ExecuteMsg;
@@ -17,7 +13,7 @@ use astroport_core::pair::{
     Cw20HookMsg, ExecuteMsg as PairExecMsg, PoolResponse, QueryMsg, SimulationResponse,
 };
 
-use crate::traits::{Pool, Rewards, Stake, Unstake};
+use crate::traits::Pool;
 use crate::CwDexError;
 
 use super::helpers::{
@@ -27,10 +23,8 @@ use super::helpers::{
 
 #[cw_serde]
 pub struct AstroportXykPool {
-    contract_addr: Addr,
+    pair_addr: Addr,
     lp_token_addr: Addr,
-    generator_addr: Addr,
-    astro_addr: Addr,
 }
 
 pub const ASTROPORT_LOCK_TOKENS_REPLY_ID: u64 = 234;
@@ -43,7 +37,7 @@ impl AstroportXykPool {
     fn get_pool_liquidity_impl(&self, querier: &QuerierWrapper) -> StdResult<PoolResponse> {
         let query_msg = QueryMsg::Pool {};
         let wasm_query = WasmQuery::Smart {
-            contract_addr: self.contract_addr.to_string(),
+            contract_addr: self.pair_addr.to_string(),
             msg: to_binary(&query_msg)?,
         };
         let query_request = QueryRequest::Wasm(wasm_query);
@@ -69,13 +63,13 @@ impl Pool for AstroportXykPool {
             receiver: None,
         };
         let provide_liquidity = CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: self.contract_addr.to_string(),
+            contract_addr: self.pair_addr.to_string(),
             msg: to_binary(&msg)?,
             funds: vec![],
         });
 
         let event = Event::new("apollo/cw-dex/provide_liquidity")
-            .add_attribute("pair_addr", &self.contract_addr)
+            .add_attribute("pair_addr", &self.pair_addr)
             .add_attribute("assets", format!("{:?}", assets));
 
         Ok(Response::new().add_message(provide_liquidity).add_event(event))
@@ -91,7 +85,7 @@ impl Pool for AstroportXykPool {
             let withdraw_liquidity = CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: token_addr.to_string(),
                 msg: to_binary(&Cw20ExecuteMsg::Send {
-                    contract: self.contract_addr.to_string(),
+                    contract: self.pair_addr.to_string(),
                     amount: asset.amount,
                     msg: to_binary(&Cw20HookMsg::WithdrawLiquidity {
                         assets: vec![],
@@ -102,7 +96,7 @@ impl Pool for AstroportXykPool {
 
             let event = Event::new("apollo/cw-dex/withdraw_liquidity")
                 .add_attribute("type", "astroport_xyk")
-                .add_attribute("pair_addr", &self.contract_addr)
+                .add_attribute("pair_addr", &self.pair_addr)
                 .add_attribute("asset", format!("{:?}", asset))
                 .add_attribute("token_amount", asset.amount);
 
@@ -129,7 +123,7 @@ impl Pool for AstroportXykPool {
             AssetInfo::Native(_) => {
                 let asset = cw_asset_to_astro_asset(&offer_asset)?;
                 Ok(CosmosMsg::Wasm(WasmMsg::Execute {
-                    contract_addr: self.contract_addr.to_string(),
+                    contract_addr: self.pair_addr.to_string(),
                     msg: to_binary(&PairExecMsg::Swap {
                         offer_asset: asset,
                         ask_asset_info: Some(cw_asset_info_to_astro_asset_info(&ask_asset_info)?),
@@ -144,7 +138,7 @@ impl Pool for AstroportXykPool {
                 Ok(CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr: addr.to_string(),
                     msg: to_binary(&Cw20ExecuteMsg::Send {
-                        contract: self.contract_addr.to_string(),
+                        contract: self.pair_addr.to_string(),
                         amount: Uint128::zero(), // Should this be `offer_asset.amount`?
                         msg: to_binary(&Cw20HookMsg::Swap {
                             ask_asset_info: Some(cw_asset_info_to_astro_asset_info(
@@ -164,7 +158,7 @@ impl Pool for AstroportXykPool {
         }?;
         let event = Event::new("apollo/cw-dex/swap")
             .add_attribute("type", "astroport_xyk")
-            .add_attribute("pair_addr", &self.contract_addr)
+            .add_attribute("pair_addr", &self.pair_addr)
             .add_attribute("ask_asset", format!("{:?}", ask_asset_info))
             .add_attribute("offer_asset", format!("{:?}", offer_asset.info))
             .add_attribute("minimum_out_amount", minimum_out_amount);
@@ -279,102 +273,12 @@ impl Pool for AstroportXykPool {
         Ok(deps
             .querier
             .query::<SimulationResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
-                contract_addr: self.contract_addr.to_string(),
+                contract_addr: self.pair_addr.to_string(),
                 msg: to_binary(&QueryMsg::Simulation {
                     offer_asset: cw_asset_to_astro_asset(&offer_asset)?,
                     ask_asset_info: Some(cw_asset_info_to_astro_asset_info(&ask_asset_info)?),
                 })?,
             }))?
             .return_amount)
-    }
-}
-
-impl Stake for AstroportXykPool {
-    fn stake(&self, _deps: Deps, _env: &Env, amount: Uint128) -> Result<Response, CwDexError> {
-        let stake_msg = CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: self.lp_token_addr.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Send {
-                contract: self.generator_addr.to_string(),
-                amount,
-                msg: to_binary(&GeneratorCw20HookMsg::Deposit {})?,
-            })?,
-            funds: vec![],
-        });
-
-        let event = Event::new("apollo/cw-dex/stake")
-            .add_attribute("type", "astroport_staking")
-            .add_attribute("asset", self.lp_token_addr.to_string())
-            .add_attribute("generator_address", self.generator_addr.to_string());
-
-        Ok(Response::new()
-            .add_submessage(SubMsg {
-                id: ASTROPORT_LOCK_TOKENS_REPLY_ID,
-                msg: stake_msg,
-                gas_limit: None,
-                reply_on: ReplyOn::Success,
-            })
-            .add_event(event))
-    }
-}
-
-impl Rewards for AstroportXykPool {
-    fn claim_rewards(&self, _deps: Deps, _env: &Env) -> Result<Response, CwDexError> {
-        let claim_rewards_msg = CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: self.generator_addr.to_string(),
-            msg: to_binary(&GeneratorExecuteMsg::ClaimRewards {
-                lp_tokens: vec![self.lp_token_addr.to_string()],
-            })?,
-            funds: vec![],
-        });
-
-        let event =
-            Event::new("apollo/cw-dex/claim_rewards").add_attribute("type", "astroport_staking");
-        Ok(Response::new().add_message(claim_rewards_msg).add_event(event))
-    }
-
-    fn query_pending_rewards(
-        &self,
-        querier: &QuerierWrapper,
-        user: &Addr,
-    ) -> Result<AssetList, CwDexError> {
-        let PendingTokenResponse {
-            pending: pending_astro,
-            pending_on_proxy,
-        } = querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-            contract_addr: self.generator_addr.to_string(),
-            msg: to_binary(&GeneratorQueryMsg::PendingToken {
-                lp_token: self.lp_token_addr.to_string(),
-                user: user.to_string(),
-            })?,
-        }))?;
-
-        let pending_rewards: AstroAssetList = pending_on_proxy
-            .unwrap_or_default()
-            .into_iter()
-            .chain(vec![cw_asset_to_astro_asset(&Asset::cw20(
-                self.astro_addr.clone(),
-                pending_astro,
-            ))?])
-            .collect::<Vec<_>>()
-            .into();
-
-        Ok(pending_rewards.into())
-    }
-}
-
-impl Unstake for AstroportXykPool {
-    fn unstake(&self, _deps: Deps, _env: &Env, amount: Uint128) -> Result<Response, CwDexError> {
-        let unstake_msg = CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: self.lp_token_addr.to_string(),
-            msg: to_binary(&GeneratorExecuteMsg::Withdraw {
-                lp_token: self.lp_token_addr.to_string(),
-                amount,
-            })?,
-            funds: vec![],
-        });
-
-        let event = Event::new("apollo/cw-dex/unstake").add_attribute("type", "astroport_staking");
-
-        Ok(Response::new().add_message(unstake_msg).add_event(event))
     }
 }
