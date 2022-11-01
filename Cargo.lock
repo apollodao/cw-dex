@@ -649,9 +649,9 @@ dependencies = [
 
 [[package]]
 name = "ff"
-version = "0.12.0"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df689201f395c6b90dfe87127685f8dbfc083a5e779e613575d8bd7314300c3e"
+checksum = "d013fc25338cc558c5c2cfbad646908fb23591e2404481826742b651c9af7160"
 dependencies = [
  "rand_core 0.6.4",
  "subtle",
@@ -796,9 +796,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.15.0"
+version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e82dad04139b71a90c080c8463fe0dc7902db5192d939bd0950f074d014339e1"
+checksum = "86f0b0d4bf799edbc74508c1e8bf170ff5f41238e5f8225603ca7caaae2b7860"
 
 [[package]]
 name = "opaque-debug"
@@ -820,7 +820,7 @@ dependencies = [
 [[package]]
 name = "osmosis-std"
 version = "0.12.0"
-source = "git+https://github.com/apollodao/osmosis-rust.git?branch=feat/msg-force-unlock-type#4d57a4647ecc1f7fbfb9f3ddf2eb889cfbc67510"
+source = "git+https://github.com/osmosis-labs/osmosis-rust#28ffd12efce20ee36bb78505e5af136b26344b70"
 dependencies = [
  "chrono",
  "cosmwasm-std",
@@ -835,7 +835,7 @@ dependencies = [
 [[package]]
 name = "osmosis-std-derive"
 version = "0.12.0"
-source = "git+https://github.com/apollodao/osmosis-rust.git?branch=feat/msg-force-unlock-type#4d57a4647ecc1f7fbfb9f3ddf2eb889cfbc67510"
+source = "git+https://github.com/osmosis-labs/osmosis-rust#28ffd12efce20ee36bb78505e5af136b26344b70"
 dependencies = [
  "itertools",
  "proc-macro2",
