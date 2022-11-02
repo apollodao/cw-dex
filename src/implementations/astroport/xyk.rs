@@ -16,10 +16,7 @@ use astroport_core::pair::{
 use crate::traits::Pool;
 use crate::CwDexError;
 
-use super::helpers::{
-    astro_asset_info_to_cw_asset_info, cw_asset_info_to_astro_asset_info, cw_asset_to_astro_asset,
-    AstroAssetList,
-};
+use super::helpers::{astro_asset_info_to_cw_asset_info, cw_asset_to_astro_asset, AstroAssetList};
 
 #[cw_serde]
 pub struct AstroportXykPool {
@@ -31,7 +28,7 @@ pub const ASTROPORT_LOCK_TOKENS_REPLY_ID: u64 = 234;
 
 impl AstroportXykPool {
     fn query_lp_token_supply(&self, querier: &QuerierWrapper) -> StdResult<Uint128> {
-        query_supply(querier, &self.lp_token_addr)
+        query_supply(querier, self.lp_token_addr.to_owned())
     }
 
     fn get_pool_liquidity_impl(&self, querier: &QuerierWrapper) -> StdResult<PoolResponse> {
@@ -57,7 +54,10 @@ impl Pool for AstroportXykPool {
         let astro_assets: AstroAssetList = assets.clone().try_into()?;
 
         let msg = PairExecMsg::ProvideLiquidity {
-            assets: astro_assets.into(),
+            assets: astro_assets
+                .0
+                .try_into()
+                .map_err(|_| CwDexError::Std(StdError::generic_err("invalid assets for pair")))?,
             slippage_tolerance,
             auto_stake: Some(false), // Should this be true?
             receiver: None,
@@ -87,9 +87,7 @@ impl Pool for AstroportXykPool {
                 msg: to_binary(&Cw20ExecuteMsg::Send {
                     contract: self.pair_addr.to_string(),
                     amount: asset.amount,
-                    msg: to_binary(&Cw20HookMsg::WithdrawLiquidity {
-                        assets: vec![],
-                    })?,
+                    msg: to_binary(&Cw20HookMsg::WithdrawLiquidity {})?,
                 })?,
                 funds: vec![],
             });
@@ -126,7 +124,6 @@ impl Pool for AstroportXykPool {
                     contract_addr: self.pair_addr.to_string(),
                     msg: to_binary(&PairExecMsg::Swap {
                         offer_asset: asset,
-                        ask_asset_info: Some(cw_asset_info_to_astro_asset_info(&ask_asset_info)?),
                         belief_price,
                         max_spread: Some(Decimal::zero()),
                         to: Some(env.contract.address.to_string()),
@@ -141,9 +138,6 @@ impl Pool for AstroportXykPool {
                         contract: self.pair_addr.to_string(),
                         amount: Uint128::zero(), // Should this be `offer_asset.amount`?
                         msg: to_binary(&Cw20HookMsg::Swap {
-                            ask_asset_info: Some(cw_asset_info_to_astro_asset_info(
-                                &ask_asset_info,
-                            )?),
                             belief_price,
                             max_spread: Some(Decimal::zero()),
                             to: Some(env.contract.address.to_string()),
@@ -167,7 +161,7 @@ impl Pool for AstroportXykPool {
 
     fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {
         let resp = self.get_pool_liquidity_impl(&deps.querier)?;
-        Ok(AssetList::from(AstroAssetList(resp.assets)))
+        Ok(AssetList::from(AstroAssetList(resp.assets.to_vec())))
     }
 
     fn simulate_provide_liquidity(
@@ -267,7 +261,7 @@ impl Pool for AstroportXykPool {
         &self,
         deps: Deps,
         offer_asset: Asset,
-        ask_asset_info: AssetInfo,
+        _ask_asset_info: AssetInfo,
         _sender: Option<String>,
     ) -> StdResult<Uint128> {
         Ok(deps
@@ -276,7 +270,6 @@ impl Pool for AstroportXykPool {
                 contract_addr: self.pair_addr.to_string(),
                 msg: to_binary(&QueryMsg::Simulation {
                     offer_asset: cw_asset_to_astro_asset(&offer_asset)?,
-                    ask_asset_info: Some(cw_asset_info_to_astro_asset_info(&ask_asset_info)?),
                 })?,
             }))?
             .return_amount)
