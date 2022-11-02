@@ -23,8 +23,8 @@ use super::helpers::{
 
 #[cw_serde]
 pub struct AstroportXykPool {
-    pair_addr: Addr,
-    lp_token_addr: Addr,
+    pub pair_addr: Addr,
+    pub lp_token_addr: Addr,
 }
 
 pub const ASTROPORT_LOCK_TOKENS_REPLY_ID: u64 = 234;
