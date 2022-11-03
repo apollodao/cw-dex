@@ -23,14 +23,11 @@ pub(crate) struct AstroportBasePool {
 }
 
 impl AstroportBasePool {
-    pub(crate) fn query_lp_token_supply(&self, querier: &QuerierWrapper) -> StdResult<Uint128> {
+    pub fn query_lp_token_supply(&self, querier: &QuerierWrapper) -> StdResult<Uint128> {
         query_supply(querier, self.lp_token_addr.to_owned())
     }
 
-    pub(crate) fn get_pool_liquidity_impl(
-        &self,
-        querier: &QuerierWrapper,
-    ) -> StdResult<PoolResponse> {
+    pub fn get_pool_liquidity_impl(&self, querier: &QuerierWrapper) -> StdResult<PoolResponse> {
         let query_msg = QueryMsg::Pool {};
         let wasm_query = WasmQuery::Smart {
             contract_addr: self.pair_addr.to_string(),
@@ -40,7 +37,7 @@ impl AstroportBasePool {
         querier.query::<PoolResponse>(&query_request)
     }
 
-    pub(crate) fn provide_liquidity(
+    pub fn provide_liquidity(
         &self,
         _deps: Deps,
         _env: &Env,
@@ -72,7 +69,7 @@ impl AstroportBasePool {
         Ok(Response::new().add_message(provide_liquidity).add_event(event))
     }
 
-    pub(crate) fn withdraw_liquidity(
+    pub fn withdraw_liquidity(
         &self,
         _deps: Deps,
         _env: &Env,
@@ -103,7 +100,7 @@ impl AstroportBasePool {
         }
     }
 
-    pub(crate) fn swap(
+    pub fn swap(
         &self,
         _deps: Deps,
         env: &Env,
@@ -156,12 +153,12 @@ impl AstroportBasePool {
         Ok(Response::new().add_message(swap_msg).add_event(event))
     }
 
-    pub(crate) fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {
+    pub fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {
         let resp = self.get_pool_liquidity_impl(&deps.querier)?;
         Ok(AssetList::from(AstroAssetList(resp.assets.to_vec())))
     }
 
-    pub(crate) fn simulate_withdraw_liquidity(
+    pub fn simulate_withdraw_liquidity(
         &self,
         deps: Deps,
         asset: Asset,
@@ -184,7 +181,7 @@ impl AstroportBasePool {
             .into())
     }
 
-    pub(crate) fn simulate_swap(
+    pub fn simulate_swap(
         &self,
         deps: Deps,
         offer_asset: Asset,
