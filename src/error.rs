@@ -34,6 +34,16 @@ pub enum CwDexError {
     #[error("Overflow when converting to from BigInt to Uint128")]
     BigIntOverflow {},
 
+    #[error("Event of zero transfer")]
+    InvalidZeroAmount {},
+
+    #[error("Insufficient amount of liquidity")]
+    LiquidityAmountTooSmall {},
+
+    #[error("It is not possible to provide liquidity with one token for an empty pool")]
+    InvalidProvideLPsWithSingleToken {},
+
+
     #[error("Asset is not an LP token")]
     NotLpToken {},
 
