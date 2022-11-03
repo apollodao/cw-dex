@@ -12,6 +12,7 @@ use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use astroport_core::pair::{
     Cw20HookMsg, ExecuteMsg as PairExecMsg, PoolResponse, QueryMsg, SimulationResponse,
 };
+use delegate::delegate;
 
 use crate::traits::Pool;
 use crate::CwDexError;
@@ -19,14 +20,14 @@ use crate::CwDexError;
 use super::helpers::{astro_asset_info_to_cw_asset_info, cw_asset_to_astro_asset, AstroAssetList};
 
 #[cw_serde]
-pub struct AstroportXykPool {
+pub struct AstroporBasePool {
     pub pair_addr: Addr,
     pub lp_token_addr: Addr,
 }
 
 pub const ASTROPORT_LOCK_TOKENS_REPLY_ID: u64 = 234;
 
-impl AstroportXykPool {
+impl AstroporBasePool {
     fn query_lp_token_supply(&self, querier: &QuerierWrapper) -> StdResult<Uint128> {
         query_supply(querier, self.lp_token_addr.to_owned())
     }
@@ -42,7 +43,7 @@ impl AstroportXykPool {
     }
 }
 
-impl Pool for AstroportXykPool {
+impl Pool for AstroporBasePool {
     fn provide_liquidity(
         &self,
         _deps: Deps,
@@ -166,15 +167,91 @@ impl Pool for AstroportXykPool {
 
     fn simulate_provide_liquidity(
         &self,
+        _deps: Deps,
+        _assets: AssetList,
+    ) -> Result<Asset, CwDexError> {
+        unimplemented!()
+    }
+
+    fn simulate_withdraw_liquidity(
+        &self,
+        deps: Deps,
+        asset: Asset,
+    ) -> Result<AssetList, CwDexError> {
+        let amount = asset.amount;
+        let total_share = self.query_lp_token_supply(&deps.querier)?;
+        let mut share_ratio = Decimal::zero();
+        if !total_share.is_zero() {
+            share_ratio = Decimal::from_ratio(amount, total_share);
+        }
+
+        let pools = self.get_pool_liquidity_impl(&deps.querier)?.assets;
+        Ok(pools
+            .iter()
+            .map(|a| Asset {
+                info: astro_asset_info_to_cw_asset_info(&a.info),
+                amount: a.amount * share_ratio,
+            })
+            .collect::<Vec<Asset>>()
+            .into())
+    }
+
+    fn simulate_swap(
+        &self,
+        deps: Deps,
+        offer_asset: Asset,
+        _ask_asset_info: AssetInfo,
+        _sender: Option<String>,
+    ) -> StdResult<Uint128> {
+        Ok(deps
+            .querier
+            .query::<SimulationResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
+                contract_addr: self.pair_addr.to_string(),
+                msg: to_binary(&QueryMsg::Simulation {
+                    offer_asset: cw_asset_to_astro_asset(&offer_asset)?,
+                })?,
+            }))?
+            .return_amount)
+    }
+}
+
+#[cw_serde]
+pub struct AstroportXykPool(pub AstroporBasePool);
+
+impl AstroportXykPool {
+    pub fn new(pair_addr: Addr, lp_token_addr: Addr) -> Self {
+        Self(AstroporBasePool {
+            pair_addr,
+            lp_token_addr,
+        })
+    }
+}
+
+impl Pool for AstroportXykPool {
+    delegate!(
+        to self.0 {
+            fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError>;
+            fn simulate_withdraw_liquidity(&self, deps: Deps, asset: Asset) -> Result<AssetList, CwDexError>;
+            fn simulate_swap(&self, deps: Deps, offer_asset: Asset, ask_asset_info: AssetInfo, sender: Option<String>) -> StdResult<Uint128>;
+            fn provide_liquidity(&self, deps: Deps, env: &Env, info: &MessageInfo, assets: AssetList, slippage_tolerance: Option<Decimal>) -> Result<Response, CwDexError>;
+            fn withdraw_liquidity(&self, deps: Deps, env: &Env, asset: Asset) -> Result<Response, CwDexError>;
+            fn swap(&self, deps: Deps, env: &Env, offer_asset: Asset, ask_asset_info: AssetInfo, minimum_out_amount: Uint128,) -> Result<Response, CwDexError>;
+        }
+    );
+
+    fn simulate_provide_liquidity(
+        &self,
         deps: Deps,
         assets: AssetList,
     ) -> Result<Asset, CwDexError> {
+        // Math for LP shares calculation when providing liquidity. Copied from the astroport XYK pool
+        // implementation. See https://github.com/astroport-fi/astroport-core/blob/5f166bd008257ff241d4dc75a1de6cbfb8415179/contracts/pair/src/contract.rs#L277-L377
         let astro_assets: AstroAssetList = assets.try_into()?;
 
         let PoolResponse {
             assets: pool_liquidity,
             total_share: total_shares,
-        } = self.get_pool_liquidity_impl(&deps.querier)?;
+        } = self.0.get_pool_liquidity_impl(&deps.querier)?;
 
         let deposits = [
             astro_assets
@@ -228,50 +305,9 @@ impl Pool for AstroportXykPool {
             )
         };
         let lp_token = Asset {
-            info: AssetInfo::Cw20(self.lp_token_addr.clone()),
+            info: AssetInfo::Cw20(self.0.lp_token_addr.clone()),
             amount: share,
         };
         Ok(lp_token)
-    }
-
-    fn simulate_withdraw_liquidity(
-        &self,
-        deps: Deps,
-        asset: Asset,
-    ) -> Result<AssetList, CwDexError> {
-        let amount = asset.amount;
-        let total_share = self.query_lp_token_supply(&deps.querier)?;
-        let mut share_ratio = Decimal::zero();
-        if !total_share.is_zero() {
-            share_ratio = Decimal::from_ratio(amount, total_share);
-        }
-
-        let pools = self.get_pool_liquidity_impl(&deps.querier)?.assets;
-        Ok(pools
-            .iter()
-            .map(|a| Asset {
-                info: astro_asset_info_to_cw_asset_info(&a.info),
-                amount: a.amount * share_ratio,
-            })
-            .collect::<Vec<Asset>>()
-            .into())
-    }
-
-    fn simulate_swap(
-        &self,
-        deps: Deps,
-        offer_asset: Asset,
-        _ask_asset_info: AssetInfo,
-        _sender: Option<String>,
-    ) -> StdResult<Uint128> {
-        Ok(deps
-            .querier
-            .query::<SimulationResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
-                contract_addr: self.pair_addr.to_string(),
-                msg: to_binary(&QueryMsg::Simulation {
-                    offer_asset: cw_asset_to_astro_asset(&offer_asset)?,
-                })?,
-            }))?
-            .return_amount)
     }
 }
