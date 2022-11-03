@@ -1,3 +1,7 @@
+mod base_pool;
 mod helpers;
-pub mod staking;
-pub mod xyk;
+mod staking;
+mod xyk;
+
+pub use staking::*;
+pub use xyk::*;
