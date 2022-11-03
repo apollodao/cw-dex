@@ -26,6 +26,7 @@ impl AstroportXykPool {
 }
 
 impl Pool for AstroportXykPool {
+    // Delegate all methods except `simulate_provide_liquidity` to the AstroportBasePool implementations
     delegate!(
         to self.0 {
             fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError>;
