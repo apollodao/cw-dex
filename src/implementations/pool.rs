@@ -90,9 +90,10 @@ impl PoolTrait for Pool {
     fn simulate_provide_liquidity(
         &self,
         deps: Deps,
+        env: Env,
         asset: AssetList,
     ) -> Result<Asset, CwDexError> {
-        self.as_trait().simulate_provide_liquidity(deps, asset)
+        self.as_trait().simulate_provide_liquidity(deps, env, asset)
     }
 
     fn simulate_withdraw_liquidity(

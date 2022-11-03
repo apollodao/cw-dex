@@ -5,7 +5,7 @@ use cosmwasm_std::{
     StdResult, Uint128, WasmQuery,
 };
 use cosmwasm_storage::to_length_prefixed;
-use std::cmp::max;
+
 // Astroport StableSwap pair does not return needed Config elements with smart query
 // Raw query gets all the necessary elements
 pub fn query_pair_config(querier: &QuerierWrapper, pair: &Addr) -> StdResult<Config> {

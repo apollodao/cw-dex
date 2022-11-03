@@ -14,7 +14,7 @@ use astroport_core::pair::{
 
 use crate::CwDexError;
 
-use super::helpers::{astro_asset_info_to_cw_asset_info, cw_asset_to_astro_asset, AstroAssetList};
+use super::helpers::{astro_asset_info_to_cw_asset_info, cw_asset_to_astro_asset, AstroAssetList, cw_asset_info_to_astro_asset_info};
 
 #[cw_serde]
 pub(crate) struct AstroportBasePool {
@@ -81,7 +81,7 @@ impl AstroportBasePool {
                 msg: to_binary(&Cw20ExecuteMsg::Send {
                     contract: self.pair_addr.to_string(),
                     amount: asset.amount,
-                    msg: to_binary(&Cw20HookMsg::WithdrawLiquidity {})?,
+                    msg: to_binary(&Cw20HookMsg::WithdrawLiquidity { assets: vec![]})?,
                 })?,
                 funds: vec![],
             });
@@ -121,6 +121,7 @@ impl AstroportBasePool {
                         belief_price,
                         max_spread: Some(Decimal::zero()),
                         to: Some(env.contract.address.to_string()),
+                        ask_asset_info: Some(cw_asset_info_to_astro_asset_info(&ask_asset_info)?)
                     })?,
                     funds: vec![offer_asset.clone().try_into()?],
                 }))
@@ -135,6 +136,7 @@ impl AstroportBasePool {
                             belief_price,
                             max_spread: Some(Decimal::zero()),
                             to: Some(env.contract.address.to_string()),
+                            ask_asset_info: Some(cw_asset_info_to_astro_asset_info(&ask_asset_info)?)
                         })?,
                     })?,
                     funds: vec![],
@@ -185,7 +187,7 @@ impl AstroportBasePool {
         &self,
         deps: Deps,
         offer_asset: Asset,
-        _ask_asset_info: AssetInfo,
+        ask_asset_info: AssetInfo,
         _sender: Option<String>,
     ) -> StdResult<Uint128> {
         Ok(deps
@@ -194,6 +196,7 @@ impl AstroportBasePool {
                 contract_addr: self.pair_addr.to_string(),
                 msg: to_binary(&QueryMsg::Simulation {
                     offer_asset: cw_asset_to_astro_asset(&offer_asset)?,
+                    ask_asset_info: Some(cw_asset_info_to_astro_asset_info(&ask_asset_info)?)
                 })?,
             }))?
             .return_amount)

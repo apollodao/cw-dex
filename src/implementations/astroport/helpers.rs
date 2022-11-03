@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::CwDexError;
-use astroport_core::{asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo, Decimal256Ext, DecimalAsset}, querier::{query_token_precision, query_supply, query_fee_info}};
+use astroport_core::{asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo, Decimal256Ext, DecimalAsset}, querier::{query_supply, query_fee_info}};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal256, Deps, Env, StdError, StdResult, Uint128, Uint64, Decimal, Uint256};
 use cw_asset::{Asset, AssetInfo, AssetList};
@@ -204,7 +204,9 @@ pub fn imbalanced_withdraw(
     if assets.len() > config.pair_info.asset_infos.len() {
         return Err(CwDexError::Std(StdError::generic_err("Invalid number of assets. The Astroport supports at least 2 and at most 5 assets within a stable pool")));
     }
-
+    let pair_addr = &config.pair_info.contract_addr;
+    let factory_addr = &config.factory_addr;
+    let liquidity_token = &config.pair_info.liquidity_token;
     let pools: HashMap<_, _> = config
         .pair_info
         .query_pools(&deps.querier, &env.contract.address)?
@@ -216,7 +218,7 @@ pub fn imbalanced_withdraw(
         .iter()
         .cloned()
         .map(|asset| {
-            let precision = query_token_precision(&deps.querier, &asset.info)?;
+            let precision = query_asset_precision(&deps.querier, pair_addr, asset.clone().info)?;
             // Get appropriate pool
             let pool = pools
                 .get(&asset.info)
@@ -235,7 +237,7 @@ pub fn imbalanced_withdraw(
         .into_iter()
         .try_for_each(|(pool_info, pool_amount)| -> StdResult<()> {
             if !assets.iter().any(|asset| asset.info == pool_info) {
-                let precision = query_token_precision(&deps.querier, &pool_info)?;
+                let precision = query_asset_precision(&deps.querier, pair_addr, pool_info.clone())?;
 
                 assets_collection.push((
                     DecimalAsset {
@@ -257,7 +259,7 @@ pub fn imbalanced_withdraw(
         .iter()
         .map(|(_, pool)| *pool)
         .collect_vec();
-    let init_d = compute_d(amp, &old_balances, config.greatest_precision)?;
+    let init_d = compute_d(amp, &old_balances, config.clone().greatest_precision)?;
 
     // Invariant (D) after assets withdrawn
     let mut new_balances = assets_collection
@@ -265,12 +267,12 @@ pub fn imbalanced_withdraw(
         .cloned()
         .map(|(withdraw, pool)| Ok(pool - withdraw.amount))
         .collect::<StdResult<Vec<Decimal256>>>()?;
-    let withdraw_d = compute_d(amp, &new_balances, config.greatest_precision)?;
+    let withdraw_d = compute_d(amp, &new_balances, config.clone().greatest_precision)?;
 
     // Get fee info from the factory
     let fee_info = query_fee_info(
         &deps.querier,
-        &config.factory_addr,
+        factory_addr,
         config.pair_info.pair_type.clone(),
     )?;
 
@@ -295,7 +297,7 @@ pub fn imbalanced_withdraw(
 
     let total_share = Uint256::from(query_supply(
         &deps.querier,
-        &config.pair_info.liquidity_token,
+        liquidity_token,
     )?);
     // How many tokens do we need to burn to withdraw asked assets?
     let burn_amount = total_share
