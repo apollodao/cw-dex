@@ -5,6 +5,7 @@ mod xyk;
 mod stableswap;
 mod querier;
 
-pub use staking::*;
-pub use xyk::*;
-pub use stableswap::*;
+
+pub use stableswap::AstroportStableSwapPool;
+pub use staking::AstroportStaking;
+pub use xyk::AstroportXykPool;

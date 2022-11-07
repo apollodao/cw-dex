@@ -26,7 +26,7 @@ impl TryFrom<AssetList> for AstroAssetList {
     fn try_from(list: AssetList) -> StdResult<Self> {
         Ok(Self(
             list.into_iter()
-                .map(|a| cw_asset_to_astro_asset(a))
+                .map(cw_asset_to_astro_asset)
                 .collect::<StdResult<Vec<AstroAsset>>>()?,
         ))
     }
@@ -34,21 +34,14 @@ impl TryFrom<AssetList> for AstroAssetList {
 
 impl From<AstroAssetList> for AssetList {
     fn from(list: AstroAssetList) -> Self {
-        list.0
-            .into_iter()
-            .map(|a| cw_asset::Asset {
-                info: match a.info {
-                    AstroAssetInfo::NativeToken {
-                        denom,
-                    } => AssetInfo::Native(denom),
-                    AstroAssetInfo::Token {
-                        contract_addr,
-                    } => AssetInfo::Cw20(contract_addr),
-                },
-                amount: a.amount,
-            })
-            .collect::<Vec<Asset>>()
-            .into()
+        list.0.iter().map(astro_asset_to_cw_asset).collect::<Vec<Asset>>().into()
+    }
+}
+
+pub(crate) fn astro_asset_to_cw_asset(astro_asset: &AstroAsset) -> Asset {
+    Asset {
+        info: astro_asset_info_to_cw_asset_info(&astro_asset.info),
+        amount: astro_asset.amount,
     }
 }
 
@@ -77,10 +70,10 @@ pub(crate) fn astro_asset_info_to_cw_asset_info(asset_info: &AstroAssetInfo) -> 
     match asset_info {
         AstroAssetInfo::NativeToken {
             denom,
-        } => AssetInfo::Native(denom.to_string()),
+        } => AssetInfo::Native(denom.clone()),
         AstroAssetInfo::Token {
             contract_addr,
-        } => AssetInfo::cw20(contract_addr.to_owned()),
+        } => AssetInfo::cw20(contract_addr.clone()),
     }
 }
 

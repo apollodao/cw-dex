@@ -10,8 +10,8 @@ use osmosis_std::types::osmosis::gamm::v1beta1::{
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    Coin, CosmosMsg, Decimal, Deps, Env, Event, MessageInfo, QuerierWrapper, Response, StdError,
-    StdResult, Uint128,
+    Coin, CosmosMsg, Decimal, Deps, Env, Event, QuerierWrapper, Response, StdError, StdResult,
+    Uint128,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
 use osmo_bindings::OsmosisQuery;
@@ -44,7 +44,6 @@ impl Pool for OsmosisPool {
         &self,
         deps: Deps,
         env: &Env,
-        _info: &MessageInfo,
         assets: AssetList,
         slippage_tolerance: Option<Decimal>,
     ) -> Result<Response, CwDexError> {
