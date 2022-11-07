@@ -1,7 +1,7 @@
 use astroport_core::querier::query_supply;
 use astroport_core::U256;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Decimal, Env, MessageInfo, Response, StdError, StdResult};
+use cosmwasm_std::{Addr, Decimal, Env, Response, StdError, StdResult};
 use cosmwasm_std::{Deps, Uint128};
 use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use delegate::delegate;
@@ -43,7 +43,8 @@ impl Pool for AstroportStableSwapPool {
         }
     );
 
-    /// https://github.com/astroport-fi/astroport-core/blob/c216ecd4f350113316be44d06a95569f451ac681/contracts/pair_stable/src/contract.rs#L338
+    // Math for providing liquidity to the pool. This logic is copied from the astroport implementation here:
+    // https://github.com/astroport-fi/astroport-core/blob/c216ecd4f350113316be44d06a95569f451ac681/contracts/pair_stable/src/contract.rs#L338
     fn simulate_provide_liquidity(
         &self,
         deps: Deps,
@@ -176,6 +177,8 @@ impl Pool for AstroportStableSwapPool {
 /// * **current_precision** is an object of type [`u8`]. This is the `value`'s current precision
 ///
 /// * **new_precision** is an object of type [`u8`]. This is the new precision to use when returning the `value`.
+///
+/// Copied from the astro code here:
 /// https://github.com/astroport-fi/astroport-core/blob/c216ecd4f350113316be44d06a95569f451ac681/contracts/pair_stable/src/contract.rs#L1269
 fn adjust_precision(
     value: Uint128,

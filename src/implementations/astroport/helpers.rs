@@ -86,6 +86,9 @@ pub(crate) fn astro_asset_info_to_cw_asset_info(asset_info: &AstroAssetInfo) -> 
 /// * **config** is an object of type [`Config`].
 ///
 /// * **env** is an object of type [`Env`].
+///
+/// Copied from the astro implementation here:
+/// https://github.com/astroport-fi/astroport-core/blob/c216ecd4f350113316be44d06a95569f451ac681/contracts/pair_stable/src/contract.rs#L1492-L1515
 pub fn compute_current_amp(config: &Config, env: &Env) -> StdResult<u64> {
     let block_time = env.block.time.seconds();
 
