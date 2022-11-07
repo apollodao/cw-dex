@@ -177,6 +177,7 @@ fn checked_u8_mul(a: &U256, b: u8) -> Option<U256> {
 /// * **Equation**:
 ///
 /// d = (leverage * sum_x + d_product * n_coins) * initial_d / ((leverage - 1) * initial_d + (n_coins + 1) * d_product)
+/// https://github.com/astroport-fi/astroport-core/blob/c216ecd4f350113316be44d06a95569f451ac681/contracts/pair_stable/src/math.rs#L119
 fn calculate_step(initial_d: &U256, leverage: u64, sum_x: u128, d_product: &U256) -> Option<U256> {
     let leverage_mul = U256::from(leverage).checked_mul(sum_x.into())? / AMP_PRECISION;
     let d_p_mul = checked_u8_mul(d_product, N_COINS)?;

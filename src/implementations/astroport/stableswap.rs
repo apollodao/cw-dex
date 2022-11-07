@@ -43,6 +43,7 @@ impl Pool for AstroportStableSwapPool {
         }
     );
 
+    /// https://github.com/astroport-fi/astroport-core/blob/c216ecd4f350113316be44d06a95569f451ac681/contracts/pair_stable/src/contract.rs#L338
     fn simulate_provide_liquidity(
         &self,
         deps: Deps,
@@ -52,7 +53,7 @@ impl Pool for AstroportStableSwapPool {
         let assets: AstroAssetList = assets.to_owned().try_into()?;
         let config = query_pair_config(&deps.querier, &self.0.pair_addr)?;
         let mut pools: [AstroAsset; 2] =
-            config.pair_info.query_pools(&deps.querier, env.contract.address.clone())?;
+            config.pair_info.query_pools(&deps.querier, self.0.pair_addr.to_owned())?;
         let deposits: [Uint128; 2] = [
             assets
                 .0
@@ -175,6 +176,7 @@ impl Pool for AstroportStableSwapPool {
 /// * **current_precision** is an object of type [`u8`]. This is the `value`'s current precision
 ///
 /// * **new_precision** is an object of type [`u8`]. This is the new precision to use when returning the `value`.
+/// https://github.com/astroport-fi/astroport-core/blob/c216ecd4f350113316be44d06a95569f451ac681/contracts/pair_stable/src/contract.rs#L1269
 fn adjust_precision(
     value: Uint128,
     current_precision: u8,

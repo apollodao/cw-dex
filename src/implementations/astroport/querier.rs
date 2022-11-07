@@ -45,7 +45,6 @@ fn concat(namespace: &[u8], key: &[u8]) -> Vec<u8> {
 }
 
 #[cw_serde]
-
 pub struct Config {
     /// The contract owner
     pub owner: Option<Addr>,
