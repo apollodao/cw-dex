@@ -28,13 +28,10 @@ impl AstroportBasePool {
     }
 
     pub fn get_pool_liquidity_impl(&self, querier: &QuerierWrapper) -> StdResult<PoolResponse> {
-        let query_msg = QueryMsg::Pool {};
-        let wasm_query = WasmQuery::Smart {
+        querier.query::<PoolResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: self.pair_addr.to_string(),
-            msg: to_binary(&query_msg)?,
-        };
-        let query_request = QueryRequest::Wasm(wasm_query);
-        querier.query::<PoolResponse>(&query_request)
+            msg: to_binary(&QueryMsg::Pool {})?,
+        }))
     }
 
     pub fn provide_liquidity(
@@ -53,7 +50,7 @@ impl AstroportBasePool {
                 .try_into()
                 .map_err(|_| CwDexError::Std(StdError::generic_err("invalid assets for pair")))?,
             slippage_tolerance,
-            auto_stake: Some(false), // Should this be true?
+            auto_stake: Some(false),
             receiver: None,
         };
         let provide_liquidity = CosmosMsg::Wasm(WasmMsg::Execute {
@@ -125,27 +122,24 @@ impl AstroportBasePool {
                     funds: vec![offer_asset.clone().try_into()?],
                 }))
             }
-            AssetInfo::Cw20(addr) => {
-                Ok(CosmosMsg::Wasm(WasmMsg::Execute {
-                    contract_addr: addr.to_string(),
-                    msg: to_binary(&Cw20ExecuteMsg::Send {
-                        contract: self.pair_addr.to_string(),
-                        amount: Uint128::zero(), // Should this be `offer_asset.amount`?
-                        msg: to_binary(&Cw20HookMsg::Swap {
-                            belief_price,
-                            max_spread: Some(Decimal::zero()),
-                            to: Some(env.contract.address.to_string()),
-                        })?,
+            AssetInfo::Cw20(addr) => Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: addr.to_string(),
+                msg: to_binary(&Cw20ExecuteMsg::Send {
+                    contract: self.pair_addr.to_string(),
+                    amount: offer_asset.amount,
+                    msg: to_binary(&Cw20HookMsg::Swap {
+                        belief_price,
+                        max_spread: Some(Decimal::zero()),
+                        to: Some(env.contract.address.to_string()),
                     })?,
-                    funds: vec![],
-                }))
-            }
+                })?,
+                funds: vec![],
+            })),
             _ => Err(CwDexError::InvalidInAsset {
                 a: offer_asset.clone(),
             }),
         }?;
         let event = Event::new("apollo/cw-dex/swap")
-            .add_attribute("type", "astroport_xyk")
             .add_attribute("pair_addr", &self.pair_addr)
             .add_attribute("ask_asset", format!("{:?}", ask_asset_info))
             .add_attribute("offer_asset", format!("{:?}", offer_asset.info))

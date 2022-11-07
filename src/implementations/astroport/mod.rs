@@ -3,5 +3,5 @@ mod helpers;
 mod staking;
 mod xyk;
 
-pub use staking::*;
-pub use xyk::*;
+pub use staking::AstroportStaking;
+pub use xyk::AstroportXykPool;
