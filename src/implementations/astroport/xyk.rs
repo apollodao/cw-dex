@@ -48,21 +48,21 @@ impl Pool for AstroportXykPool {
         let astro_assets: AstroAssetList = assets.try_into()?;
 
         let PoolResponse {
-            assets: pool_liquidity,
-            total_share: total_shares,
+            assets: pools,
+            total_share,
         } = self.0.get_pool_liquidity_impl(&deps.querier)?;
 
         let deposits = [
             astro_assets
                 .0
                 .iter()
-                .find(|a| a.info.equal(&pool_liquidity[0].info))
+                .find(|a| a.info.equal(&pools[0].info))
                 .map(|a| a.amount)
                 .expect("Wrong asset info is given"),
             astro_assets
                 .0
                 .iter()
-                .find(|a| a.info.equal(&pool_liquidity[1].info))
+                .find(|a| a.info.equal(&pools[1].info))
                 .map(|a| a.amount)
                 .expect("Wrong asset info is given"),
         ];
@@ -73,36 +73,37 @@ impl Pool for AstroportXykPool {
 
         // map over pools
         const MINIMUM_LIQUIDITY_AMOUNT: Uint128 = Uint128::new(1_000);
-        let share = if total_shares.is_zero() {
+        let share = if total_share.is_zero() {
             // Initial share = collateral amount
             let share = Uint128::new(
                 (U256::from(deposits[0].u128()) * U256::from(deposits[1].u128()))
                     .integer_sqrt()
                     .as_u128(),
-            )
-            .saturating_sub(MINIMUM_LIQUIDITY_AMOUNT);
-            // share cannot become zero after minimum liquidity subtraction
-            if share.is_zero() {
+            );
+
+            if share.lt(&MINIMUM_LIQUIDITY_AMOUNT) {
                 return Err(StdError::generic_err(
                     "Share cannot be less than minimum liquidity amount",
                 )
                 .into());
             }
+
             share
         } else {
             // Assert slippage tolerance
             // assert_slippage_tolerance(slippage_tolerance, &deposits, &pools)?;
 
             // min(1, 2)
-            // 1. sqrt(deposit_0 * exchange_rate_0_to_1 * deposit_0) * (total_share / sqrt(pool_0 * pool_0))
+            // 1. sqrt(deposit_0 * exchange_rate_0_to_1 * deposit_0) * (total_share / sqrt(pool_0 * pool_1))
             // == deposit_0 * total_share / pool_0
             // 2. sqrt(deposit_1 * exchange_rate_1_to_0 * deposit_1) * (total_share / sqrt(pool_1 * pool_1))
             // == deposit_1 * total_share / pool_1
             std::cmp::min(
-                deposits[0].multiply_ratio(total_shares, pool_liquidity[0].amount),
-                deposits[1].multiply_ratio(total_shares, pool_liquidity[1].amount),
+                deposits[0].multiply_ratio(total_share, pools[0].amount),
+                deposits[1].multiply_ratio(total_share, pools[1].amount),
             )
         };
+
         let lp_token = Asset {
             info: AssetInfo::Cw20(self.0.lp_token_addr.clone()),
             amount: share,
