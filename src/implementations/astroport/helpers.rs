@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use astroport_core::{
     asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo},
     U256,
@@ -194,4 +196,29 @@ fn calculate_step(initial_d: &U256, leverage: u64, sum_x: u128, d_product: &U256
     let r_val = leverage_sub.checked_add(n_coins_sum)?;
 
     l_val.checked_div(r_val)
+}
+
+/// ## Description
+/// Return a value using a newly specified precision.
+/// ## Params
+/// * **value** is an object of type [`Uint128`]. This is the value that will have its precision adjusted.
+///
+/// * **current_precision** is an object of type [`u8`]. This is the `value`'s current precision
+///
+/// * **new_precision** is an object of type [`u8`]. This is the new precision to use when returning the `value`.
+///
+/// Copied from the astro code here:
+/// https://github.com/astroport-fi/astroport-core/blob/c216ecd4f350113316be44d06a95569f451ac681/contracts/pair_stable/src/contract.rs#L1269
+pub(crate) fn adjust_precision(
+    value: Uint128,
+    current_precision: u8,
+    new_precision: u8,
+) -> StdResult<Uint128> {
+    Ok(match current_precision.cmp(&new_precision) {
+        Ordering::Equal => value,
+        Ordering::Less => value
+            .checked_mul(Uint128::new(10_u128.pow((new_precision - current_precision) as u32)))?,
+        Ordering::Greater => value
+            .checked_div(Uint128::new(10_u128.pow((current_precision - new_precision) as u32)))?,
+    })
 }
