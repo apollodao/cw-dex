@@ -30,6 +30,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "astroport"
+version = "2.0.0"
+source = "git+https://github.com/astroport-fi/astroport-core.git?rev=126d43216111df786472fe2a845c1e2fadfe4a36#126d43216111df786472fe2a845c1e2fadfe4a36"
+dependencies = [
+ "cosmwasm-std",
+ "cw-storage-plus 0.13.4",
+ "cw20 0.13.4",
+ "schemars",
+ "serde",
+ "uint",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -263,6 +276,7 @@ name = "cw-dex"
 version = "0.0.1"
 dependencies = [
  "apollo-utils",
+ "astroport",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-asset",
@@ -273,6 +287,7 @@ dependencies = [
  "cw20 0.13.4",
  "cw20-base 0.16.0",
  "cw20-stake",
+ "delegate",
  "num-bigint",
  "num-rational",
  "num-traits",
@@ -545,6 +560,17 @@ dependencies = [
  "schemars",
  "serde",
  "thiserror",
+]
+
+[[package]]
+name = "delegate"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "082a24a9967533dc5d743c602157637116fc1b52806d694a5a45e6f32567fcdd"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
