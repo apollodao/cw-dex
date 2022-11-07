@@ -84,7 +84,6 @@ impl AstroportBasePool {
             });
 
             let event = Event::new("apollo/cw-dex/withdraw_liquidity")
-                .add_attribute("type", "astroport_xyk")
                 .add_attribute("pair_addr", &self.pair_addr)
                 .add_attribute("asset", format!("{:?}", asset))
                 .add_attribute("token_amount", asset.amount);
