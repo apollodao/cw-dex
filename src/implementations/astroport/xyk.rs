@@ -44,7 +44,7 @@ impl Pool for AstroportXykPool {
         assets: AssetList,
     ) -> Result<Asset, CwDexError> {
         // Math for LP shares calculation when providing liquidity. Copied from the astroport XYK pool
-        // implementation. See https://github.com/astroport-fi/astroport-core/blob/5f166bd008257ff241d4dc75a1de6cbfb8415179/contracts/pair/src/contract.rs#L277-L377
+        // implementation. See https://github.com/astroport-fi/astroport-core/blob/7bedc6f27e59ef8b921a0980be9bc30c4aab7459/contracts/pair/src/contract.rs#L277-L377
         let astro_assets: AstroAssetList = assets.try_into()?;
 
         let PoolResponse {
