@@ -37,7 +37,7 @@ impl Pool for AstroportStableSwapPool {
             fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError>;
             fn simulate_withdraw_liquidity(&self, deps: Deps, asset: Asset) -> Result<AssetList, CwDexError>;
             fn simulate_swap(&self, deps: Deps, offer_asset: Asset, ask_asset_info: AssetInfo, sender: Option<String>) -> StdResult<Uint128>;
-            fn provide_liquidity(&self, deps: Deps, env: &Env, info: &MessageInfo, assets: AssetList, slippage_tolerance: Option<Decimal>) -> Result<Response, CwDexError>;
+            fn provide_liquidity(&self, deps: Deps, env: &Env, assets: AssetList, slippage_tolerance: Option<Decimal>) -> Result<Response, CwDexError>;
             fn withdraw_liquidity(&self, deps: Deps, env: &Env, asset: Asset) -> Result<Response, CwDexError>;
             fn swap(&self, deps: Deps, env: &Env, offer_asset: Asset, ask_asset_info: AssetInfo, minimum_out_amount: Uint128,) -> Result<Response, CwDexError>;
         }

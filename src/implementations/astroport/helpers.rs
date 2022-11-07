@@ -1,5 +1,8 @@
-use astroport_core::{asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo}, U256};
-use cosmwasm_std::{StdError, StdResult, Env, Uint128};
+use astroport_core::{
+    asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo},
+    U256,
+};
+use cosmwasm_std::{Env, StdError, StdResult, Uint128};
 use cw_asset::{Asset, AssetInfo, AssetList};
 
 use super::{querier::Config, N_COINS};
@@ -121,6 +124,9 @@ pub fn compute_current_amp(config: &Config, env: &Env) -> StdResult<u64> {
 /// * **amount_a** is an object of type [`u128`].
 ///
 /// * **amount_b** is an object of type [`u128`].
+///
+/// Copied from the astroport implementation here:
+/// https://github.com/astroport-fi/astroport-core/blob/c216ecd4f350113316be44d06a95569f451ac681/contracts/pair_stable/src/math.rs#L80-L111
 pub fn compute_d(leverage: u64, amount_a: u128, amount_b: u128) -> Option<u128> {
     let amount_a_times_coins =
         checked_u8_mul(&U256::from(amount_a), N_COINS)?.checked_add(U256::one())?;
@@ -136,12 +142,8 @@ pub fn compute_d(leverage: u64, amount_a: u128, amount_b: u128) -> Option<u128> 
         // Newton's method to approximate D
         for _ in 0..ITERATIONS {
             let mut d_product = d;
-            d_product = d_product
-                .checked_mul(d)?
-                .checked_div(amount_a_times_coins)?;
-            d_product = d_product
-                .checked_mul(d)?
-                .checked_div(amount_b_times_coins)?;
+            d_product = d_product.checked_mul(d)?.checked_div(amount_a_times_coins)?;
+            d_product = d_product.checked_mul(d)?.checked_div(amount_b_times_coins)?;
             d_previous = d;
             // d = (leverage * sum_x + d_p * n_coins) * d / ((leverage - 1) * d + (n_coins + 1) * d_p);
             d = calculate_step(&d, leverage, sum_x, &d_product)?;
@@ -156,6 +158,9 @@ pub fn compute_d(leverage: u64, amount_a: u128, amount_b: u128) -> Option<u128> 
 
 /// ## Description
 /// Returns self multiplied by b.
+///
+/// Copied from the astroport implementation here:
+/// https://github.com/astroport-fi/astroport-core/blob/c216ecd4f350113316be44d06a95569f451ac681/contracts/pair_stable/src/math.rs#L187-L193
 fn checked_u8_mul(a: &U256, b: u8) -> Option<U256> {
     let mut result = *a;
     for _ in 1..b {
@@ -170,7 +175,9 @@ fn checked_u8_mul(a: &U256, b: u8) -> Option<U256> {
 /// * **Equation**:
 ///
 /// d = (leverage * sum_x + d_product * n_coins) * initial_d / ((leverage - 1) * initial_d + (n_coins + 1) * d_product)
-/// https://github.com/astroport-fi/astroport-core/blob/c216ecd4f350113316be44d06a95569f451ac681/contracts/pair_stable/src/math.rs#L119
+///
+/// Copied from the astroport implementation here:
+/// https://github.com/astroport-fi/astroport-core/blob/c216ecd4f350113316be44d06a95569f451ac681/contracts/pair_stable/src/math.rs#L119-L132
 fn calculate_step(initial_d: &U256, leverage: u64, sum_x: u128, d_product: &U256) -> Option<U256> {
     let leverage_mul = U256::from(leverage).checked_mul(sum_x.into())? / AMP_PRECISION;
     let d_p_mul = checked_u8_mul(d_product, N_COINS)?;
@@ -185,4 +192,3 @@ fn calculate_step(initial_d: &U256, leverage: u64, sum_x: u128, d_product: &U256
 
     l_val.checked_div(r_val)
 }
-

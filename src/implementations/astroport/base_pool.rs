@@ -38,7 +38,6 @@ impl AstroportBasePool {
         &self,
         _deps: Deps,
         _env: &Env,
-        _info: &MessageInfo,
         assets: AssetList,
         slippage_tolerance: Option<Decimal>,
     ) -> Result<Response, CwDexError> {
