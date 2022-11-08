@@ -1,9 +1,6 @@
 use astroport_core::asset::{AssetInfo, PairInfo};
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{
-    from_slice, Addr, Binary, QuerierWrapper, StdResult, Uint128,
-};
-use cosmwasm_storage::to_length_prefixed;
+use cosmwasm_std::{from_slice, Addr, QuerierWrapper, StdResult, Uint128};
 
 // Astroport StableSwap pair does not return needed Config elements with smart query
 // Raw query gets all the necessary elements
@@ -16,32 +13,6 @@ pub fn query_pair_config(querier: &QuerierWrapper, pair: &Addr) -> StdResult<Con
             msg: "Raw query failed: config not found on pair address".to_string(),
         })
     }
-}
-
-// needed to simualate provide liquidity
-pub fn query_asset_precision(
-    querier: &QuerierWrapper,
-    pair: &Addr,
-    asset: AssetInfo,
-) -> StdResult<u8> {
-    if let Some(res) = querier.query_wasm_raw(
-        pair,
-        Binary::from(concat(&to_length_prefixed(b"precisions"), asset.to_string().as_bytes())),
-    )? {
-        let precision: u8 = from_slice(&res)?;
-        Ok(precision)
-    } else {
-        return Err(cosmwasm_std::StdError::GenericErr {
-            msg: format!("Raw query failed: precision for {} not found", asset).to_string(),
-        });
-    }
-}
-
-#[inline]
-fn concat(namespace: &[u8], key: &[u8]) -> Vec<u8> {
-    let mut k = namespace.to_vec();
-    k.extend_from_slice(key);
-    k
 }
 
 #[cw_serde]

@@ -1,4 +1,4 @@
-use astroport_core::querier::query_supply;
+use astroport_core::querier::{query_supply, query_token_precision};
 use astroport_core::U256;
 use astroport_pair_stable::math::compute_d;
 use cosmwasm_schema::cw_serde;
@@ -14,7 +14,7 @@ use astroport_core::asset::AssetInfo as AstroAssetInfo;
 
 use super::base_pool::AstroportBasePool;
 use super::helpers::{adjust_precision, compute_current_amp, AstroAssetList};
-use super::querier::{query_asset_precision, query_pair_config};
+use super::querier::query_pair_config;
 
 pub(crate) const N_COINS: u8 = 2;
 
@@ -96,10 +96,8 @@ impl Pool for AstroportStableSwapPool {
             }
         }
 
-        let token_precision_0 =
-            query_asset_precision(&deps.querier, &self.0.pair_addr, pools[0].info.clone())?;
-        let token_precision_1 =
-            query_asset_precision(&deps.querier, &self.0.pair_addr, pools[1].info.clone())?;
+        let token_precision_0 = query_token_precision(&deps.querier, pools[0].info.clone())?;
+        let token_precision_1 = query_token_precision(&deps.querier, pools[1].info.clone())?;
 
         let greater_precision = token_precision_0.max(token_precision_1);
 
@@ -108,9 +106,8 @@ impl Pool for AstroportStableSwapPool {
 
         let total_share = query_supply(&deps.querier, config.pair_info.liquidity_token.clone())?;
         let share = if total_share.is_zero() {
-            let liquidity_token_precision = query_asset_precision(
+            let liquidity_token_precision = query_token_precision(
                 &deps.querier,
-                &self.0.pair_addr,
                 AstroAssetInfo::Token {
                     contract_addr: config.pair_info.liquidity_token.clone(),
                 },
