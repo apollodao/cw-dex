@@ -191,12 +191,6 @@ impl LockedStaking for JunoswapStaking {
             }))?
             .unstaking_duration;
 
-        Ok(match duration {
-            Some(duration) => match duration {
-                cw_utils_0_13_4::Duration::Height(height) => Duration::Height(height),
-                cw_utils_0_13_4::Duration::Time(time) => Duration::Time(time),
-            },
-            None => Duration::Time(0),
-        })
+        Ok(duration.unwrap_or(Duration::Time(0)))
     }
 }
