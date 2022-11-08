@@ -173,7 +173,7 @@ impl Pool for OsmosisPool {
     fn simulate_provide_liquidity(
         &self,
         deps: Deps,
-        _env: Env,
+        _env: &Env,
         assets: AssetList,
     ) -> Result<Asset, CwDexError> {
         let querier = QuerierWrapper::<OsmosisQuery>::new(deps.querier.deref());

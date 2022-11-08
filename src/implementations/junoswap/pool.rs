@@ -182,7 +182,7 @@ impl Pool for JunoswapPool {
     fn simulate_provide_liquidity(
         &self,
         deps: Deps,
-        _env: Env,
+        _env: &Env,
         assets: AssetList,
     ) -> Result<Asset, CwDexError> {
         let pool_info = self.query_info(&deps.querier)?;

@@ -41,7 +41,7 @@ impl Pool for AstroportXykPool {
     fn simulate_provide_liquidity(
         &self,
         deps: Deps,
-        _env: Env,
+        _env: &Env,
         assets: AssetList,
     ) -> Result<Asset, CwDexError> {
         // Math for LP shares calculation when providing liquidity. Copied from the astroport XYK pool

@@ -47,7 +47,7 @@ impl Pool for AstroportStableSwapPool {
     fn simulate_provide_liquidity(
         &self,
         deps: Deps,
-        env: Env,
+        env: &Env,
         assets: AssetList,
     ) -> Result<Asset, CwDexError> {
         let assets: AstroAssetList = assets.to_owned().try_into()?;
