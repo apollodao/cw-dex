@@ -1,4 +1,4 @@
-use astroport_core::asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo};
+use astroport_core::{asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo}, U256};
 use cosmwasm_std::{StdError, StdResult};
 use cw_asset::{Asset, AssetInfo, AssetList};
 
@@ -70,4 +70,14 @@ pub(crate) fn astro_asset_info_to_cw_asset_info(asset_info: &AstroAssetInfo) -> 
             contract_addr,
         } => AssetInfo::cw20(contract_addr.clone()),
     }
+}
+
+/// ## Description
+/// Returns self multiplied by b
+pub fn checked_u8_mul(a: &U256, b: u8) -> Option<U256> {
+    let mut result = *a;
+    for _ in 1..b {
+        result = result.checked_add(*a)?;
+    }
+    Some(result)
 }
