@@ -46,7 +46,7 @@ impl Pool for AstroportStableSwapPool {
     );
 
     // Math for providing liquidity to the pool. This logic is copied from the astroport implementation here:
-    // https://github.com/astroport-fi/astroport-core/blob/c216ecd4f350113316be44d06a95569f451ac681/contracts/pair_stable/src/contract.rs#L338
+    // https://github.com/astroport-fi/astroport-core/blob/c216ecd4f350113316be44d06a95569f451ac681/contracts/pair_stable/src/contract.rs#L338-L501
     fn simulate_provide_liquidity(
         &self,
         deps: Deps,
