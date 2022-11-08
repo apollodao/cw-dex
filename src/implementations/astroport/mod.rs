@@ -1,6 +1,5 @@
 mod base_pool;
 mod helpers;
-mod querier;
 mod stableswap;
 mod staking;
 mod xyk;
