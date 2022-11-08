@@ -1,5 +1,6 @@
 use astroport_core::querier::query_supply;
 use astroport_core::U256;
+use astroport_pair_stable::math::compute_d;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, Env, Response, StdError, StdResult};
 use cosmwasm_std::{Deps, Uint128};
@@ -12,7 +13,7 @@ use astroport_core::asset::Asset as AstroAsset;
 use astroport_core::asset::AssetInfo as AstroAssetInfo;
 
 use super::base_pool::AstroportBasePool;
-use super::helpers::{adjust_precision, compute_current_amp, compute_d, AstroAssetList};
+use super::helpers::{adjust_precision, compute_current_amp, AstroAssetList};
 use super::querier::{query_asset_precision, query_pair_config};
 
 pub(crate) const N_COINS: u8 = 2;
