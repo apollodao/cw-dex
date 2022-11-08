@@ -81,21 +81,6 @@ impl Pool for AstroportStableSwapPool {
             if deposits[i].is_zero() && pool.amount.is_zero() {
                 return Err(CwDexError::InvalidProvideLPsWithSingleToken {});
             }
-
-            // transfer only for non zero amount
-            if !deposits[i].is_zero() {
-                // If the pool is a token contract, then we need to execute a TransferFrom msg to receive funds
-                if let AstroAssetInfo::Token {
-                    contract_addr: _,
-                    ..
-                } = &pool.info
-                {
-                } else {
-                    // If the asset is a native token, the pool balance already increased
-                    // To calculate the pool balance properly, we should subtract the user deposit from the recorded pool token amount
-                    pool.amount = pool.amount.checked_sub(deposits[i])?;
-                }
-            }
         }
 
         let token_precision_0 = query_token_precision(&deps.querier, pools[0].info.clone())?;
