@@ -146,9 +146,7 @@ impl Pool for AstroportStableSwapPool {
 
             // d after adding liquidity may be less than or equal to d before adding liquidity because of rounding
             if d_before_addition_liquidity >= d_after_addition_liquidity {
-                return Err(CwDexError::Std(StdError::generic_err(
-                    "Insufficient amount of liquidity",
-                )));
+                return Err(CwDexError::LiquidityAmountTooSmall {});
             }
 
             total_share.multiply_ratio(
