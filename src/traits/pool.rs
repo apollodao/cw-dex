@@ -24,7 +24,7 @@ pub trait Pool {
     /// Withdraw liquidity from the pool.
     ///
     /// Arguments:
-    /// - `asset`: the LP tokens to withdraw as an [`Asset`]. The `info` field must correspond
+    /// - `lp_token`: the LP tokens to withdraw as an [`Asset`]. The `info` field must correspond
     ///       to the LP token of the pool. Else, an error is returned.
     ///
     /// Returns a Response containing the messages to withdraw liquidity from the pool.
@@ -32,7 +32,7 @@ pub trait Pool {
         &self,
         deps: Deps,
         env: &Env,
-        asset: Asset,
+        lp_token: Asset,
     ) -> Result<Response, CwDexError>;
 
     /// Swap assets in the pool.
@@ -64,18 +64,18 @@ pub trait Pool {
         &self,
         deps: Deps,
         env: &Env,
-        asset: AssetList,
+        assets: AssetList,
     ) -> Result<Asset, CwDexError>;
 
     /// Returns an estimated number of assets to be returned for withdrawing the given LP tokens.
     ///
     /// Arguments:
-    /// - `asset`: the LP tokens to withdraw as an [`Asset`]. The `info` field must correspond to the
+    /// - `lp_token`: the LP tokens to withdraw as an [`Asset`]. The `info` field must correspond to the
     ///       LP token of the pool. Else, an error is returned.
     fn simulate_withdraw_liquidity(
         &self,
         deps: Deps,
-        asset: Asset,
+        lp_token: Asset,
     ) -> Result<AssetList, CwDexError>;
 
     fn simulate_swap(
