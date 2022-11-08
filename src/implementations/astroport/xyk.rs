@@ -1,6 +1,6 @@
 use astroport_core::U256;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Decimal, Env, MessageInfo, Response, StdError, StdResult};
+use cosmwasm_std::{Addr, Decimal, Env, Response, StdError, StdResult};
 use cosmwasm_std::{Deps, Uint128};
 use cw_asset::{Asset, AssetInfo, AssetList};
 
@@ -32,7 +32,7 @@ impl Pool for AstroportXykPool {
             fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError>;
             fn simulate_withdraw_liquidity(&self, deps: Deps, asset: Asset) -> Result<AssetList, CwDexError>;
             fn simulate_swap(&self, deps: Deps, offer_asset: Asset, ask_asset_info: AssetInfo, sender: Option<String>) -> StdResult<Uint128>;
-            fn provide_liquidity(&self, deps: Deps, env: &Env, info: &MessageInfo, assets: AssetList, slippage_tolerance: Option<Decimal>) -> Result<Response, CwDexError>;
+            fn provide_liquidity(&self, deps: Deps, env: &Env, assets: AssetList, slippage_tolerance: Option<Decimal>) -> Result<Response, CwDexError>;
             fn withdraw_liquidity(&self, deps: Deps, env: &Env, asset: Asset) -> Result<Response, CwDexError>;
             fn swap(&self, deps: Deps, env: &Env, offer_asset: Asset, ask_asset_info: AssetInfo, minimum_out_amount: Uint128,) -> Result<Response, CwDexError>;
         }
@@ -41,6 +41,7 @@ impl Pool for AstroportXykPool {
     fn simulate_provide_liquidity(
         &self,
         deps: Deps,
+        _env: &Env,
         assets: AssetList,
     ) -> Result<Asset, CwDexError> {
         // Math for LP shares calculation when providing liquidity. Copied from the astroport XYK pool

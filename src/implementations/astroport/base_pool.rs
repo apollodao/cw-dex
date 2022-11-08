@@ -1,8 +1,8 @@
 use astroport_core::querier::query_supply;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, Decimal, Env, MessageInfo, QuerierWrapper, QueryRequest, Response,
-    StdError, StdResult, WasmMsg, WasmQuery,
+    to_binary, Addr, CosmosMsg, Decimal, Env, QuerierWrapper, QueryRequest, Response, StdError,
+    StdResult, WasmMsg, WasmQuery,
 };
 use cosmwasm_std::{Deps, Event, Uint128};
 use cw20::Cw20ExecuteMsg;
@@ -38,7 +38,6 @@ impl AstroportBasePool {
         &self,
         _deps: Deps,
         _env: &Env,
-        _info: &MessageInfo,
         assets: AssetList,
         slippage_tolerance: Option<Decimal>,
     ) -> Result<Response, CwDexError> {

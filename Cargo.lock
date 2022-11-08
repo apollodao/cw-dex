@@ -43,6 +43,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "astroport-pair-stable"
+version = "1.0.0-fix1"
+source = "git+https://github.com/astroport-fi/astroport-core.git?rev=126d43216111df786472fe2a845c1e2fadfe4a36#126d43216111df786472fe2a845c1e2fadfe4a36"
+dependencies = [
+ "astroport",
+ "cosmwasm-std",
+ "cw-storage-plus 0.13.4",
+ "cw2 0.13.4",
+ "cw20 0.13.4",
+ "integer-sqrt",
+ "protobuf",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -277,8 +294,10 @@ version = "0.0.1"
 dependencies = [
  "apollo-utils",
  "astroport",
+ "astroport-pair-stable",
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cosmwasm-storage",
  "cw-asset",
  "cw-storage-plus 0.16.0",
  "cw-utils 0.13.4",
@@ -746,6 +765,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "integer-sqrt"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "276ec31bcb4a9ee45f58bec6f9ec700ae4cf4f4f8f2fa7e06cb406bd5ffdd770"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "itertools"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -919,6 +947,15 @@ checksum = "4dfaa718ad76a44b3415e6c4d53b17c8f99160dcb3a99b10470fce8ad43f6e3e"
 dependencies = [
  "bytes",
  "prost",
+]
+
+[[package]]
+name = "protobuf"
+version = "2.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "106dd99e98437432fed6519dedecfade6a06a73bb7b2a1e019fdd2bee5778d94"
+dependencies = [
+ "bytes",
 ]
 
 [[package]]
