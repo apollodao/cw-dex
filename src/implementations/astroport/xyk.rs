@@ -1,6 +1,6 @@
 use astroport_core::U256;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Decimal, Env, MessageInfo, Response, StdError, StdResult};
+use cosmwasm_std::{Addr, Decimal, Env, Response, StdError, StdResult};
 use cosmwasm_std::{Deps, Uint128};
 use cw_asset::{Asset, AssetInfo, AssetList};
 

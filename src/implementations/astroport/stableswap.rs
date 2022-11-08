@@ -5,7 +5,6 @@ use cosmwasm_std::{Addr, Decimal, Env, Response, StdError, StdResult};
 use cosmwasm_std::{Deps, Uint128};
 use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use delegate::delegate;
-use std::cmp::Ordering;
 
 use crate::traits::Pool;
 use crate::CwDexError;
@@ -16,7 +15,7 @@ use super::base_pool::AstroportBasePool;
 use super::helpers::{adjust_precision, compute_current_amp, compute_d, AstroAssetList};
 use super::querier::{query_asset_precision, query_pair_config};
 
-const N_COINS: u8 = 2;
+pub(crate) const N_COINS: u8 = 2;
 
 #[cw_serde]
 pub struct AstroportStableSwapPool(AstroportBasePool);
