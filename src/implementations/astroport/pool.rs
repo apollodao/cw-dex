@@ -148,7 +148,7 @@ impl AstroportBasePool {
         env: &Env,
         assets: AssetList,
     ) -> Result<Asset, CwDexError> {
-        let assets: AstroAssetList = assets.to_owned().try_into()?;
+        let assets: AstroAssetList = assets.try_into()?;
         let config =
             query_pair_config(&deps.querier, &Addr::unchecked(self.pair_addr.to_string()))?;
         let mut pools: [AstroAsset; 2] =
@@ -192,7 +192,7 @@ impl AstroportBasePool {
             let liquidity_token_precision = query_token_precision(
                 &deps.querier,
                 AstroAssetInfo::Token {
-                    contract_addr: config.pair_info.liquidity_token.clone(),
+                    contract_addr: config.pair_info.liquidity_token,
                 },
             )?;
 
@@ -208,7 +208,7 @@ impl AstroportBasePool {
             )?
         } else {
             let leverage =
-                compute_current_amp(&config, &env)?.checked_mul(u64::from(N_COINS)).unwrap();
+                compute_current_amp(&config, env)?.checked_mul(u64::from(N_COINS)).unwrap();
 
             let mut pool_amount_0 =
                 adjust_precision(pools[0].amount, token_precision_0, greater_precision)?;

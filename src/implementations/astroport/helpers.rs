@@ -4,6 +4,15 @@ use astroport_core::{
 };
 use cosmwasm_std::{StdError, StdResult};
 use cw_asset::{Asset, AssetInfo, AssetList};
+use std::cmp::Ordering;
+
+use cosmwasm_std::Uint128;
+use cosmwasm_std::{from_slice, Addr, Env, QuerierWrapper};
+
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+
+use astroport_core::asset::PairInfo;
 
 pub(crate) struct AstroAssetList(pub(crate) Vec<AstroAsset>);
 
@@ -84,22 +93,6 @@ pub fn checked_u8_mul(a: &U256, b: u8) -> Option<U256> {
     }
     Some(result)
 }
-
-use std::cmp::Ordering;
-
-use astroport_core::factory::PairType;
-use astroport_core::querier::{query_supply, query_token_precision};
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{from_slice, Addr, Decimal, Env, QuerierWrapper, Response};
-use cosmwasm_std::{Deps, Uint128};
-use cw_asset::AssetInfoBase;
-use delegate::delegate;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-
-use crate::traits::Pool;
-use crate::CwDexError;
-use astroport_core::asset::PairInfo;
 
 pub(crate) const N_COINS: u8 = 2;
 pub const AMP_PRECISION: u64 = 100;
