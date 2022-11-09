@@ -94,6 +94,12 @@ pub fn checked_u8_mul(a: &U256, b: u8) -> Option<U256> {
     Some(result)
 }
 
+//
+// ============================================================
+// ====== Helper functions for Stableswap implementation ======
+// ============================================================
+//
+
 pub(crate) const N_COINS: u8 = 2;
 pub const AMP_PRECISION: u64 = 100;
 const ITERATIONS: u8 = 32;
