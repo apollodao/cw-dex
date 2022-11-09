@@ -1,3 +1,4 @@
+use astroport_core::factory::PairType;
 use astroport_core::U256;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, Env, Response, StdError, StdResult};
@@ -17,11 +18,8 @@ use super::helpers::AstroAssetList;
 pub struct AstroportXykPool(AstroportBasePool);
 
 impl AstroportXykPool {
-    pub fn new(pair_addr: Addr, lp_token_addr: Addr) -> Self {
-        Self(AstroportBasePool {
-            pair_addr,
-            lp_token_addr,
-        })
+    pub fn new(deps: Deps, pair_addr: Addr) -> StdResult<Self> {
+        AstroportBasePool::new(deps, pair_addr, PairType::Xyk {}).map(Self)
     }
 }
 

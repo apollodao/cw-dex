@@ -1,3 +1,5 @@
+use astroport_core::asset::PairInfo;
+use astroport_core::factory::PairType;
 use astroport_core::querier::query_supply;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
@@ -9,7 +11,8 @@ use cw20::Cw20ExecuteMsg;
 use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 
 use astroport_core::pair::{
-    Cw20HookMsg, ExecuteMsg as PairExecMsg, PoolResponse, QueryMsg, SimulationResponse,
+    Cw20HookMsg, ExecuteMsg as PairExecMsg, PoolResponse, QueryMsg, QueryMsg as PairQueryMsg,
+    SimulationResponse,
 };
 
 use crate::CwDexError;
@@ -23,6 +26,19 @@ pub(crate) struct AstroportBasePool {
 }
 
 impl AstroportBasePool {
+    pub fn new(deps: Deps, pair_addr: Addr, pair_type: PairType) -> StdResult<Self> {
+        let pair_info =
+            deps.querier.query_wasm_smart::<PairInfo>(pair_addr.clone(), &PairQueryMsg::Pair {})?;
+        if pair_info.pair_type == pair_type {
+            Ok(Self {
+                pair_addr,
+                lp_token_addr: pair_info.liquidity_token,
+            })
+        } else {
+            Err(StdError::generic_err("Invalid pair type"))
+        }
+    }
+
     pub fn query_lp_token_supply(&self, querier: &QuerierWrapper) -> StdResult<Uint128> {
         query_supply(querier, self.lp_token_addr.to_owned())
     }
