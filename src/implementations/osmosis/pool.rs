@@ -1,8 +1,11 @@
 use std::ops::Deref;
 use std::str::FromStr;
 
-use apollo_utils::assets::{
-    assert_native_asset_info, assert_native_coin, assert_only_native_coins, merge_assets,
+use apollo_utils::{
+    assets::{
+        assert_native_asset_info, assert_native_coin, assert_only_native_coins, merge_assets,
+    },
+    response_prefix, with_dollar_sign,
 };
 use osmosis_std::types::osmosis::gamm::v1beta1::{
     GammQuerier, MsgExitPool, MsgJoinSwapExternAmountIn, MsgSwapExactAmountIn, SwapAmountInRoute,
@@ -10,8 +13,7 @@ use osmosis_std::types::osmosis::gamm::v1beta1::{
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    Coin, CosmosMsg, Decimal, Deps, Env, Event, QuerierWrapper, Response, StdError, StdResult,
-    Uint128,
+    Coin, CosmosMsg, Decimal, Deps, Env, QuerierWrapper, Response, StdError, StdResult, Uint128,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
 use osmo_bindings::OsmosisQuery;
@@ -22,6 +24,8 @@ use crate::osmosis::osmosis_math::{
 use crate::traits::Pool;
 use crate::utils::vec_into;
 use crate::CwDexError;
+
+response_prefix!("apollo/cw-dex/osmosis");
 
 /// Struct for interacting with Osmosis v1beta1 balancer pools. If `pool_id` maps to another type of pool this will fail.
 #[cw_serde]
@@ -88,11 +92,15 @@ impl Pool for OsmosisPool {
             .into_iter()
             .unzip();
 
-        let event = Event::new("apollo/cw-dex/provide_liquidity")
-            .add_attribute("pool_id", self.pool_id.to_string())
-            .add_attribute("minimum_shares_out", shares_out.iter().sum::<Uint128>().to_string());
-
-        Ok(Response::new().add_messages(join_msgs).add_event(event))
+        Ok(response!(
+            "provide_liquidity",
+            [
+                ("type", "osmosis_pool"),
+                ("pool_id", self.pool_id.to_string()),
+                ("minimum_shares_out", shares_out.iter().sum::<Uint128>().to_string())
+            ]
+        )
+        .add_messages(join_msgs))
     }
 
     fn withdraw_liquidity(
@@ -115,11 +123,15 @@ impl Pool for OsmosisPool {
             token_out_mins: vec_into(token_out_mins),
         };
 
-        let event = Event::new("apollo/cw-dex/withdraw_liquidity")
-            .add_attribute("pool_id", self.pool_id.to_string())
-            .add_attribute("lp_token", lp_token.to_string());
-
-        Ok(Response::new().add_message(exit_msg).add_event(event))
+        Ok(response!(
+            "withdraw_liquidity",
+            [
+                ("type", "osmosis_pool"),
+                ("pool_id", self.pool_id.to_string()),
+                ("lp_token", lp_token.to_string())
+            ],
+            [exit_msg.into()]
+        ))
     }
 
     fn swap(
@@ -143,13 +155,17 @@ impl Pool for OsmosisPool {
             token_out_min_amount: minimum_out_amount.to_string(),
         };
 
-        let event = Event::new("apollo/cw-dex/swap")
-            .add_attribute("pool_id", self.pool_id.to_string())
-            .add_attribute("offer", offer.to_string())
-            .add_attribute("ask", ask_denom)
-            .add_attribute("token_out_min_amount", minimum_out_amount);
-
-        Ok(Response::new().add_message(swap_msg).add_event(event))
+        Ok(response!(
+            "swap",
+            [
+                ("type", "osmosis_pool"),
+                ("pool_id", self.pool_id.to_string()),
+                ("offer", offer.to_string()),
+                ("ask", ask_denom),
+                ("token_out_min_amount", minimum_out_amount)
+            ],
+            [swap_msg.into()]
+        ))
     }
 
     fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {

@@ -1,7 +1,7 @@
+use apollo_utils::{response_prefix, with_dollar_sign};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    Addr, Coin, Deps, Env, Event, QuerierWrapper, ReplyOn, Response, StdError, StdResult, SubMsg,
-    Uint128,
+    Addr, Coin, Deps, Env, QuerierWrapper, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128,
 };
 use cw_asset::AssetList;
 use cw_utils::Duration as CwDuration;
@@ -15,6 +15,8 @@ use crate::traits::{ForceUnlock, LockedStaking, Rewards, Stake, Unlock};
 use crate::CwDexError;
 
 use super::helpers::ToProtobufDuration;
+
+response_prefix!("apollo/cw-dex/osmosis");
 
 /// Implementation of locked staking on osmosis. Using the Staking trait.
 /// `lockup_duration` is the duration of the lockup period in nano seconds.
@@ -58,9 +60,7 @@ pub const OSMOSIS_UNLOCK_TOKENS_REPLY_ID: u64 = 124;
 impl Rewards for OsmosisStaking {
     fn claim_rewards(&self, _deps: Deps, _env: &Env) -> Result<Response, CwDexError> {
         // Rewards are automatically distributed to stakers every epoch.
-        let event =
-            Event::new("apollo/cw-dex/claim_rewards").add_attribute("type", "osmosis_staking");
-        Ok(Response::new().add_event(event))
+        Ok(response!("claim_rewards", [("type", "osmosis_staking")]))
     }
 
     fn query_pending_rewards(
@@ -85,19 +85,21 @@ impl Stake for OsmosisStaking {
             coins: vec![asset.clone().into()],
         };
 
-        let event = Event::new("apollo/cw-dex/stake")
-            .add_attribute("type", "osmosis_staking")
-            .add_attribute("asset", asset.to_string())
-            .add_attribute("lockup_duration_secs", self.lockup_duration.as_secs().to_string());
-
-        Ok(Response::new()
-            .add_submessage(SubMsg {
+        Ok(response!(
+            "stake",
+            [
+                ("type", "osmosis_staking"),
+                ("asset", asset.to_string()),
+                ("lockup_duration_secs", self.lockup_duration.as_secs().to_string())
+            ],
+            [],
+            [SubMsg {
                 id: OSMOSIS_LOCK_TOKENS_REPLY_ID,
                 msg: stake_msg.into(),
                 gas_limit: None,
                 reply_on: ReplyOn::Success,
-            })
-            .add_event(event))
+            }]
+        ))
     }
 }
 
@@ -113,20 +115,22 @@ impl Unlock for OsmosisStaking {
             coins: vec![asset.clone().into()],
         };
 
-        let event = Event::new("apollo/cw-dex/unstake")
-            .add_attribute("type", "osmosis_staking")
-            .add_attribute("asset", asset.to_string())
-            .add_attribute("lockup_duration_secs", self.lockup_duration.as_secs().to_string())
-            .add_attribute("lock_id", id.to_string());
-
-        Ok(Response::new()
-            .add_submessage(SubMsg {
+        Ok(response!(
+            "unstake",
+            [
+                ("type", "osmosis_staking"),
+                ("asset", asset.to_string()),
+                ("lockup_duration_secs", self.lockup_duration.as_secs().to_string()),
+                ("lock_id", id.to_string())
+            ],
+            [],
+            [SubMsg {
                 id: OSMOSIS_UNLOCK_TOKENS_REPLY_ID,
                 msg: unstake_msg.into(),
                 gas_limit: None,
                 reply_on: ReplyOn::Success,
-            })
-            .add_event(event))
+            }]
+        ))
     }
 
     fn withdraw_unlocked(
@@ -136,7 +140,7 @@ impl Unlock for OsmosisStaking {
         _amount: Uint128,
     ) -> Result<Response, CwDexError> {
         // Osmosis automatically sends the unlocked tokens after the lockup duration
-        Ok(Response::new())
+        Ok(response!("withdraw_unlocked", [("type", "osmosis_staking")]))
     }
 }
 
@@ -167,12 +171,11 @@ impl ForceUnlock for OsmosisStaking {
             coins: vec![coin_to_unlock.into()],
         };
 
-        let event = Event::new("apollo/cw-dex/force-unlock")
-            .add_attribute("type", "osmosis_staking")
-            .add_attribute("amount", amount)
-            .add_attribute("lockup_id", lockup_id.to_string());
-
-        Ok(Response::new().add_message(force_unlock_msg).add_event(event))
+        Ok(response!(
+            "force-unlock",
+            [("type", "osmosis_staking"), ("amount", amount), ("lockup_id", lockup_id.to_string())],
+            [force_unlock_msg.into()]
+        ))
     }
 }
 
@@ -203,9 +206,7 @@ impl OsmosisSuperfluidStaking {
 impl Rewards for OsmosisSuperfluidStaking {
     fn claim_rewards(&self, _deps: Deps, _env: &Env) -> Result<Response, CwDexError> {
         // Rewards are automatically distributed to stakers every epoch.
-        let event = Event::new("apollo/cw-dex/claim_rewards")
-            .add_attribute("type", "osmosis_superfluid_staking");
-        Ok(Response::new().add_event(event))
+        Ok(response!("claim_rewards", [("type", "osmosis_superfluid_staking")]))
     }
 
     fn query_pending_rewards(
@@ -230,19 +231,21 @@ impl Stake for OsmosisSuperfluidStaking {
             val_addr: self.validator_address.to_string(),
         };
 
-        let event = Event::new("apollo/cw-dex/stake")
-            .add_attribute("type", "osmosis_superfluid_staking")
-            .add_attribute("asset", asset.to_string())
-            .add_attribute("validator_address", self.validator_address.to_string());
-
-        Ok(Response::new()
-            .add_submessage(SubMsg {
+        Ok(response!(
+            "stake",
+            [
+                ("type", "osmosis_superfluid_staking"),
+                ("asset", asset.to_string()),
+                ("validator_address", self.validator_address.to_string())
+            ],
+            [],
+            [SubMsg {
                 id: OSMOSIS_LOCK_TOKENS_REPLY_ID,
                 msg: stake_msg.into(),
                 gas_limit: None,
                 reply_on: ReplyOn::Success,
-            })
-            .add_event(event))
+            }]
+        ))
     }
 }
 
@@ -256,12 +259,15 @@ impl Unlock for OsmosisSuperfluidStaking {
             lock_id,
         };
 
-        let event = Event::new("apollo/cw-dex/unstake")
-            .add_attribute("type", "osmosis_superfluid_staking")
-            .add_attribute("validator_address", self.validator_address.to_string())
-            .add_attribute("lock_id", lock_id.to_string());
-
-        Ok(Response::new().add_message(unstake_msg).add_event(event))
+        Ok(response!(
+            "unstake",
+            [
+                ("type", "osmosis_superfluid_staking"),
+                ("validator_address", self.validator_address.to_string()),
+                ("lock_id", lock_id.to_string())
+            ],
+            [unstake_msg.into()]
+        ))
     }
 
     fn withdraw_unlocked(
@@ -271,7 +277,7 @@ impl Unlock for OsmosisSuperfluidStaking {
         _amount: Uint128,
     ) -> Result<Response, CwDexError> {
         // Osmosis automatically sends the unlocked tokens after the lockup duration
-        Ok(Response::new())
+        Ok(response!("withdraw_unlocked", [("type", "osmosis_superfluid_staking")]))
     }
 }
 
