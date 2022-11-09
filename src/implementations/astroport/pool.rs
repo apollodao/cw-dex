@@ -27,13 +27,13 @@ use super::helpers::{
 };
 
 #[cw_serde]
-pub(crate) struct AstroportBasePool {
+pub struct AstroportPool {
     pub pair_addr: Addr,
     pub lp_token_addr: Addr,
     pub pair_type: PairType,
 }
 
-impl AstroportBasePool {
+impl AstroportPool {
     pub fn new(deps: Deps, pair_addr: Addr) -> StdResult<Self> {
         let pair_info =
             deps.querier.query_wasm_smart::<PairInfo>(pair_addr.clone(), &PairQueryMsg::Pair {})?;
@@ -247,7 +247,7 @@ impl AstroportBasePool {
     }
 }
 
-impl Pool for AstroportBasePool {
+impl Pool for AstroportPool {
     fn provide_liquidity(
         &self,
         _deps: Deps,
