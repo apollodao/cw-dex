@@ -1,3 +1,5 @@
+use apollo_utils::{response_prefix, with_dollar_sign};
+
 use astroport_core::asset::PairInfo;
 use astroport_core::factory::PairType;
 use astroport_core::querier::{query_supply, query_token_precision};
@@ -7,7 +9,7 @@ use cosmwasm_std::{
     to_binary, Addr, CosmosMsg, Decimal, Env, QuerierWrapper, QueryRequest, Response, StdError,
     StdResult, WasmMsg, WasmQuery,
 };
-use cosmwasm_std::{Deps, Event, Uint128};
+use cosmwasm_std::{Deps, Uint128};
 use cw20::Cw20ExecuteMsg;
 use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 
@@ -25,6 +27,8 @@ use super::helpers::{
     adjust_precision, astro_asset_info_to_cw_asset_info, compute_current_amp, compute_d,
     cw_asset_to_astro_asset, query_pair_config, AstroAssetList, N_COINS,
 };
+
+response_prefix!("apollo/cw-dex/astroport");
 
 #[cw_serde]
 pub struct AstroportPool {
@@ -271,11 +275,15 @@ impl Pool for AstroportPool {
             funds: vec![],
         });
 
-        let event = Event::new("apollo/cw-dex/provide_liquidity")
-            .add_attribute("pair_addr", &self.pair_addr)
-            .add_attribute("assets", format!("{:?}", assets));
-
-        Ok(Response::new().add_message(provide_liquidity).add_event(event))
+        Ok(response!(
+            "provide_liquidity",
+            [
+                ("type", "astroport_pool"),
+                ("pair_addr", &self.pair_addr),
+                ("assets", format!("{:?}", assets))
+            ],
+            [provide_liquidity]
+        ))
     }
 
     fn withdraw_liquidity(
@@ -295,12 +303,16 @@ impl Pool for AstroportPool {
                 funds: vec![],
             });
 
-            let event = Event::new("apollo/cw-dex/withdraw_liquidity")
-                .add_attribute("pair_addr", &self.pair_addr)
-                .add_attribute("asset", format!("{:?}", asset))
-                .add_attribute("token_amount", asset.amount);
-
-            Ok(Response::new().add_message(withdraw_liquidity).add_event(event))
+            Ok(response!(
+                "withdraw_liquidity",
+                [
+                    ("type", "astroport_pool"),
+                    ("pair_addr", &self.pair_addr),
+                    ("asset", format!("{:?}", asset)),
+                    ("token_amount", asset.amount)
+                ],
+                [withdraw_liquidity]
+            ))
         } else {
             Err(CwDexError::InvalidInAsset {
                 a: asset,
@@ -350,12 +362,17 @@ impl Pool for AstroportPool {
                 a: offer_asset.clone(),
             }),
         }?;
-        let event = Event::new("apollo/cw-dex/swap")
-            .add_attribute("pair_addr", &self.pair_addr)
-            .add_attribute("ask_asset", format!("{:?}", ask_asset_info))
-            .add_attribute("offer_asset", format!("{:?}", offer_asset.info))
-            .add_attribute("minimum_out_amount", minimum_out_amount);
-        Ok(Response::new().add_message(swap_msg).add_event(event))
+        Ok(response!(
+            "swap",
+            [
+                ("type", "astroport_pool"),
+                ("pair_addr", &self.pair_addr),
+                ("ask_asset", format!("{:?}", ask_asset_info)),
+                ("offer_asset", format!("{:?}", offer_asset.info)),
+                ("minimum_out_amount", minimum_out_amount)
+            ],
+            [swap_msg]
+        ))
     }
 
     fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {

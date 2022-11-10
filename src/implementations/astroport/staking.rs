@@ -1,6 +1,8 @@
+use apollo_utils::{response_prefix, with_dollar_sign};
+
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, Deps, Env, Event, QuerierWrapper, QueryRequest, Response, Uint128,
+    to_binary, Addr, CosmosMsg, Deps, Env, QuerierWrapper, QueryRequest, Response, Uint128,
     WasmMsg, WasmQuery,
 };
 use cw20::Cw20ExecuteMsg;
@@ -17,6 +19,8 @@ use crate::{
 };
 
 use super::helpers::{cw_asset_to_astro_asset, AstroAssetList};
+
+response_prefix!("apollo/cw-dex/astroport");
 
 #[cw_serde]
 pub struct AstroportStaking {
@@ -39,12 +43,15 @@ impl Stake for AstroportStaking {
             funds: vec![],
         });
 
-        let event = Event::new("apollo/cw-dex/stake")
-            .add_attribute("type", "astroport_staking")
-            .add_attribute("asset", self.lp_token_addr.to_string())
-            .add_attribute("generator_address", self.generator_addr.to_string());
-
-        Ok(Response::new().add_message(stake_msg).add_event(event))
+        Ok(response!(
+            "stake",
+            [
+                ("type", "astroport_staking"),
+                ("asset", self.lp_token_addr.to_string()),
+                ("generator_address", self.generator_addr.to_string())
+            ],
+            [stake_msg]
+        ))
     }
 }
 
@@ -58,9 +65,7 @@ impl Rewards for AstroportStaking {
             funds: vec![],
         });
 
-        let event =
-            Event::new("apollo/cw-dex/claim_rewards").add_attribute("type", "astroport_staking");
-        Ok(Response::new().add_message(claim_rewards_msg).add_event(event))
+        Ok(response!("claim_rewards", [("type", "astroport_staking")], [claim_rewards_msg]))
     }
 
     fn query_pending_rewards(
@@ -104,8 +109,6 @@ impl Unstake for AstroportStaking {
             funds: vec![],
         });
 
-        let event = Event::new("apollo/cw-dex/unstake").add_attribute("type", "astroport_staking");
-
-        Ok(Response::new().add_message(unstake_msg).add_event(event))
+        Ok(response!("unstake", [("type", "astroport_staking")], [unstake_msg]))
     }
 }
