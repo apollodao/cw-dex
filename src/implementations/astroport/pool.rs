@@ -55,7 +55,7 @@ impl AstroportPool {
         query_supply(querier, self.lp_token_addr.to_owned())
     }
 
-    pub fn get_pool_liquidity_impl(&self, querier: &QuerierWrapper) -> StdResult<PoolResponse> {
+    fn get_pool_liquidity_impl(&self, querier: &QuerierWrapper) -> StdResult<PoolResponse> {
         querier.query::<PoolResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: self.pair_addr.to_string(),
             msg: to_binary(&QueryMsg::Pool {})?,
@@ -66,7 +66,7 @@ impl AstroportPool {
     ///
     /// Copied from the astroport XYK pool implementation here:
     /// https://github.com/astroport-fi/astroport-core/blob/7bedc6f27e59ef8b921a0980be9bc30c4aab7459/contracts/pair/src/contract.rs#L297-L434
-    pub fn xyk_simulate_provide_liquidity(
+    fn xyk_simulate_provide_liquidity(
         &self,
         deps: Deps,
         _env: &Env,
@@ -149,8 +149,7 @@ impl AstroportPool {
         assets: AssetList,
     ) -> Result<Asset, CwDexError> {
         let assets: AstroAssetList = assets.try_into()?;
-        let config =
-            query_pair_config(&deps.querier, &Addr::unchecked(self.pair_addr.to_string()))?;
+        let config = query_pair_config(&deps.querier, self.pair_addr.clone())?;
         let mut pools: [AstroAsset; 2] =
             config.pair_info.query_pools(&deps.querier, self.pair_addr.to_owned())?;
         let deposits: [Uint128; 2] = [

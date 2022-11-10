@@ -102,7 +102,7 @@ pub fn checked_u8_mul(a: &U256, b: u8) -> Option<U256> {
 //
 
 pub(crate) const N_COINS: u8 = 2;
-pub const AMP_PRECISION: u64 = 100;
+const AMP_PRECISION: u64 = 100;
 const ITERATIONS: u8 = 32;
 
 /// ## Description
@@ -237,7 +237,7 @@ pub(crate) fn query_pair_config(querier: &QuerierWrapper, pair: Addr) -> StdResu
 /// ## Description
 /// This structure describes the main control config of pair stable.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct Config {
+pub(crate) struct Config {
     /// the type of pair info available in [`PairInfo`]
     pub pair_info: PairInfo,
     /// the factory contract address
