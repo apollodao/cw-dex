@@ -4,10 +4,11 @@ use astroport_core::{
 };
 use cosmwasm_std::{StdError, StdResult};
 use cw_asset::{Asset, AssetInfo, AssetList};
+use cw_storage_plus::Item;
 use std::cmp::Ordering;
 
 use cosmwasm_std::Uint128;
-use cosmwasm_std::{from_slice, Addr, Env, QuerierWrapper};
+use cosmwasm_std::{Addr, Env, QuerierWrapper};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -229,15 +230,8 @@ fn calculate_step(initial_d: &U256, leverage: u64, sum_x: u128, d_product: &U256
 
 // Astroport StableSwap pair does not return needed Config elements with smart query
 // Raw query gets all the necessary elements
-pub fn query_pair_config(querier: &QuerierWrapper, pair: &Addr) -> StdResult<Config> {
-    if let Some(res) = querier.query_wasm_raw(pair, b"config".as_slice())? {
-        let res: Config = from_slice(&res)?;
-        Ok(res)
-    } else {
-        Err(cosmwasm_std::StdError::GenericErr {
-            msg: "Raw query failed: config not found on pair address".to_string(),
-        })
-    }
+pub(crate) fn query_pair_config(querier: &QuerierWrapper, pair: Addr) -> StdResult<Config> {
+    Item::<Config>::new("config").query(querier, pair)
 }
 
 /// ## Description
