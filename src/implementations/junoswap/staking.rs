@@ -1,6 +1,8 @@
+use apollo_utils::{response_prefix, with_dollar_sign};
+
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, Deps, Env, Event, QuerierWrapper, QueryRequest, ReplyOn, Response,
+    to_binary, Addr, CosmosMsg, Deps, Env, QuerierWrapper, QueryRequest, ReplyOn, Response,
     StdResult, SubMsg, Uint128, WasmMsg, WasmQuery,
 };
 use cw20::{Cw20ExecuteMsg, Denom};
@@ -24,6 +26,7 @@ use stake_cw20_external_rewards::msg::{
     QueryMsg as StakeCw20ExternalRewardsQueryMsg,
 };
 
+response_prefix!("apollo/cw-dex/junoswap");
 #[cw_serde]
 pub struct JunoswapStaking {
     pub addr: Addr,
@@ -47,11 +50,11 @@ impl Stake for JunoswapStaking {
             })?,
         });
 
-        let event = Event::new("cw-dex/staking/stake")
-            .add_attribute("type", "junoswap")
-            .add_attribute("amount", amount.to_string());
-
-        Ok(Response::new().add_message(stake_msg).add_event(event))
+        Ok(response!(
+            "stake",
+            [("type", "junoswap_staking"), ("amount", amount.to_string())],
+            [stake_msg]
+        ))
     }
 }
 
@@ -100,9 +103,8 @@ impl Rewards for JunoswapStaking {
             })
             .collect::<StdResult<Vec<SubMsg>>>()?;
 
-        let event = Event::new("apollo/cw-dex/claim_rewards").add_attribute("type", "junoswap");
-
-        Ok(Response::new().add_submessages(claim_messages).add_event(event))
+        Ok(response!("claim_rewards", [("type", "junoswap_staking")])
+            .add_submessages(claim_messages))
     }
 
     fn query_pending_rewards(
@@ -157,11 +159,11 @@ impl Unlock for JunoswapStaking {
             msg: to_binary(&Cw20StakeExecuteMsg::Claim {})?,
         });
 
-        let event = Event::new("cw-dex/lockup/withdraw_unlocked")
-            .add_attribute("type", "junoswap")
-            .add_attribute("amount", amount.to_string());
-
-        Ok(Response::new().add_message(claim_unlocked_msg).add_event(event))
+        Ok(response!(
+            "withdraw_unlocked",
+            [("type", "junoswap_staking"), ("amount", amount.to_string())],
+            [claim_unlocked_msg]
+        ))
     }
 
     fn unlock(&self, _deps: Deps, _env: &Env, amount: Uint128) -> Result<Response, CwDexError> {
@@ -173,11 +175,11 @@ impl Unlock for JunoswapStaking {
             })?,
         });
 
-        let event = Event::new("cw-dex/staking/unstake")
-            .add_attribute("type", "junoswap")
-            .add_attribute("amount", amount.to_string());
-
-        Ok(Response::new().add_message(unstake_msg).add_event(event))
+        Ok(response!(
+            "unstake",
+            [("type", "junoswap_staking"), ("amount", amount.to_string())],
+            [unstake_msg]
+        ))
     }
 }
 

@@ -1,8 +1,10 @@
 use std::vec;
 
+use apollo_utils::{response_prefix, with_dollar_sign};
+
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, Decimal, Deps, Env, Event, QuerierWrapper, QueryRequest, Response,
+    to_binary, Addr, CosmosMsg, Decimal, Deps, Env, QuerierWrapper, QueryRequest, Response,
     StdError, StdResult, Uint128, WasmMsg, WasmQuery,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
@@ -16,6 +18,8 @@ use super::helpers::{
     juno_simulate_provide_liquidity, prepare_funds_and_increase_allowances, JunoAsset,
     JunoAssetInfo, JunoAssetList,
 };
+
+response_prefix!("apollo/cw-dex");
 
 #[cw_serde]
 pub struct JunoswapPool {
@@ -77,12 +81,8 @@ impl Pool for JunoswapPool {
             })?,
         });
 
-        let event = Event::new("apollo/cw-dex/provide_liquidity").add_attribute("type", "junoswap");
-
-        Ok(Response::new()
-            .add_messages(increase_allowances)
-            .add_message(provide_liquidity)
-            .add_event(event))
+        Ok(response!("provide_liquidity", [("type", "junoswap_pool")], [provide_liquidity])
+            .add_messages(increase_allowances))
     }
 
     fn withdraw_liquidity(
@@ -102,11 +102,11 @@ impl Pool for JunoswapPool {
             })?,
         });
 
-        let event = Event::new("apollo/cw-dex/withdraw_liquidity")
-            .add_attribute("type", "junoswap")
-            .add_attribute("asset", format!("{:?}", asset));
-
-        Ok(Response::new().add_message(withdraw_liquidity).add_event(event))
+        Ok(response!(
+            "withdraw_liquidity",
+            [("type", "junoswap"), ("asset", format!("{:?}", asset))],
+            [withdraw_liquidity]
+        ))
     }
 
     fn swap(
@@ -154,13 +154,17 @@ impl Pool for JunoswapPool {
             })?,
         });
 
-        let event = Event::new("apollo/cw-dex/swap")
-            .add_attribute("type", "junoswap")
-            .add_attribute("offer_asset", format!("{:?}", offer_asset))
-            .add_attribute("ask_asset_info", format!("{:?}", ask_asset_info))
-            .add_attribute("minimum_out_amount", minimum_out_amount.to_string());
-
-        Ok(Response::new().add_messages(increase_allowances).add_message(swap).add_event(event))
+        Ok(response!(
+            "swap",
+            [
+                ("type", "junoswap_pool"),
+                ("offer_asset", format!("{:?}", offer_asset)),
+                ("ask_asset_info", format!("{:?}", ask_asset_info)),
+                ("minimum_out_amount", minimum_out_amount.to_string())
+            ],
+            [swap]
+        )
+        .add_messages(increase_allowances))
     }
 
     fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {
