@@ -1,6 +1,11 @@
 use std::ops::Deref;
 use std::str::FromStr;
 
+use apollo_proto_rust::osmosis::gamm::v1beta1::{
+    QueryCalcJoinPoolSharesRequest, QueryCalcJoinPoolSharesResponse,
+};
+use apollo_proto_rust::utils::encode;
+use apollo_proto_rust::OsmosisTypeURLs;
 use apollo_utils::assets::{
     assert_native_asset_info, assert_native_coin, assert_only_native_coins, merge_assets,
 };
@@ -10,8 +15,8 @@ use osmosis_std::types::osmosis::gamm::v1beta1::{
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    Coin, CosmosMsg, Decimal, Deps, Env, Event, QuerierWrapper, Response, StdError, StdResult,
-    Uint128,
+    Coin, CosmosMsg, Decimal, Deps, Env, Event, QuerierWrapper, QueryRequest, Response, StdError,
+    StdResult, Uint128,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
 use osmo_bindings::OsmosisQuery;
@@ -65,14 +70,23 @@ impl Pool for OsmosisPool {
         let (join_msgs, shares_out): (Vec<CosmosMsg>, Vec<Uint128>) = assets
             .into_iter()
             .map(|coin| {
-                // TODO: Turn into stargate query
-                let shares_out_min = slippage_tolerance
-                    * osmosis_calculate_join_pool_shares(
-                        querier,
-                        self.pool_id,
-                        vec![coin.clone()],
-                    )?
-                    .amount;
+                // Query expected amount of lp shares with stargate query
+                let expected_shares = Uint128::from_str(
+                    &deps
+                        .querier
+                        .query::<QueryCalcJoinPoolSharesResponse>(&QueryRequest::Stargate {
+                            path: OsmosisTypeURLs::QueryCalcJoinPoolShares.to_string(),
+                            data: encode(QueryCalcJoinPoolSharesRequest {
+                                pool_id: self.pool_id,
+                                tokens_in: vec![coin.clone().into()],
+                            }),
+                        })?
+                        .share_out_amount,
+                )?;
+
+                // Calculate minimym shares
+                let shares_out_min = slippage_tolerance * expected_shares;
+
                 Ok((
                     MsgJoinSwapExternAmountIn {
                         sender: env.contract.address.to_string(),

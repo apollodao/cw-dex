@@ -20,6 +20,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "216261ddc8289130e551ddcd5ce8a064710c0d064a4d2895c67151c92b5443f6"
 
 [[package]]
+name = "apollo-proto-rust"
+version = "0.2.0"
+source = "git+https://github.com/apollodao/apollo-proto-rust.git?tag=v0.4.0#5e3986af6b065cab0dc67a65f7c6dae85629ace8"
+dependencies = [
+ "cosmwasm-std",
+ "prost",
+ "prost-types",
+ "schemars",
+ "serde",
+]
+
+[[package]]
 name = "apollo-utils"
 version = "0.1.0"
 source = "git+https://github.com/apollodao/apollo-utils.git#b9caacbb112f92eaf486694759d5cf7de8af172d"
@@ -275,6 +287,7 @@ dependencies = [
 name = "cw-dex"
 version = "0.0.1"
 dependencies = [
+ "apollo-proto-rust",
  "apollo-utils",
  "astroport",
  "cosmwasm-schema",
@@ -304,7 +317,7 @@ dependencies = [
 [[package]]
 name = "cw-paginate"
 version = "0.2.0"
-source = "git+https://github.com/DA0-DA0/dao-contracts#6b77887ac77e43905d653c173c9b98670b5686e6"
+source = "git+https://github.com/DA0-DA0/dao-contracts#48d962971e07ee5bb056b889b41c52c96416ff66"
 dependencies = [
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -519,7 +532,7 @@ dependencies = [
 [[package]]
 name = "cw20-stake"
 version = "0.2.6"
-source = "git+https://github.com/DA0-DA0/dao-contracts#6b77887ac77e43905d653c173c9b98670b5686e6"
+source = "git+https://github.com/DA0-DA0/dao-contracts#48d962971e07ee5bb056b889b41c52c96416ff66"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1085,7 +1098,7 @@ dependencies = [
 [[package]]
 name = "stake-cw20-external-rewards"
 version = "0.2.6"
-source = "git+https://github.com/DA0-DA0/dao-contracts#6b77887ac77e43905d653c173c9b98670b5686e6"
+source = "git+https://github.com/DA0-DA0/dao-contracts#48d962971e07ee5bb056b889b41c52c96416ff66"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
