@@ -2,6 +2,7 @@ use std::ops::Deref;
 use std::str::FromStr;
 
 use apollo_proto_rust::osmosis::gamm::v1beta1::{
+    QueryCalcExitPoolCoinsFromSharesRequest, QueryCalcExitPoolCoinsFromSharesResponse,
     QueryCalcJoinPoolSharesRequest, QueryCalcJoinPoolSharesResponse,
 };
 use apollo_proto_rust::utils::encode;
@@ -121,6 +122,19 @@ impl Pool for OsmosisPool {
 
         // TODO: Query for exit pool amounts?
         let token_out_mins = osmosis_calculate_exit_pool_amounts(querier, self.pool_id, &lp_token)?;
+
+        let token_out_amount = deps.querier.query::<QueryCalcExitPoolCoinsFromSharesResponse>(
+            &QueryRequest::Stargate {
+                path: OsmosisTypeURLs::QueryCalcExitPoolCoinsFromShares.to_string(),
+                data: encode(QueryCalcExitPoolCoinsFromSharesRequest {
+                    pool_id: self.pool_id,
+                    token_out_denom: lp_token.denom,
+                    share_in_amount: lp_token.amount.to_string(),
+                }),
+            },
+        )?;
+
+        let token_out_mins = vec![]
 
         let exit_msg = MsgExitPool {
             sender: env.contract.address.to_string(),
