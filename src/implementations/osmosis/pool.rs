@@ -23,6 +23,8 @@ use crate::traits::Pool;
 use crate::utils::vec_into;
 use crate::CwDexError;
 
+use super::helpers::query_lp_denom;
+
 /// Struct for interacting with Osmosis v1beta1 balancer pools. If `pool_id` maps to another type of pool this will fail.
 #[cw_serde]
 #[derive(Copy)]
@@ -183,13 +185,17 @@ impl Pool for OsmosisPool {
         _env: &Env,
         assets: AssetList,
     ) -> Result<Asset, CwDexError> {
-        let querier = QuerierWrapper::<OsmosisQuery>::new(deps.querier.deref());
-        Ok(osmosis_calculate_join_pool_shares(
-            querier,
-            self.pool_id,
-            assert_only_native_coins(assets)?,
-        )?
-        .into())
+        let querier = GammQuerier::new(&deps.querier);
+
+        let shares_out_amount = Uint128::from_str(
+            &querier
+                .calc_join_pool_shares(self.pool_id, vec_into(assert_only_native_coins(assets)?))?
+                .share_out_amount,
+        )?;
+
+        let lp_denom = query_lp_denom(&deps.querier, self.pool_id)?;
+
+        Ok(Asset::new(AssetInfo::native(lp_denom), shares_out_amount))
     }
 
     fn simulate_withdraw_liquidity(
