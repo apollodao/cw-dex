@@ -105,28 +105,24 @@ impl Pool for OsmosisPool {
         env: &Env,
         asset: Asset,
     ) -> Result<Response, CwDexError> {
-        let lp_token = assert_native_coin(&asset)?;
-
-        let gamm_querier = GammQuerier::new(&deps.querier);
-
-        // TODO: Query for exit pool amounts?
-        let token_out_mins =
-            osmosis_calculate_exit_pool_amounts(&gamm_querier, self.pool_id.clone(), &lp_token)?;
-
-        let token_out_amount = gamm_querier
-            .calc_exit_pool_coins_from_shares(self.pool_id.clone(), lp_token.amount.to_string())?
-            .tokens_out;
+        let token_out_mins = self
+            .simulate_withdraw_liquidity(deps, asset)?
+            .into_iter()
+            .map(|asset| asset.try_into())
+            .collect::<StdResult<Vec<Coin>>>()?;
 
         let exit_msg = MsgExitPool {
             sender: env.contract.address.to_string(),
             pool_id: self.pool_id,
-            share_in_amount: lp_token.amount.to_string(),
-            token_out_mins: vec_into(token_out_mins),
+            share_in_amount: asset.amount.to_string(),
+            token_out_mins: vec_into(token_out_mins.clone()),
         };
 
         let event = Event::new("apollo/cw-dex/withdraw_liquidity")
             .add_attribute("pool_id", self.pool_id.to_string())
-            .add_attribute("lp_token", lp_token.to_string());
+            .add_attribute("lp_token", asset.info.to_string())
+            .add_attribute("minimum_tokens_out", format!("{:?}", token_out_mins))
+            .add_attribute("shares_in", asset.to_string());
 
         Ok(Response::new().add_message(exit_msg).add_event(event))
     }
@@ -216,11 +212,13 @@ impl Pool for OsmosisPool {
             .calc_exit_pool_coins_from_shares(self.pool_id, lp_token.amount.to_string())?
             .tokens_out
             .iter()
-            .map(|c| Coin {
-                denom: c.denom.clone(),
-                amount: Uint128::from_str(&c.amount)?,
+            .map(|c| {
+                Ok(Coin {
+                    denom: c.denom.clone(),
+                    amount: Uint128::from_str(&c.amount)?,
+                })
             })
-            .collect();
+            .collect::<StdResult<_>>()?;
 
         Ok(tokens_out.into())
     }
