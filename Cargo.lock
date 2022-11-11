@@ -258,13 +258,14 @@ dependencies = [
 
 [[package]]
 name = "cw-controllers"
-version = "0.13.4"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f0bc6019b4d3d81e11f5c384bcce7173e2210bd654d75c6c9668e12cca05dfa"
+checksum = "24bd6738c3fd59c87d2f84911c1cad1e4f2d1c58ecaa6e52549b4f78f4ed6f07"
 dependencies = [
+ "cosmwasm-schema",
  "cosmwasm-std",
- "cw-storage-plus 0.13.4",
- "cw-utils 0.13.4",
+ "cw-storage-plus 0.16.0",
+ "cw-utils 0.16.0",
  "schemars",
  "serde",
  "thiserror",
@@ -281,9 +282,9 @@ dependencies = [
  "cosmwasm-storage",
  "cw-asset",
  "cw-storage-plus 0.16.0",
- "cw-utils 0.13.4",
+ "cw-utils 0.16.0",
  "cw20 0.10.3",
- "cw20 0.13.4",
+ "cw20 0.16.0",
  "cw20-base 0.16.0",
  "cw20-stake",
  "delegate",
@@ -303,11 +304,11 @@ dependencies = [
 [[package]]
 name = "cw-paginate"
 version = "0.2.0"
-source = "git+https://github.com/DA0-DA0/dao-contracts?rev=6823d7f#6823d7fb6946beee21a1956ea1e9d7d3e797c1c2"
+source = "git+https://github.com/DA0-DA0/dao-contracts#6b77887ac77e43905d653c173c9b98670b5686e6"
 dependencies = [
  "cosmwasm-std",
  "cosmwasm-storage",
- "cw-storage-plus 0.13.4",
+ "cw-storage-plus 0.16.0",
  "serde",
 ]
 
@@ -433,18 +434,6 @@ dependencies = [
 
 [[package]]
 name = "cw2"
-version = "0.13.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04cf4639517490dd36b333bbd6c4fbd92e325fd0acf4683b41753bc5eb63bfc1"
-dependencies = [
- "cosmwasm-std",
- "cw-storage-plus 0.13.4",
- "schemars",
- "serde",
-]
-
-[[package]]
-name = "cw2"
 version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "91398113b806f4d2a8d5f8d05684704a20ffd5968bf87e3473e1973710b884ad"
@@ -511,22 +500,6 @@ dependencies = [
 
 [[package]]
 name = "cw20-base"
-version = "0.13.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0306e606581f4fb45e82bcbb7f0333179ed53dd949c6523f01a99b4bfc1475a0"
-dependencies = [
- "cosmwasm-std",
- "cw-storage-plus 0.13.4",
- "cw-utils 0.13.4",
- "cw2 0.13.4",
- "cw20 0.13.4",
- "schemars",
- "serde",
- "thiserror",
-]
-
-[[package]]
-name = "cw20-base"
 version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61d826fa1084d026d0abdb54faa5956972efa3a9053473bfcefb5388960aab69"
@@ -546,19 +519,18 @@ dependencies = [
 [[package]]
 name = "cw20-stake"
 version = "0.2.6"
-source = "git+https://github.com/DA0-DA0/dao-contracts?rev=6823d7f#6823d7fb6946beee21a1956ea1e9d7d3e797c1c2"
+source = "git+https://github.com/DA0-DA0/dao-contracts#6b77887ac77e43905d653c173c9b98670b5686e6"
 dependencies = [
+ "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
  "cw-controllers",
  "cw-paginate",
- "cw-storage-plus 0.13.4",
- "cw-utils 0.13.4",
- "cw2 0.13.4",
- "cw20 0.13.4",
- "cw20-base 0.13.4",
- "schemars",
- "serde",
+ "cw-storage-plus 0.16.0",
+ "cw-utils 0.16.0",
+ "cw2 0.16.0",
+ "cw20 0.16.0",
+ "cw20-base 0.16.0",
  "thiserror",
 ]
 
@@ -1113,19 +1085,18 @@ dependencies = [
 [[package]]
 name = "stake-cw20-external-rewards"
 version = "0.2.6"
-source = "git+https://github.com/DA0-DA0/dao-contracts?rev=6823d7f#6823d7fb6946beee21a1956ea1e9d7d3e797c1c2"
+source = "git+https://github.com/DA0-DA0/dao-contracts#6b77887ac77e43905d653c173c9b98670b5686e6"
 dependencies = [
+ "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
  "cw-controllers",
- "cw-storage-plus 0.13.4",
- "cw-utils 0.13.4",
- "cw2 0.13.4",
- "cw20 0.13.4",
- "cw20-base 0.13.4",
+ "cw-storage-plus 0.16.0",
+ "cw-utils 0.16.0",
+ "cw2 0.16.0",
+ "cw20 0.16.0",
+ "cw20-base 0.16.0",
  "cw20-stake",
- "schemars",
- "serde",
  "thiserror",
 ]
 
