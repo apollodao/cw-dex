@@ -101,7 +101,7 @@ impl Pool for OsmosisPool {
         asset: Asset,
     ) -> Result<Response, CwDexError> {
         let token_out_mins = self
-            .simulate_withdraw_liquidity(deps, asset)?
+            .simulate_withdraw_liquidity(deps, &asset)?
             .into_iter()
             .map(|asset| asset.try_into())
             .collect::<StdResult<Vec<Coin>>>()?;
@@ -115,7 +115,6 @@ impl Pool for OsmosisPool {
 
         let event = Event::new("apollo/cw-dex/withdraw_liquidity")
             .add_attribute("pool_id", self.pool_id.to_string())
-            .add_attribute("lp_token", asset.info.to_string())
             .add_attribute("minimum_tokens_out", format!("{:?}", token_out_mins))
             .add_attribute("shares_in", asset.to_string());
 
@@ -192,10 +191,10 @@ impl Pool for OsmosisPool {
     fn simulate_withdraw_liquidity(
         &self,
         deps: Deps,
-        asset: Asset,
+        asset: &Asset,
     ) -> Result<AssetList, CwDexError> {
         let querier = GammQuerier::new(&deps.querier);
-        let lp_token = assert_native_coin(&asset)?;
+        let lp_token = assert_native_coin(asset)?;
 
         let lp_denom = query_lp_denom(&deps.querier, self.pool_id)?;
 

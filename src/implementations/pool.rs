@@ -98,7 +98,7 @@ impl PoolTrait for Pool {
     fn simulate_withdraw_liquidity(
         &self,
         deps: Deps,
-        asset: Asset,
+        asset: &Asset,
     ) -> Result<AssetList, CwDexError> {
         self.as_trait().simulate_withdraw_liquidity(deps, asset)
     }

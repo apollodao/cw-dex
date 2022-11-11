@@ -202,7 +202,7 @@ impl Pool for JunoswapPool {
     fn simulate_withdraw_liquidity(
         &self,
         deps: Deps,
-        asset: Asset,
+        asset: &Asset,
     ) -> Result<AssetList, CwDexError> {
         let pool_info = self.query_info(&deps.querier)?;
 
