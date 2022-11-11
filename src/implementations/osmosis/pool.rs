@@ -203,9 +203,26 @@ impl Pool for OsmosisPool {
         deps: Deps,
         asset: Asset,
     ) -> Result<AssetList, CwDexError> {
-        let gamm_querier = GammQuerier::new(&deps.querier);
+        let querier = GammQuerier::new(&deps.querier);
         let lp_token = assert_native_coin(&asset)?;
-        Ok(osmosis_calculate_exit_pool_amounts(&gamm_querier, self.pool_id, &lp_token)?.into())
+
+        let lp_denom = query_lp_denom(&deps.querier, self.pool_id)?;
+
+        if lp_denom != lp_token.denom {
+            return Err(CwDexError::InvalidLpToken {});
+        }
+
+        let tokens_out: Vec<Coin> = querier
+            .calc_exit_pool_coins_from_shares(self.pool_id, lp_token.amount.to_string())?
+            .tokens_out
+            .iter()
+            .map(|c| Coin {
+                denom: c.denom.clone(),
+                amount: Uint128::from_str(&c.amount)?,
+            })
+            .collect();
+
+        Ok(tokens_out.into())
     }
 
     fn simulate_swap(
