@@ -20,6 +20,6 @@ pub(crate) fn query_lp_denom(querier: &QuerierWrapper, pool_id: u64) -> StdResul
     GammQuerier::new(querier)
         .total_shares(pool_id)?
         .total_shares
-        .ok_or(StdError::generic_err("No total shares found for pool"))
+        .ok_or_else(|| StdError::generic_err("No total shares found for pool"))
         .map(|coin| coin.denom)
 }

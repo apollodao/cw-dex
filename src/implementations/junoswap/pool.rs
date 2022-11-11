@@ -46,13 +46,13 @@ impl Pool for JunoswapPool {
 
         // Calculate minimum LPs from slippage tolerance
         let provide_liquidity_info =
-            juno_simulate_provide_liquidity(&assets.clone().try_into()?, pool_info.clone())?;
+            juno_simulate_provide_liquidity(&assets.try_into()?, pool_info)?;
 
         // TODO: Is this the behavior of slippage_tolerance that we want? Right now
         // It's a bit unclear what slippage_tolerance is supposed to do. We must
         // define it more clearly in the trait doc comments.
         let min_liquidity = provide_liquidity_info.lp_token_expected_amount
-            * Decimal::one().checked_sub(slippage_tolerance.unwrap_or_else(|| Decimal::one()))?;
+            * Decimal::one().checked_sub(slippage_tolerance.unwrap_or_else(Decimal::one))?;
 
         // Increase allowance for cw20 tokens and add native tokens to the funds vec.
         let assets_to_use = vec![
@@ -195,8 +195,7 @@ impl Pool for JunoswapPool {
         Ok(Asset {
             info: AssetInfo::Cw20(lp_addr),
             amount: provide_liquidity_info.lp_token_expected_amount,
-        }
-        .into())
+        })
     }
 
     fn simulate_withdraw_liquidity(

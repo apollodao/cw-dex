@@ -48,8 +48,7 @@ impl Pool for OsmosisPool {
         let assets = assert_only_native_coins(merge_assets(assets.purge().deref())?)?;
 
         // Unwrap slppage tolerance or set to 0% if not provided.
-        let slippage_tolerance =
-            Decimal::one() - slippage_tolerance.unwrap_or_else(|| Decimal::one());
+        let slippage_tolerance = Decimal::one() - slippage_tolerance.unwrap_or_else(Decimal::one);
 
         // TODO: Provide liquidity double sided.
         // For now we only provide liquidity single sided since the ratio of the underlying tokens
@@ -219,12 +218,12 @@ impl Pool for OsmosisPool {
     ) -> StdResult<Uint128> {
         let offer: Coin = offer.try_into()?;
         let swap_response = GammQuerier::new(&deps.querier).estimate_swap_exact_amount_in(
-            sender.ok_or(StdError::generic_err("sender is required for osmosis"))?,
+            sender.ok_or_else(|| StdError::generic_err("sender is required for osmosis"))?,
             self.pool_id,
             offer.denom.clone(),
             vec![SwapAmountInRoute {
                 pool_id: self.pool_id,
-                token_out_denom: offer.denom.clone(),
+                token_out_denom: offer.denom,
             }],
         )?;
         Uint128::from_str(swap_response.token_out_amount.as_str())
