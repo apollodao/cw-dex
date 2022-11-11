@@ -10,15 +10,10 @@ use osmosis_std::types::osmosis::gamm::v1beta1::{
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    Coin, CosmosMsg, Decimal, Deps, Env, Event, QuerierWrapper, QueryRequest, Response, StdError,
-    StdResult, Uint128,
+    Coin, CosmosMsg, Decimal, Deps, Env, Event, Response, StdError, StdResult, Uint128,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
-use osmo_bindings::OsmosisQuery;
 
-use crate::osmosis::osmosis_math::{
-    osmosis_calculate_exit_pool_amounts, osmosis_calculate_join_pool_shares,
-};
 use crate::traits::Pool;
 use crate::utils::vec_into;
 use crate::CwDexError;
