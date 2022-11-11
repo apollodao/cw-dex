@@ -20,18 +20,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "216261ddc8289130e551ddcd5ce8a064710c0d064a4d2895c67151c92b5443f6"
 
 [[package]]
-name = "apollo-proto-rust"
-version = "0.2.0"
-source = "git+https://github.com/apollodao/apollo-proto-rust.git?tag=v0.4.0#5e3986af6b065cab0dc67a65f7c6dae85629ace8"
-dependencies = [
- "cosmwasm-std",
- "prost",
- "prost-types",
- "schemars",
- "serde",
-]
-
-[[package]]
 name = "apollo-utils"
 version = "0.1.0"
 source = "git+https://github.com/apollodao/apollo-utils.git#b9caacbb112f92eaf486694759d5cf7de8af172d"
@@ -287,7 +275,6 @@ dependencies = [
 name = "cw-dex"
 version = "0.0.1"
 dependencies = [
- "apollo-proto-rust",
  "apollo-utils",
  "astroport",
  "cosmwasm-schema",
@@ -831,7 +818,7 @@ dependencies = [
 [[package]]
 name = "osmosis-std"
 version = "0.12.0"
-source = "git+https://github.com/osmosis-labs/osmosis-rust#9b010acf59d631cf099f2b45dbc011a4d99b37f8"
+source = "git+https://github.com/apollodao/osmosis-rust?branch=dev/cosmos-types#9e0d551b5b10ab887a8f4f734d6e86eb636fbbc2"
 dependencies = [
  "chrono",
  "cosmwasm-std",
@@ -846,7 +833,7 @@ dependencies = [
 [[package]]
 name = "osmosis-std-derive"
 version = "0.12.0"
-source = "git+https://github.com/osmosis-labs/osmosis-rust#9b010acf59d631cf099f2b45dbc011a4d99b37f8"
+source = "git+https://github.com/apollodao/osmosis-rust?branch=dev/cosmos-types#9e0d551b5b10ab887a8f4f734d6e86eb636fbbc2"
 dependencies = [
  "itertools",
  "proc-macro2",

@@ -5,7 +5,9 @@ use std::{
 };
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Coin, Decimal, QuerierWrapper, QueryRequest, StdError, StdResult, Uint128};
+use cosmwasm_std::{
+    Coin, Decimal, Empty, QuerierWrapper, QueryRequest, StdError, StdResult, Uint128,
+};
 use num_bigint::BigInt;
 use osmo_bindings::{OsmosisQuery, PoolStateResponse};
 use osmosis_std::types::osmosis::gamm::v1beta1::{GammQuerier, Pool as ProtoPool, PoolAsset};
@@ -339,12 +341,12 @@ pub fn calc_join_single_asset_tokens_in(
 /// of the GAMM module. See
 /// https://github.com/osmosis-labs/osmosis/blob/91c7830d7d195aad53378d60b24224a67e70fd7f/x/gamm/pool-models/internal/cfmm_common/lp.go#L16
 pub fn osmosis_calculate_exit_pool_amounts(
-    querier: QuerierWrapper<OsmosisQuery>,
+    querier: &GammQuerier<Empty>,
     pool_id: u64,
     exit_lp_shares: &Coin,
 ) -> StdResult<Vec<Coin>> {
     // TODO: Remove go code comments after review
-    let res = GammQuerier::new(&querier).pool(pool_id)?;
+    let res = querier.pool(pool_id)?;
     let pool: ProtoPool = res
         .pool
         .ok_or_else(|| StdError::NotFound {
@@ -355,15 +357,14 @@ pub fn osmosis_calculate_exit_pool_amounts(
             target_type: "osmosis_std::types::osmosis::gamm::v1beta1::Pool".to_string(),
             msg: e.to_string(),
         })?;
-    let pool_state: PoolStateResponse =
-        querier.query(&QueryRequest::Custom(OsmosisQuery::PoolState {
-            id: pool_id,
-        }))?;
 
-    if exit_lp_shares.denom != pool_state.shares.denom {
+    let total_shares =
+        pool.total_shares.map(|c| Coin::new(c.amount.parse().unwrap(), c.denom)).unwrap();
+
+    if exit_lp_shares.denom != total_shares.denom {
         return Err(StdError::generic_err(format!(
             "exit_shares denom {} does not match pool lp shares denom {}",
-            exit_lp_shares.denom, pool_state.shares.denom
+            exit_lp_shares.denom, total_shares.denom
         )));
     }
 
@@ -374,8 +375,7 @@ pub fn osmosis_calculate_exit_pool_amounts(
     // 	return sdk.Coins{}, sdkerrors.Wrapf(types.ErrLimitMaxAmount, errMsgFormatSharesLargerThanMax, exitingShares, totalShares)
     // }
 
-    let total_shares = pool_state.shares.amount;
-    if exit_lp_shares.amount >= total_shares {
+    if exit_lp_shares.amount >= total_shares.amount {
         return Err(StdError::generic_err("exit share amount must be less than total shares"));
     }
 
@@ -400,7 +400,8 @@ pub fn osmosis_calculate_exit_pool_amounts(
 
     // shareOutRatio := refundedShares.QuoInt(totalShares)
 
-    let share_out_ratio = refunded_shares.checked_mul(Decimal::from_ratio(1u128, total_shares))?;
+    let share_out_ratio =
+        refunded_shares.checked_mul(Decimal::from_ratio(1u128, total_shares.amount))?;
 
     // // exitedCoins = shareOutRatio * pool liquidity
     // exitedCoins := sdk.Coins{}
@@ -418,7 +419,12 @@ pub fn osmosis_calculate_exit_pool_amounts(
     // }
 
     let mut exited_coins: Vec<Coin> = vec![];
-    for pool_asset in pool_state.assets {
+    for pool_asset in pool.pool_assets.iter() {
+        let pool_asset = pool_asset
+            .token
+            .as_ref()
+            .map(|c| Coin::new(c.amount.parse().unwrap(), c.denom.to_string()))
+            .unwrap();
         let exit_amount = share_out_ratio * pool_asset.amount;
         if exit_amount.is_zero() {
             continue;

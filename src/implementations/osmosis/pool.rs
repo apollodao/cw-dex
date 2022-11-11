@@ -1,12 +1,6 @@
 use std::ops::Deref;
 use std::str::FromStr;
 
-use apollo_proto_rust::osmosis::gamm::v1beta1::{
-    QueryCalcExitPoolCoinsFromSharesRequest, QueryCalcExitPoolCoinsFromSharesResponse,
-    QueryCalcJoinPoolSharesRequest, QueryCalcJoinPoolSharesResponse,
-};
-use apollo_proto_rust::utils::encode;
-use apollo_proto_rust::OsmosisTypeURLs;
 use apollo_utils::assets::{
     assert_native_asset_info, assert_native_coin, assert_only_native_coins, merge_assets,
 };
@@ -59,7 +53,7 @@ impl Pool for OsmosisPool {
         let assets = assert_only_native_coins(merge_assets(assets.purge().deref())?)?;
 
         // Construct osmosis querier
-        let querier = QuerierWrapper::<OsmosisQuery>::new(deps.querier.deref());
+        let gamm_querier = GammQuerier::new(&deps.querier);
 
         let slippage_tolerance =
             Decimal::one() - slippage_tolerance.unwrap_or_else(|| Decimal::one());
@@ -73,15 +67,8 @@ impl Pool for OsmosisPool {
             .map(|coin| {
                 // Query expected amount of lp shares with stargate query
                 let expected_shares = Uint128::from_str(
-                    &deps
-                        .querier
-                        .query::<QueryCalcJoinPoolSharesResponse>(&QueryRequest::Stargate {
-                            path: OsmosisTypeURLs::QueryCalcJoinPoolShares.to_string(),
-                            data: encode(QueryCalcJoinPoolSharesRequest {
-                                pool_id: self.pool_id,
-                                tokens_in: vec![coin.clone().into()],
-                            }),
-                        })?
+                    &gamm_querier
+                        .calc_join_pool_shares(self.pool_id, vec![coin.clone().into()])?
                         .share_out_amount,
                 )?;
 
@@ -118,23 +105,15 @@ impl Pool for OsmosisPool {
     ) -> Result<Response, CwDexError> {
         let lp_token = assert_native_coin(&asset)?;
 
-        let querier = QuerierWrapper::<OsmosisQuery>::new(deps.querier.deref());
+        let gamm_querier = GammQuerier::new(&deps.querier);
 
         // TODO: Query for exit pool amounts?
-        let token_out_mins = osmosis_calculate_exit_pool_amounts(querier, self.pool_id, &lp_token)?;
+        let token_out_mins =
+            osmosis_calculate_exit_pool_amounts(&gamm_querier, self.pool_id.clone(), &lp_token)?;
 
-        let token_out_amount = deps.querier.query::<QueryCalcExitPoolCoinsFromSharesResponse>(
-            &QueryRequest::Stargate {
-                path: OsmosisTypeURLs::QueryCalcExitPoolCoinsFromShares.to_string(),
-                data: encode(QueryCalcExitPoolCoinsFromSharesRequest {
-                    pool_id: self.pool_id,
-                    token_out_denom: lp_token.denom,
-                    share_in_amount: lp_token.amount.to_string(),
-                }),
-            },
-        )?;
-
-        let token_out_mins = vec![]
+        let token_out_amount = gamm_querier
+            .calc_exit_pool_coins_from_shares(self.pool_id.clone(), lp_token.amount.to_string())?
+            .tokens_out;
 
         let exit_msg = MsgExitPool {
             sender: env.contract.address.to_string(),
@@ -218,9 +197,9 @@ impl Pool for OsmosisPool {
         deps: Deps,
         asset: Asset,
     ) -> Result<AssetList, CwDexError> {
-        let querier = QuerierWrapper::<OsmosisQuery>::new(deps.querier.deref());
+        let gamm_querier = GammQuerier::new(&deps.querier);
         let lp_token = assert_native_coin(&asset)?;
-        Ok(osmosis_calculate_exit_pool_amounts(querier, self.pool_id, &lp_token)?.into())
+        Ok(osmosis_calculate_exit_pool_amounts(&gamm_querier, self.pool_id, &lp_token)?.into())
     }
 
     fn simulate_swap(
