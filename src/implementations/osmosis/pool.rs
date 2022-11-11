@@ -41,17 +41,13 @@ impl Pool for OsmosisPool {
         &self,
         deps: Deps,
         env: &Env,
-        assets: AssetList,
+        mut assets: AssetList,
         slippage_tolerance: Option<Decimal>,
     ) -> Result<Response, CwDexError> {
-        let mut assets = assets;
-
         // Remove all zero amount Coins, merge duplicates and assert that all assets are native.
         let assets = assert_only_native_coins(merge_assets(assets.purge().deref())?)?;
 
-        // Construct osmosis querier
-        let gamm_querier = GammQuerier::new(&deps.querier);
-
+        // Unwrap slppage tolerance or set to 0% if not provided.
         let slippage_tolerance =
             Decimal::one() - slippage_tolerance.unwrap_or_else(|| Decimal::one());
 
@@ -63,14 +59,11 @@ impl Pool for OsmosisPool {
             .into_iter()
             .map(|coin| {
                 // Query expected amount of lp shares with stargate query
-                let expected_shares = Uint128::from_str(
-                    &gamm_querier
-                        .calc_join_pool_shares(self.pool_id, vec![coin.clone().into()])?
-                        .share_out_amount,
-                )?;
+                let expected_shares =
+                    self.simulate_provide_liquidity(deps, env, vec![coin.clone()].into())?;
 
-                // Calculate minimym shares
-                let shares_out_min = slippage_tolerance * expected_shares;
+                // Calculate minimum shares
+                let shares_out_min = slippage_tolerance * expected_shares.amount;
 
                 Ok((
                     MsgJoinSwapExternAmountIn {
