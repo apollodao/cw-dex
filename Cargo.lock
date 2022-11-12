@@ -281,12 +281,12 @@ dependencies = [
  "cosmwasm-std",
  "cosmwasm-storage",
  "cw-asset",
+ "cw-controllers",
  "cw-storage-plus 0.16.0",
  "cw-utils 0.16.0",
  "cw20 0.10.3",
  "cw20 0.16.0",
  "cw20-base 0.16.0",
- "cw20-stake",
  "delegate",
  "num-bigint",
  "num-rational",
@@ -296,20 +296,8 @@ dependencies = [
  "prost",
  "schemars",
  "serde",
- "stake-cw20-external-rewards",
  "thiserror",
  "wasmswap",
-]
-
-[[package]]
-name = "cw-paginate"
-version = "0.2.0"
-source = "git+https://github.com/DA0-DA0/dao-contracts#6b77887ac77e43905d653c173c9b98670b5686e6"
-dependencies = [
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-storage-plus 0.16.0",
- "serde",
 ]
 
 [[package]]
@@ -513,24 +501,6 @@ dependencies = [
  "schemars",
  "semver",
  "serde",
- "thiserror",
-]
-
-[[package]]
-name = "cw20-stake"
-version = "0.2.6"
-source = "git+https://github.com/DA0-DA0/dao-contracts#6b77887ac77e43905d653c173c9b98670b5686e6"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-controllers",
- "cw-paginate",
- "cw-storage-plus 0.16.0",
- "cw-utils 0.16.0",
- "cw2 0.16.0",
- "cw20 0.16.0",
- "cw20-base 0.16.0",
  "thiserror",
 ]
 
@@ -818,7 +788,7 @@ dependencies = [
 [[package]]
 name = "osmosis-std"
 version = "0.12.0"
-source = "git+https://github.com/osmosis-labs/osmosis-rust?rev=3ea06eda3e5f2979a6232a118544d292a3bfca9f#3ea06eda3e5f2979a6232a118544d292a3bfca9f"
+source = "git+https://github.com/osmosis-labs/osmosis-rust?branch=osmosis-main-clone#3ea06eda3e5f2979a6232a118544d292a3bfca9f"
 dependencies = [
  "chrono",
  "cosmwasm-std",
@@ -833,7 +803,7 @@ dependencies = [
 [[package]]
 name = "osmosis-std-derive"
 version = "0.12.0"
-source = "git+https://github.com/osmosis-labs/osmosis-rust?rev=3ea06eda3e5f2979a6232a118544d292a3bfca9f#3ea06eda3e5f2979a6232a118544d292a3bfca9f"
+source = "git+https://github.com/osmosis-labs/osmosis-rust?branch=osmosis-main-clone#3ea06eda3e5f2979a6232a118544d292a3bfca9f"
 dependencies = [
  "itertools",
  "proc-macro2",
@@ -1080,24 +1050,6 @@ checksum = "67cf02bbac7a337dc36e4f5a693db6c21e7863f45070f7064577eb4367a3212b"
 dependencies = [
  "base64ct",
  "der",
-]
-
-[[package]]
-name = "stake-cw20-external-rewards"
-version = "0.2.6"
-source = "git+https://github.com/DA0-DA0/dao-contracts#6b77887ac77e43905d653c173c9b98670b5686e6"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-controllers",
- "cw-storage-plus 0.16.0",
- "cw-utils 0.16.0",
- "cw2 0.16.0",
- "cw20 0.16.0",
- "cw20-base 0.16.0",
- "cw20-stake",
- "thiserror",
 ]
 
 [[package]]

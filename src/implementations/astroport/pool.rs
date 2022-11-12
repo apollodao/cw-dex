@@ -35,8 +35,8 @@ pub struct AstroportPool {
 
 impl AstroportPool {
     pub fn new(deps: Deps, pair_addr: Addr) -> StdResult<Self> {
-        let pair_info =
-            deps.querier.query_wasm_smart::<PairInfo>(pair_addr.clone(), &PairQueryMsg::Pair {})?;
+        let pair_info: PairInfo =
+            deps.querier.query_wasm_smart(pair_addr.clone(), &PairQueryMsg::Pair {})?;
 
         // Validate pair type. We only support XYK and stable swap pools
         match pair_info.pair_type {
