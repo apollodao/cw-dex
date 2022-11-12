@@ -7,16 +7,15 @@ use cosmwasm_std::{
 };
 use cw20::Cw20ExecuteMsg;
 
-use cw_asset::AssetList;
-use cw_utils::Duration;
-use stake_cw20::{
-    msg::{
-        ExecuteMsg as Cw20StakeExecuteMsg, QueryMsg as Cw20StakeQueryMsg,
-        ReceiveMsg as Cw20StakeReceiveMsg,
-    },
-    state::Config,
+use crate::junoswap::cw20_stake_msgs::{
+    Config, ExecuteMsg as Cw20StakeExecuteMsg, GetHooksResponse, QueryMsg as Cw20StakeQueryMsg,
+    ReceiveMsg as Cw20StakeReceiveMsg,
 };
 
+use crate::junoswap::cw20_stake_external_rewards_msgs::{
+    ExecuteMsg as StakeCw20ExternalRewardsExecuteMsg, PendingRewardsResponse,
+    QueryMsg as StakeCw20ExternalRewardsQueryMsg,
+};
 use crate::{
     traits::{LockedStaking, Rewards, Stake, Unlock, Unstake},
     CwDexError,
