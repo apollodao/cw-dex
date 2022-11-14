@@ -4,14 +4,13 @@ use astroport_core::querier::{query_supply, query_token_precision};
 use astroport_core::U256;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, Decimal, Env, QuerierWrapper, QueryRequest, Response, StdError,
-    StdResult, WasmMsg, WasmQuery,
+    to_binary, wasm_execute, Addr, CosmosMsg, Decimal, Env, QuerierWrapper, QueryRequest, Response,
+    StdError, StdResult, WasmMsg, WasmQuery,
 };
 use cosmwasm_std::{Deps, Event, Uint128};
 use cw20::Cw20ExecuteMsg;
 use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 
-use astroport_core::asset::Asset as AstroAsset;
 use astroport_core::asset::AssetInfo as AstroAssetInfo;
 use astroport_core::pair::{
     Cw20HookMsg, ExecuteMsg as PairExecMsg, PoolResponse, QueryMsg, QueryMsg as PairQueryMsg,
@@ -23,7 +22,7 @@ use crate::CwDexError;
 
 use super::helpers::{
     adjust_precision, astro_asset_info_to_cw_asset_info, compute_current_amp, compute_d,
-    cw_asset_to_astro_asset, query_pair_config, AstroAssetList, N_COINS,
+    cw_asset_to_astro_asset, query_pair_config, N_COINS,
 };
 
 #[cw_serde]
@@ -72,24 +71,18 @@ impl AstroportPool {
         _env: &Env,
         assets: AssetList,
     ) -> Result<Asset, CwDexError> {
-        let astro_assets: AstroAssetList = assets.try_into()?;
-
         let PoolResponse {
             assets: pools,
             total_share,
         } = self.get_pool_liquidity_impl(&deps.querier)?;
 
         let deposits = [
-            astro_assets
-                .0
-                .iter()
-                .find(|a| a.info.equal(&pools[0].info))
+            assets
+                .find(&astro_asset_info_to_cw_asset_info(&pools[0].info))
                 .map(|a| a.amount)
                 .expect("Wrong asset info is given"),
-            astro_assets
-                .0
-                .iter()
-                .find(|a| a.info.equal(&pools[1].info))
+            assets
+                .find(&astro_asset_info_to_cw_asset_info(&pools[1].info))
                 .map(|a| a.amount)
                 .expect("Wrong asset info is given"),
         ];
@@ -148,21 +141,15 @@ impl AstroportPool {
         env: &Env,
         assets: AssetList,
     ) -> Result<Asset, CwDexError> {
-        let assets: AstroAssetList = assets.try_into()?;
         let config = query_pair_config(&deps.querier, self.pair_addr.clone())?;
-        let mut pools: [AstroAsset; 2] =
-            config.pair_info.query_pools(&deps.querier, self.pair_addr.to_owned())?;
+        let mut pools = config.pair_info.query_pools(&deps.querier, self.pair_addr.to_owned())?;
         let deposits: [Uint128; 2] = [
             assets
-                .0
-                .iter()
-                .find(|a| a.info.equal(&pools[0].info))
+                .find(&astro_asset_info_to_cw_asset_info(&pools[0].info))
                 .map(|a| a.amount)
                 .expect("Wrong asset info is given"),
             assets
-                .0
-                .iter()
-                .find(|a| a.info.equal(&pools[1].info))
+                .find(&astro_asset_info_to_cw_asset_info(&pools[1].info))
                 .map(|a| a.amount)
                 .expect("Wrong asset info is given"),
         ];
@@ -254,13 +241,8 @@ impl Pool for AstroportPool {
         assets: AssetList,
         slippage_tolerance: Option<Decimal>,
     ) -> Result<Response, CwDexError> {
-        let astro_assets: AstroAssetList = assets.clone().try_into()?;
-
         let msg = PairExecMsg::ProvideLiquidity {
-            assets: astro_assets
-                .0
-                .try_into()
-                .map_err(|_| CwDexError::Std(StdError::generic_err("invalid assets for pair")))?,
+            assets: assets.to_owned().try_into()?,
             slippage_tolerance,
             auto_stake: Some(false),
             receiver: None,
@@ -322,20 +304,20 @@ impl Pool for AstroportPool {
         let swap_msg = match &offer_asset.info {
             AssetInfo::Native(_) => {
                 let asset = cw_asset_to_astro_asset(&offer_asset)?;
-                Ok(CosmosMsg::Wasm(WasmMsg::Execute {
-                    contract_addr: self.pair_addr.to_string(),
-                    msg: to_binary(&PairExecMsg::Swap {
+                wasm_execute(
+                    self.pair_addr.to_string(),
+                    &PairExecMsg::Swap {
                         offer_asset: asset,
                         belief_price,
                         max_spread: Some(Decimal::zero()),
                         to: Some(env.contract.address.to_string()),
-                    })?,
-                    funds: vec![offer_asset.clone().try_into()?],
-                }))
+                    },
+                    vec![offer_asset.clone().try_into()?],
+                )
             }
-            AssetInfo::Cw20(addr) => Ok(CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: addr.to_string(),
-                msg: to_binary(&Cw20ExecuteMsg::Send {
+            AssetInfo::Cw20(addr) => wasm_execute(
+                addr.to_string(),
+                &Cw20ExecuteMsg::Send {
                     contract: self.pair_addr.to_string(),
                     amount: offer_asset.amount,
                     msg: to_binary(&Cw20HookMsg::Swap {
@@ -343,12 +325,9 @@ impl Pool for AstroportPool {
                         max_spread: Some(Decimal::zero()),
                         to: Some(env.contract.address.to_string()),
                     })?,
-                })?,
-                funds: vec![],
-            })),
-            _ => Err(CwDexError::InvalidInAsset {
-                a: offer_asset.clone(),
-            }),
+                },
+                vec![],
+            ),
         }?;
         let event = Event::new("apollo/cw-dex/swap")
             .add_attribute("pair_addr", &self.pair_addr)
@@ -360,7 +339,7 @@ impl Pool for AstroportPool {
 
     fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {
         let resp = self.get_pool_liquidity_impl(&deps.querier)?;
-        Ok(AssetList::from(AstroAssetList(resp.assets.to_vec())))
+        Ok(resp.assets.to_vec().into())
     }
 
     fn simulate_provide_liquidity(
