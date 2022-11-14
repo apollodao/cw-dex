@@ -19,7 +19,7 @@ use osmo_bindings::OsmosisQuery;
 use crate::osmosis::osmosis_math::{
     osmosis_calculate_exit_pool_amounts, osmosis_calculate_join_pool_shares,
 };
-use crate::traits::Pool;
+use crate::traits::{Pool, SlippageControl};
 use crate::utils::vec_into;
 use crate::CwDexError;
 
@@ -37,6 +37,11 @@ impl OsmosisPool {
             pool_id,
         }
     }
+
+    // TODO: Implement this. How to define price in pool with more than two assets?
+    fn get_price_with_reserves(&self, _deps: Deps, _reserves: Vec<Coin>) -> StdResult<Decimal> {
+        todo!()
+    }
 }
 
 impl Pool for OsmosisPool {
@@ -45,7 +50,7 @@ impl Pool for OsmosisPool {
         deps: Deps,
         env: &Env,
         assets: AssetList,
-        slippage_tolerance: Option<Decimal>,
+        slippage_control: SlippageControl,
     ) -> Result<Response, CwDexError> {
         let mut assets = assets;
 
@@ -55,9 +60,6 @@ impl Pool for OsmosisPool {
         // Construct osmosis querier
         let querier = QuerierWrapper::<OsmosisQuery>::new(deps.querier.deref());
 
-        let slippage_tolerance =
-            Decimal::one() - slippage_tolerance.unwrap_or_else(|| Decimal::one());
-
         // TODO: Provide liquidity double sided.
         // For now we only provide liquidity single sided since the ratio of the underlying tokens
         // needs to be exactly the same as the the pool ratio otherwise the remainder is returned
@@ -66,27 +68,30 @@ impl Pool for OsmosisPool {
             .into_iter()
             .map(|coin| {
                 // TODO: Turn into stargate query
-                let shares_out_min = slippage_tolerance
-                    * osmosis_calculate_join_pool_shares(
-                        querier,
-                        self.pool_id,
-                        vec![coin.clone()],
-                    )?
-                    .amount;
+                let shares_out =
+                    osmosis_calculate_join_pool_shares(querier, self.pool_id, vec![coin.clone()])?
+                        .amount;
                 Ok((
                     MsgJoinSwapExternAmountIn {
                         sender: env.contract.address.to_string(),
                         pool_id: self.pool_id,
                         token_in: Some(coin.into()),
-                        share_out_min_amount: shares_out_min.to_string(),
+                        share_out_min_amount: shares_out.to_string(),
                     }
                     .into(),
-                    shares_out_min,
+                    shares_out,
                 ))
             })
             .collect::<StdResult<Vec<_>>>()?
             .into_iter()
             .unzip();
+
+        // TODO: Get price before and after providing liquidity
+        let old_price = self.get_price_with_reserves(deps, vec![])?;
+        let new_price = self.get_price_with_reserves(deps, vec![])?;
+
+        // Assert slippage control
+        slippage_control.assert(old_price, new_price, shares_out.iter().sum())?;
 
         let event = Event::new("apollo/cw-dex/provide_liquidity")
             .add_attribute("pool_id", self.pool_id.to_string())

@@ -1,6 +1,6 @@
 use std::num::TryFromIntError;
 
-use cosmwasm_std::{DivideByZeroError, OverflowError, StdError};
+use cosmwasm_std::{Decimal, DivideByZeroError, OverflowError, StdError, Uint128};
 use cw_asset::Asset;
 use thiserror::Error;
 
@@ -43,6 +43,17 @@ pub enum CwDexError {
     #[error("It is not possible to provide liquidity with one token for an empty pool")]
     InvalidProvideLPsWithSingleToken {},
 
+    #[error("Slippage control failed. Wanted minimum {wanted} but got {got}")]
+    SlippageControlMinOutFailed {
+        wanted: Uint128,
+        got: Uint128,
+    },
+
+    #[error("Slippage control failed because price moved too much.")]
+    SlippageControlPriceFailed {
+        old_price: Decimal,
+        new_price: Decimal,
+    },
 
     #[error("Asset is not an LP token")]
     NotLpToken {},

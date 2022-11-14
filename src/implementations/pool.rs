@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Decimal, Deps, Env, Response, StdResult, Uint128};
+use cosmwasm_std::{Deps, Env, Response, StdResult, Uint128};
 use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use std::str::FromStr;
 
@@ -7,6 +7,7 @@ use crate::error::CwDexError;
 use crate::implementations::osmosis::OsmosisPool;
 use crate::junoswap::JunoswapPool;
 use crate::traits::pool::Pool as PoolTrait;
+use crate::traits::SlippageControl;
 
 /// An enum with all known variants that implement the Pool trait.
 /// The ideal solution would of course instead be to use a trait object so that
@@ -57,9 +58,9 @@ impl PoolTrait for Pool {
         deps: Deps,
         env: &Env,
         assets: AssetList,
-        slippage_tolerance: Option<Decimal>,
+        slippage_control: SlippageControl,
     ) -> Result<Response, CwDexError> {
-        self.as_trait().provide_liquidity(deps, env, assets, slippage_tolerance)
+        self.as_trait().provide_liquidity(deps, env, assets, slippage_control)
     }
 
     fn withdraw_liquidity(

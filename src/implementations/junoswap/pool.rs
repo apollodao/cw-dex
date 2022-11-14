@@ -10,7 +10,10 @@ use wasmswap::msg::{
     ExecuteMsg, InfoResponse, QueryMsg, Token1ForToken2PriceResponse, TokenSelect,
 };
 
-use crate::{traits::Pool, CwDexError};
+use crate::{
+    traits::{Pool, SlippageControl},
+    CwDexError,
+};
 
 use super::helpers::{
     juno_simulate_provide_liquidity, prepare_funds_and_increase_allowances, JunoAsset,
@@ -29,6 +32,10 @@ impl JunoswapPool {
             msg: to_binary(&QueryMsg::Info {})?,
         }))
     }
+
+    fn price_for_reserves(&self, token_1_reserve: Uint128, token_2_reserve: Uint128) -> Decimal {
+        Decimal::from_ratio(token_1_reserve, token_2_reserve)
+    }
 }
 
 impl Pool for JunoswapPool {
@@ -40,7 +47,7 @@ impl Pool for JunoswapPool {
         deps: Deps,
         env: &Env,
         assets: AssetList,
-        slippage_tolerance: Option<Decimal>,
+        slippage_control: SlippageControl,
     ) -> Result<Response, CwDexError> {
         let pool_info = self.query_info(&deps.querier)?;
 
@@ -48,11 +55,17 @@ impl Pool for JunoswapPool {
         let provide_liquidity_info =
             juno_simulate_provide_liquidity(&assets.clone().try_into()?, pool_info.clone())?;
 
-        // TODO: Is this the behavior of slippage_tolerance that we want? Right now
-        // It's a bit unclear what slippage_tolerance is supposed to do. We must
-        // define it more clearly in the trait doc comments.
-        let min_liquidity = provide_liquidity_info.lp_token_expected_amount
-            * Decimal::one().checked_sub(slippage_tolerance.unwrap_or_else(|| Decimal::one()))?;
+        // Assert slippage control
+        let old_price = self.price_for_reserves(pool_info.token1_reserve, pool_info.token2_reserve);
+        let new_price = self.price_for_reserves(
+            pool_info.token1_reserve + provide_liquidity_info.token1_to_use.amount,
+            pool_info.token2_reserve + provide_liquidity_info.token2_to_use.amount,
+        );
+        slippage_control.assert(
+            old_price,
+            new_price,
+            provide_liquidity_info.lp_token_expected_amount,
+        )?;
 
         // Increase allowance for cw20 tokens and add native tokens to the funds vec.
         let assets_to_use = vec![
@@ -71,7 +84,9 @@ impl Pool for JunoswapPool {
             funds,
             msg: to_binary(&ExecuteMsg::AddLiquidity {
                 token1_amount: provide_liquidity_info.token1_to_use.amount,
-                min_liquidity,
+                min_liquidity: slippage_control
+                    .get_min_out()
+                    .unwrap_or(provide_liquidity_info.lp_token_expected_amount),
                 max_token2: provide_liquidity_info.token2_to_use.amount,
                 expiration: None,
             })?,

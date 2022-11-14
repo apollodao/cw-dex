@@ -18,7 +18,7 @@ use astroport_core::pair::{
     SimulationResponse,
 };
 
-use crate::traits::Pool;
+use crate::traits::{Pool, SlippageControl};
 use crate::CwDexError;
 
 use super::helpers::{
@@ -60,6 +60,10 @@ impl AstroportPool {
             contract_addr: self.pair_addr.to_string(),
             msg: to_binary(&QueryMsg::Pool {})?,
         }))
+    }
+
+    fn price_for_reserves(&self, token_1_reserve: Uint128, token_2_reserve: Uint128) -> Decimal {
+        Decimal::from_ratio(token_1_reserve, token_2_reserve)
     }
 
     /// Math for LP shares calculation when providing liquidity to an Astroport constant product pool.
@@ -249,19 +253,40 @@ impl AstroportPool {
 impl Pool for AstroportPool {
     fn provide_liquidity(
         &self,
-        _deps: Deps,
-        _env: &Env,
+        deps: Deps,
+        env: &Env,
         assets: AssetList,
-        slippage_tolerance: Option<Decimal>,
+        slippage_control: SlippageControl,
     ) -> Result<Response, CwDexError> {
         let astro_assets: AstroAssetList = assets.clone().try_into()?;
+        let pool = self.get_pool_liquidity_impl(&deps.querier)?;
+        let deposits: [AstroAsset; 2] = [
+            astro_assets
+                .0
+                .iter()
+                .find(|a| a.info.equal(&pool.assets[0].info))
+                .expect("Wrong asset info is given")
+                .clone(),
+            astro_assets
+                .0
+                .iter()
+                .find(|a| a.info.equal(&pool.assets[0].info))
+                .expect("Wrong asset info is given")
+                .clone(),
+        ];
+
+        // Assert slippage control
+        let shares_returned = self.simulate_provide_liquidity(deps, env, assets.clone())?.amount;
+        let old_price = self.price_for_reserves(pool.assets[0].amount, pool.assets[1].amount);
+        let new_price = self.price_for_reserves(
+            pool.assets[0].amount + deposits[0].amount,
+            pool.assets[1].amount + deposits[1].amount,
+        );
+        slippage_control.assert(old_price, new_price, shares_returned)?;
 
         let msg = PairExecMsg::ProvideLiquidity {
-            assets: astro_assets
-                .0
-                .try_into()
-                .map_err(|_| CwDexError::Std(StdError::generic_err("invalid assets for pair")))?,
-            slippage_tolerance,
+            assets: deposits,
+            slippage_tolerance: slippage_control.get_max_price_impact(),
             auto_stake: Some(false),
             receiver: None,
         };
