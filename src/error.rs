@@ -1,4 +1,3 @@
-use std::convert::Infallible;
 use std::num::TryFromIntError;
 
 use cosmwasm_std::{DivideByZeroError, OverflowError, StdError};
@@ -21,9 +20,6 @@ pub enum CwDexError {
 
     #[error("{0}")]
     DivideByZero(#[from] DivideByZeroError),
-
-    #[error("{0}")]
-    Infallible(#[from] Infallible),
 
     /// Invalid Reply ID Error
     #[error("invalid output asset")]
