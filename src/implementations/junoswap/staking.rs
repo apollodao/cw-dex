@@ -9,8 +9,6 @@ use crate::junoswap::cw20_stake_msgs::{
     Config, ExecuteMsg as Cw20StakeExecuteMsg, GetHooksResponse, QueryMsg as Cw20StakeQueryMsg,
     ReceiveMsg as Cw20StakeReceiveMsg,
 };
-use cw_asset::{Asset, AssetInfo, AssetList};
-use cw_utils::Duration;
 
 use crate::junoswap::cw20_stake_external_rewards_msgs::{
     ExecuteMsg as StakeCw20ExternalRewardsExecuteMsg, PendingRewardsResponse,
@@ -72,34 +70,35 @@ impl Unstake for JunoswapStaking {
 
 impl Rewards for JunoswapStaking {
     fn claim_rewards(&self, deps: Deps, _env: &Env) -> Result<Response, CwDexError> {
-        let claim_messages = deps
-            .querier
-            .query::<GetHooksResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
-                contract_addr: self.addr.to_string(),
-                msg: to_binary(&Cw20StakeQueryMsg::GetHooks {})?,
-            }))?
-            .hooks
-            .iter()
-            .map(|addr| {
-                // Call as SubMsg since we don't know if the contracts in the hooks are
-                // always going to be reward contracts. If not the messages for that
-                // contract should fail without failing the transaction.
-                Ok(SubMsg {
-                    id: 0,
-                    msg: CosmosMsg::Wasm(WasmMsg::Execute {
-                        contract_addr: addr.to_string(),
-                        funds: vec![],
-                        msg: to_binary(&StakeCw20ExternalRewardsExecuteMsg::Claim {})?,
-                    }),
-                    gas_limit: None,
-                    reply_on: ReplyOn::Error,
-                })
-            })
-            .collect::<StdResult<Vec<SubMsg>>>()?;
-
-        let event = Event::new("apollo/cw-dex/claim_rewards").add_attribute("type", "junoswap");
-
-        Ok(Response::new().add_submessages(claim_messages).add_event(event))
+        todo!("Implement JunoswapStaking::claim_rewards")
+        // let claim_messages = deps
+        //     .querier
+        //     .query::<GetHooksResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
+        //         contract_addr: self.addr.to_string(),
+        //         msg: to_binary(&Cw20StakeQueryMsg::GetHooks {})?,
+        //     }))?
+        //     .hooks
+        //     .iter()
+        //     .map(|addr| {
+        //         // Call as SubMsg since we don't know if the contracts in the hooks are
+        //         // always going to be reward contracts. If not the messages for that
+        //         // contract should fail without failing the transaction.
+        //         Ok(SubMsg {
+        //             id: 0,
+        //             msg: CosmosMsg::Wasm(WasmMsg::Execute {
+        //                 contract_addr: addr.to_string(),
+        //                 funds: vec![],
+        //                 msg: to_binary(&StakeCw20ExternalRewardsExecuteMsg::Claim {})?,
+        //             }),
+        //             gas_limit: None,
+        //             reply_on: ReplyOn::Error,
+        //         })
+        //     })
+        //     .collect::<StdResult<Vec<SubMsg>>>()?;
+        //
+        // let event = Event::new("apollo/cw-dex/claim_rewards").add_attribute("type", "junoswap");
+        //
+        // Ok(Response::new().add_submessages(claim_messages).add_event(event))
     }
 
     fn query_pending_rewards(
@@ -107,37 +106,38 @@ impl Rewards for JunoswapStaking {
         querier: &QuerierWrapper,
         user: &Addr,
     ) -> Result<AssetList, CwDexError> {
-        let hooks = querier
-            .query::<GetHooksResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
-                contract_addr: self.addr.to_string(),
-                msg: to_binary(&Cw20StakeQueryMsg::GetHooks {})?,
-            }))?
-            .hooks;
-
-        let mut assets = AssetList::new();
-        for hook in hooks {
-            // Since we can't be sure that the hook is actually a reward contract we must
-            // do .ok() and match only on `Some` values to avoid failing the entire query.
-            let pending_rewards = querier
-                .query::<PendingRewardsResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
-                    contract_addr: hook.to_string(),
-                    msg: to_binary(&StakeCw20ExternalRewardsQueryMsg::GetPendingRewards {
-                        address: user.to_string(),
-                    })?,
-                }))
-                .ok();
-
-            if let Some(pending_rewards) = pending_rewards {
-                let asset_info = match pending_rewards.denom {
-                    Denom::Native(x) => AssetInfo::Native(x),
-                    Denom::Cw20(x) => AssetInfo::Cw20(x),
-                };
-
-                assets.add(&Asset::new(asset_info, pending_rewards.pending_rewards))?;
-            }
-        }
-
-        Ok(assets)
+        todo!("Implement JunoswapStaking::query_pending_rewards")
+        // let hooks = querier
+        //     .query::<GetHooksResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
+        //         contract_addr: self.addr.to_string(),
+        //         msg: to_binary(&Cw20StakeQueryMsg::GetHooks {})?,
+        //     }))?
+        //     .hooks;
+        //
+        // let mut assets = AssetList::new();
+        // for hook in hooks {
+        //     // Since we can't be sure that the hook is actually a reward contract we must
+        //     // do .ok() and match only on `Some` values to avoid failing the entire query.
+        //     let pending_rewards = querier
+        //         .query::<PendingRewardsResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
+        //             contract_addr: hook.to_string(),
+        //             msg: to_binary(&StakeCw20ExternalRewardsQueryMsg::GetPendingRewards {
+        //                 address: user.to_string(),
+        //             })?,
+        //         }))
+        //         .ok();
+        //
+        //     if let Some(pending_rewards) = pending_rewards {
+        //         let asset_info = match pending_rewards.denom {
+        //             Denom::Native(x) => AssetInfo::Native(x),
+        //             Denom::Cw20(x) => AssetInfo::Cw20(x),
+        //         };
+        //
+        //         assets.add(&Asset::new(asset_info, pending_rewards.pending_rewards))?;
+        //     }
+        // }
+        //
+        // Ok(assets)
     }
 }
 

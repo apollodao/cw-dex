@@ -22,10 +22,10 @@ checksum = "216261ddc8289130e551ddcd5ce8a064710c0d064a4d2895c67151c92b5443f6"
 [[package]]
 name = "apollo-utils"
 version = "0.1.0"
-source = "git+https://github.com/apollodao/apollo-utils.git#b9caacbb112f92eaf486694759d5cf7de8af172d"
+source = "git+https://github.com/apollodao/apollo-utils.git#f042bb9b9bce31dc365e80db82d2ab6ad4356ff7"
 dependencies = [
  "cosmwasm-std",
- "cw-asset",
+ "cw-asset 0.3.0",
  "cw20 0.16.0",
 ]
 
@@ -104,9 +104,9 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "chrono"
-version = "0.4.22"
+version = "0.4.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfd4d1b31faaa3a89d7934dbded3111da0d2ef28e3ebccdb4f0179f5929d1ef1"
+checksum = "16b0a3d9ed01224b22057780a37bb8c5dbfe1be8ba48678e7bf57ec4b385411f"
 dependencies = [
  "num-integer",
  "num-traits",
@@ -114,9 +114,9 @@ dependencies = [
 
 [[package]]
 name = "const-oid"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "722e23542a15cea1f65d4a1419c4cfd7a26706c70871a13a04238ca3f40f1661"
+checksum = "cec318a675afcb6a1ea1d4340e2d377e56e47c266f28043ceccbf4412ddfdd3b"
 
 [[package]]
 name = "cosmwasm-crypto"
@@ -245,6 +245,19 @@ dependencies = [
 
 [[package]]
 name = "cw-asset"
+version = "0.3.0"
+source = "git+https://github.com/apollodao/cw-asset.git#0f4eebc2f10688958c82dc219859dc204cf4076b"
+dependencies = [
+ "astroport",
+ "cosmwasm-std",
+ "cw-storage-plus 0.16.0",
+ "cw20 0.16.0",
+ "schemars",
+ "serde",
+]
+
+[[package]]
+name = "cw-asset"
 version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "28e955303c96778b58ad52bbbabbe10b170ae1c8df2fec08ce7d7eedf2c22701"
@@ -280,10 +293,10 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
- "cw-asset",
+ "cw-asset 2.4.0",
  "cw-controllers",
  "cw-storage-plus 0.16.0",
- "cw-utils 0.16.0",
+ "cw-utils 0.11.1",
  "cw20 0.10.3",
  "cw20 0.16.0",
  "cw20-base 0.16.0",
@@ -342,6 +355,18 @@ dependencies = [
  "cosmwasm-std",
  "schemars",
  "serde",
+]
+
+[[package]]
+name = "cw-utils"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef842a1792e4285beff7b3b518705f760fa4111dc1e296e53f3e92d1ef7f6220"
+dependencies = [
+ "cosmwasm-std",
+ "schemars",
+ "serde",
+ "thiserror",
 ]
 
 [[package]]
