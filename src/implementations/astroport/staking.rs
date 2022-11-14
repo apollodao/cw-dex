@@ -5,6 +5,7 @@ use cosmwasm_std::{
 };
 use cw20::Cw20ExecuteMsg;
 
+use astroport_core::asset::Asset as AstroAsset;
 use astroport_core::generator::{
     Cw20HookMsg as GeneratorCw20HookMsg, ExecuteMsg as GeneratorExecuteMsg, PendingTokenResponse,
     QueryMsg as GeneratorQueryMsg,
@@ -16,7 +17,7 @@ use crate::{
     CwDexError,
 };
 
-use super::helpers::{cw_asset_to_astro_asset, AstroAssetList};
+use super::helpers::cw_asset_to_astro_asset;
 
 #[cw_serde]
 pub struct AstroportStaking {
@@ -79,7 +80,7 @@ impl Rewards for AstroportStaking {
             })?,
         }))?;
 
-        let pending_rewards: AstroAssetList = pending_on_proxy
+        let pending_rewards: Vec<AstroAsset> = pending_on_proxy
             .unwrap_or_default()
             .into_iter()
             .chain(vec![cw_asset_to_astro_asset(&Asset::cw20(
