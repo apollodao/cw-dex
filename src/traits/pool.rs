@@ -1,96 +1,9 @@
-use cosmwasm_std::{Decimal, Env, Response, StdResult};
 use cosmwasm_std::{Deps, Uint128};
+use cosmwasm_std::{Env, Response, StdResult};
 use cw_asset::{Asset, AssetInfo, AssetList};
 
 use crate::error::CwDexError;
-
-/// Options for slippage control when providing liquidity (TODO: and swapping?)
-pub enum SlippageControl {
-    /// Require a minimum amount of LP tokens to be returned
-    MinOut(Uint128),
-    /// The user supplies a belief about the current price and the transaction
-    /// reverts if the resulting price is more than `slippage_tolerance` percent
-    /// different from `belief_price`.
-    BeliefPrice {
-        belief_price: Decimal,
-        slippage_tolerance: Decimal,
-    },
-    /// Require that the price in the pool does not move more than
-    /// `max_price_impact` from the current price before this transaction.
-    MaxPriceImpact {
-        max_price_impact: Decimal,
-    },
-}
-
-impl SlippageControl {
-    pub fn assert(
-        &self,
-        old_price: Decimal,
-        new_price: Decimal,
-        shares_returned: Uint128,
-    ) -> Result<(), CwDexError> {
-        match self {
-            SlippageControl::MinOut(min_out) => {
-                if &shares_returned < min_out {
-                    return Err(CwDexError::SlippageControlMinOutFailed {
-                        wanted: *min_out,
-                        got: shares_returned,
-                    });
-                }
-            }
-            SlippageControl::BeliefPrice {
-                belief_price,
-                slippage_tolerance,
-            } => {
-                let max_price = belief_price * (Decimal::one() + *slippage_tolerance);
-                let min_price = belief_price * (Decimal::one() - *slippage_tolerance);
-                if new_price > max_price || new_price < min_price {
-                    return Err(CwDexError::SlippageControlPriceFailed {
-                        old_price,
-                        new_price,
-                    });
-                }
-            }
-            SlippageControl::MaxPriceImpact {
-                max_price_impact,
-            } => {
-                let max_price = old_price * (Decimal::one() + *max_price_impact);
-                let min_price = old_price * (Decimal::one() - *max_price_impact);
-                if new_price > max_price || new_price < min_price {
-                    return Err(CwDexError::SlippageControlPriceFailed {
-                        old_price,
-                        new_price,
-                    });
-                }
-            }
-        }
-        Ok(())
-    }
-
-    pub fn get_min_out(&self) -> Option<Uint128> {
-        match self {
-            SlippageControl::MinOut(min_out) => Some(*min_out),
-            _ => None,
-        }
-    }
-
-    pub fn get_max_price_impact(&self) -> Option<Decimal> {
-        match self {
-            SlippageControl::MaxPriceImpact {
-                max_price_impact,
-            } => Some(*max_price_impact),
-            _ => None,
-        }
-    }
-}
-
-impl Default for SlippageControl {
-    fn default() -> Self {
-        SlippageControl::MaxPriceImpact {
-            max_price_impact: Decimal::percent(3),
-        }
-    }
-}
+use crate::slippage_control::SlippageControl;
 
 /// Trait to represent an AMM pool.
 pub trait Pool {

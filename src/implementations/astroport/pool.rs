@@ -18,7 +18,8 @@ use astroport_core::pair::{
     SimulationResponse,
 };
 
-use crate::traits::{Pool, SlippageControl};
+use crate::slippage_control::{Price, SlippageControl};
+use crate::traits::Pool;
 use crate::CwDexError;
 
 use super::helpers::{
@@ -62,8 +63,16 @@ impl AstroportPool {
         }))
     }
 
-    fn price_for_reserves(&self, token_1_reserve: Uint128, token_2_reserve: Uint128) -> Decimal {
-        Decimal::from_ratio(token_1_reserve, token_2_reserve)
+    fn price_for_reserves(
+        &self,
+        token_1_reserve: AstroAsset,
+        token_2_reserve: AstroAsset,
+    ) -> Price {
+        Price {
+            quote_asset: astro_asset_info_to_cw_asset_info(&token_1_reserve.info),
+            base_asset: astro_asset_info_to_cw_asset_info(&token_2_reserve.info),
+            price: Decimal::from_ratio(token_1_reserve.amount, token_2_reserve.amount),
+        }
     }
 
     /// Math for LP shares calculation when providing liquidity to an Astroport constant product pool.
@@ -277,10 +286,16 @@ impl Pool for AstroportPool {
 
         // Assert slippage control
         let shares_returned = self.simulate_provide_liquidity(deps, env, assets.clone())?.amount;
-        let old_price = self.price_for_reserves(pool.assets[0].amount, pool.assets[1].amount);
+        let old_price = self.price_for_reserves(pool.assets[0].clone(), pool.assets[1].clone());
         let new_price = self.price_for_reserves(
-            pool.assets[0].amount + deposits[0].amount,
-            pool.assets[1].amount + deposits[1].amount,
+            AstroAsset {
+                info: pool.assets[0].info.clone(),
+                amount: pool.assets[0].amount + deposits[0].amount,
+            },
+            AstroAsset {
+                info: pool.assets[1].info.clone(),
+                amount: pool.assets[1].amount + deposits[1].amount,
+            },
         );
         slippage_control.assert(old_price, new_price, shares_returned)?;
 

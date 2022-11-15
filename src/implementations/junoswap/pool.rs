@@ -11,7 +11,8 @@ use wasmswap::msg::{
 };
 
 use crate::{
-    traits::{Pool, SlippageControl},
+    slippage_control::{Price, SlippageControl},
+    traits::Pool,
     CwDexError,
 };
 
@@ -33,8 +34,12 @@ impl JunoswapPool {
         }))
     }
 
-    fn price_for_reserves(&self, token_1_reserve: Uint128, token_2_reserve: Uint128) -> Decimal {
-        Decimal::from_ratio(token_1_reserve, token_2_reserve)
+    fn price_for_reserves(&self, token_1_reserve: Asset, token_2_reserve: Asset) -> Price {
+        Price {
+            quote_asset: token_1_reserve.info,
+            base_asset: token_2_reserve.info,
+            price: Decimal::from_ratio(token_1_reserve.amount, token_2_reserve.amount),
+        }
     }
 }
 
@@ -55,11 +60,23 @@ impl Pool for JunoswapPool {
         let provide_liquidity_info =
             juno_simulate_provide_liquidity(&assets.clone().try_into()?, pool_info.clone())?;
 
+        let quote_asset_info = AssetInfo::from(JunoAssetInfo(pool_info.token1_denom));
+        let base_asset_info = AssetInfo::from(JunoAssetInfo(pool_info.token2_denom));
+
         // Assert slippage control
-        let old_price = self.price_for_reserves(pool_info.token1_reserve, pool_info.token2_reserve);
+        let old_price = self.price_for_reserves(
+            Asset::new(quote_asset_info.clone(), pool_info.token1_reserve),
+            Asset::new(base_asset_info.clone(), pool_info.token2_reserve),
+        );
         let new_price = self.price_for_reserves(
-            pool_info.token1_reserve + provide_liquidity_info.token1_to_use.amount,
-            pool_info.token2_reserve + provide_liquidity_info.token2_to_use.amount,
+            Asset::new(
+                quote_asset_info,
+                pool_info.token1_reserve + provide_liquidity_info.token1_to_use.amount,
+            ),
+            Asset::new(
+                base_asset_info,
+                pool_info.token2_reserve + provide_liquidity_info.token2_to_use.amount,
+            ),
         );
         slippage_control.assert(
             old_price,

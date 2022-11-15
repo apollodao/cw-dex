@@ -19,9 +19,12 @@ use osmo_bindings::OsmosisQuery;
 use crate::osmosis::osmosis_math::{
     osmosis_calculate_exit_pool_amounts, osmosis_calculate_join_pool_shares,
 };
-use crate::traits::{Pool, SlippageControl};
+use crate::slippage_control::{Price, SlippageControl};
+use crate::traits::Pool;
 use crate::utils::vec_into;
 use crate::CwDexError;
+
+use super::helpers::{BalancerPoolAssets, SupportedPoolType};
 
 /// Struct for interacting with Osmosis v1beta1 balancer pools. If `pool_id` maps to another type of pool this will fail.
 #[cw_serde]
@@ -38,9 +41,63 @@ impl OsmosisPool {
         }
     }
 
-    // TODO: Implement this. How to define price in pool with more than two assets?
-    fn get_price_with_reserves(&self, _deps: Deps, _reserves: Vec<Coin>) -> StdResult<Decimal> {
-        todo!()
+    fn pool_asset_count(&self, deps: Deps) -> Result<usize, CwDexError> {
+        self.get_pool_liquidity(deps).map(|pool| pool.len())
+    }
+
+    fn query_pool(&self, deps: &Deps) -> StdResult<SupportedPoolType> {
+        let res = GammQuerier::new(&deps.querier).pool(self.pool_id)?;
+        res.pool
+            .ok_or_else(|| StdError::NotFound {
+                kind: "pool".to_string(),
+            })?
+            .try_into() // convert `Any` to `Pool`
+    }
+
+    /// Get the price of `quote_asset` in `base_asset` at the given pool reserves.
+    fn price_for_reserves(
+        &self,
+        deps: Deps,
+        reserves: &AssetList,
+        base_asset: &str,
+        quote_asset: &str,
+    ) -> Result<Price, CwDexError> {
+        let pool = self.query_pool(&deps)?;
+        match pool {
+            SupportedPoolType::Balancer(pool) => {
+                let pool_assets: BalancerPoolAssets = pool.pool_assets.try_into()?;
+                let base_asset_weight = pool_assets.get_pool_weight(base_asset)?;
+                let quote_asset_weight = pool_assets.get_pool_weight(&quote_asset)?;
+
+                if base_asset_weight.is_zero() || quote_asset_weight.is_zero() {
+                    return Err("pool is misconfigured, got 0 weight".into());
+                }
+
+                let base_asset_reserve = reserves
+                    .find(&AssetInfo::native(base_asset))
+                    .ok_or_else(|| CwDexError::from("Base asset reserve not found in reserves"))?
+                    .amount;
+                let quote_asset_reserve = reserves
+                    .find(&AssetInfo::native(quote_asset))
+                    .ok_or_else(|| CwDexError::from("Quote asset reserve not found in reserves"))?
+                    .amount;
+
+                if base_asset_reserve.is_zero() || quote_asset_reserve.is_zero() {
+                    return Err("Can't get price for empty pool".into());
+                }
+
+                let inv_weight_ratio = Decimal::from_ratio(quote_asset_weight, base_asset_weight);
+                let supply_ratio = Decimal::from_ratio(base_asset_reserve, quote_asset_reserve);
+                let spot_price = supply_ratio.checked_mul(inv_weight_ratio)?;
+
+                Ok(Price {
+                    base_asset: AssetInfo::native(base_asset),
+                    quote_asset: AssetInfo::native(quote_asset),
+                    price: spot_price,
+                })
+            }
+            _ => Err("Price query only implented for Balancer pools".into()),
+        }
     }
 }
 
@@ -52,19 +109,25 @@ impl Pool for OsmosisPool {
         assets: AssetList,
         slippage_control: SlippageControl,
     ) -> Result<Response, CwDexError> {
-        let mut assets = assets;
-
-        // Remove all zero amount Coins, merge duplicates and assert that all assets are native.
-        let assets = assert_only_native_coins(merge_assets(assets.purge().deref())?)?;
-
         // Construct osmosis querier
         let querier = QuerierWrapper::<OsmosisQuery>::new(deps.querier.deref());
+
+        // Remove all zero amount Coins, merge duplicates and assert that all assets are native.
+        let mut assets = assets;
+        let assets = assert_only_native_coins(merge_assets(assets.purge().deref())?)?;
+
+        // Validate that we can provide liquidity with the given assets
+        let pool_asset_count = self.pool_asset_count(deps)?;
+        if assets.len() != pool_asset_count {
+            return Err("Must provide liquidity for all assets in the pool".into());
+        }
 
         // TODO: Provide liquidity double sided.
         // For now we only provide liquidity single sided since the ratio of the underlying tokens
         // needs to be exactly the same as the the pool ratio otherwise the remainder is returned
         // and there are no queries yet
         let (join_msgs, shares_out): (Vec<CosmosMsg>, Vec<Uint128>) = assets
+            .clone()
             .into_iter()
             .map(|coin| {
                 // TODO: Turn into stargate query
@@ -86,12 +149,59 @@ impl Pool for OsmosisPool {
             .into_iter()
             .unzip();
 
-        // TODO: Get price before and after providing liquidity
-        let old_price = self.get_price_with_reserves(deps, vec![])?;
-        let new_price = self.get_price_with_reserves(deps, vec![])?;
+        // Slippage control
+        let shares_returned = shares_out.iter().sum();
+        let pool_type = self.query_pool(&deps)?;
+        match slippage_control {
+            SlippageControl::MinOut(min_out) => {
+                if shares_returned < min_out {
+                    return Err(CwDexError::SlippageControlMinOutFailed {
+                        wanted: min_out,
+                        got: shares_returned,
+                    });
+                }
+            }
+            _ => match pool_type {
+                SupportedPoolType::StableSwap(_) => {
+                    // We currently have no way to get the price of a stableswap pool at
+                    // specific reserves, so for now we simply disallow other slippage controls
+                    // than MinOut for stableswap pools.
+                    // TODO: PR to Osmosis to add query for this.
+                    return Err(
+                        "Cannot use slippage control other than MinOut for stableswap pools".into(),
+                    );
+                }
+                SupportedPoolType::Balancer(_) => {
+                    // Belief price is not well defined for more than two assets since the
+                    // liquidity provision affects the price (ratio) of more than two assets.
+                    if assets.len() > 2 {
+                        return Err("Cannot use slippage control other than MinOut for pool with more than two assets".into());
+                    }
 
-        // Assert slippage control
-        slippage_control.assert(old_price, new_price, shares_out.iter().sum())?;
+                    let first_asset = &assets.to_vec()[0];
+                    let second_asset = &assets.to_vec()[1];
+
+                    // If slippage control is BeliefPrice, we use the quote and base assets
+                    // the user provided to calculate the price of the pool.
+                    // Otherwise we just use the two assets in the order they were provided.
+                    let base_asset = slippage_control
+                        .get_belief_price()
+                        .map_or(first_asset.to_string(), |p| p.base_asset.to_string());
+                    let quote_asset = slippage_control
+                        .get_belief_price()
+                        .map_or(second_asset.to_string(), |p| p.quote_asset.to_string());
+
+                    let reserves = self.get_pool_liquidity(deps)?;
+                    let old_price =
+                        self.price_for_reserves(deps, &reserves, &base_asset, &quote_asset)?;
+                    let new_price =
+                        self.price_for_reserves(deps, &reserves, &base_asset, &quote_asset)?;
+
+                    // Assert slippage control
+                    slippage_control.assert(old_price, new_price, shares_returned)?;
+                }
+            },
+        }
 
         let event = Event::new("apollo/cw-dex/provide_liquidity")
             .add_attribute("pool_id", self.pool_id.to_string())

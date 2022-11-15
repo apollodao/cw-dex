@@ -1,5 +1,6 @@
 pub mod error;
 pub mod implementations;
+pub mod slippage_control;
 pub mod traits;
 mod utils;
 

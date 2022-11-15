@@ -6,8 +6,8 @@ use std::str::FromStr;
 use crate::error::CwDexError;
 use crate::implementations::osmosis::OsmosisPool;
 use crate::junoswap::JunoswapPool;
+use crate::slippage_control::SlippageControl;
 use crate::traits::pool::Pool as PoolTrait;
-use crate::traits::SlippageControl;
 
 /// An enum with all known variants that implement the Pool trait.
 /// The ideal solution would of course instead be to use a trait object so that

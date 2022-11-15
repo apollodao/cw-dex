@@ -1,8 +1,10 @@
 use std::num::TryFromIntError;
 
-use cosmwasm_std::{Decimal, DivideByZeroError, OverflowError, StdError, Uint128};
+use cosmwasm_std::{DivideByZeroError, OverflowError, StdError, Uint128};
 use cw_asset::Asset;
 use thiserror::Error;
+
+use crate::slippage_control::Price;
 
 /// ## Description
 /// This enum describes router-test contract errors!
@@ -49,10 +51,10 @@ pub enum CwDexError {
         got: Uint128,
     },
 
-    #[error("Slippage control failed because price moved too much.")]
+    #[error("Slippage control failed because price moved too much. Old price: {old_price}, new price: {new_price}")]
     SlippageControlPriceFailed {
-        old_price: Decimal,
-        new_price: Decimal,
+        old_price: Price,
+        new_price: Price,
     },
 
     #[error("Asset is not an LP token")]
@@ -60,6 +62,18 @@ pub enum CwDexError {
 
     #[error("Expected no unbonding period")]
     UnstakingDurationNotSupported {},
+}
+
+impl From<&str> for CwDexError {
+    fn from(s: &str) -> Self {
+        CwDexError::Std(StdError::generic_err(s))
+    }
+}
+
+impl From<String> for CwDexError {
+    fn from(s: String) -> Self {
+        CwDexError::Std(StdError::generic_err(s))
+    }
 }
 
 impl From<CwDexError> for StdError {
