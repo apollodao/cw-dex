@@ -23,7 +23,8 @@ use crate::traits::Pool;
 use crate::utils::vec_into;
 use crate::CwDexError;
 
-/// Struct for interacting with Osmosis v1beta1 balancer pools. If `pool_id` maps to another type of pool this will fail.
+/// Struct for interacting with Osmosis v1beta1 balancer pools. If `pool_id`
+/// maps to another type of pool this will fail.
 #[cw_serde]
 #[derive(Copy)]
 pub struct OsmosisPool {
@@ -33,9 +34,7 @@ pub struct OsmosisPool {
 
 impl OsmosisPool {
     pub fn new(pool_id: u64) -> Self {
-        Self {
-            pool_id,
-        }
+        Self { pool_id }
     }
 }
 
@@ -49,7 +48,8 @@ impl Pool for OsmosisPool {
     ) -> Result<Response, CwDexError> {
         let mut assets = assets;
 
-        // Remove all zero amount Coins, merge duplicates and assert that all assets are native.
+        // Remove all zero amount Coins, merge duplicates and assert that all assets are
+        // native.
         let assets = assert_only_native_coins(merge_assets(assets.purge().deref())?)?;
 
         // Construct osmosis querier
@@ -59,9 +59,9 @@ impl Pool for OsmosisPool {
             Decimal::one() - slippage_tolerance.unwrap_or_else(|| Decimal::one());
 
         // TODO: Provide liquidity double sided.
-        // For now we only provide liquidity single sided since the ratio of the underlying tokens
-        // needs to be exactly the same as the the pool ratio otherwise the remainder is returned
-        // and there are no queries yet
+        // For now we only provide liquidity single sided since the ratio of the
+        // underlying tokens needs to be exactly the same as the the pool ratio
+        // otherwise the remainder is returned and there are no queries yet
         let (join_msgs, shares_out): (Vec<CosmosMsg>, Vec<Uint128>) = assets
             .into_iter()
             .map(|coin| {
@@ -90,7 +90,10 @@ impl Pool for OsmosisPool {
 
         let event = Event::new("apollo/cw-dex/provide_liquidity")
             .add_attribute("pool_id", self.pool_id.to_string())
-            .add_attribute("minimum_shares_out", shares_out.iter().sum::<Uint128>().to_string());
+            .add_attribute(
+                "minimum_shares_out",
+                shares_out.iter().sum::<Uint128>().to_string(),
+            );
 
         Ok(Response::new().add_messages(join_msgs).add_event(event))
     }

@@ -27,9 +27,7 @@ pub enum CwDexError {
     // Add any other custom errors you like here.
     // Look at https://docs.rs/thiserror/1.0.31/thiserror/ for details.
     #[error("invalid input asset: {a}")]
-    InvalidInAsset {
-        a: Asset,
-    },
+    InvalidInAsset { a: Asset },
 
     #[error("Overflow when converting to from BigInt to Uint128")]
     BigIntOverflow {},

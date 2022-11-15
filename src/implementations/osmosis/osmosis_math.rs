@@ -1,8 +1,6 @@
 use prost::DecodeError;
-use std::{
-    ops::{Neg, Sub},
-    str::FromStr,
-};
+use std::ops::{Neg, Sub};
+use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Coin, Decimal, QuerierWrapper, QueryRequest, StdError, StdResult, Uint128};
@@ -53,7 +51,11 @@ pub fn osmosis_calculate_join_pool_shares(
             denom: denom.to_string(),
             amount: shares_out,
         })
-    } else if pool_state.assets.iter().all(|x| assets.iter().any(|y| x.denom == y.denom)) {
+    } else if pool_state
+        .assets
+        .iter()
+        .all(|x| assets.iter().any(|y| x.denom == y.denom))
+    {
         let shares_out_amount = calc_join_pool_shares_double_sided(
             assets,
             pool_state.assets,
@@ -73,19 +75,21 @@ pub fn osmosis_calculate_join_pool_shares(
 // 	normalizedTokenWeightIn,
 // ) sdk.Dec {
 // 	// deduct swapfee on the in asset.
-// 	// We don't charge swap fee on the token amount that we imagine as unswapped (the normalized weight).
-// 	// So effective_swapfee = swapfee * (1 - normalized_token_weight)
-// 	tokenAmountInAfterFee := tokenAmountIn.Mul(feeRatio(normalizedTokenWeightIn, swapFee))
-// 	// To figure out the number of shares we add, first notice that in balancer we can treat
-// 	// the number of shares as linearly related to the `k` value function. This is due to the normalization.
-// 	// e.g.
-// 	// if x^.5 y^.5 = k, then we `n` x the liquidity to `(nx)^.5 (ny)^.5 = nk = k'`
-// 	// We generalize this linear relation to do the liquidity add for the not-all-asset case.
-// 	// Suppose we increase the supply of x by x', so we want to solve for `k'/k`.
-// 	// This is `(x + x')^{weight} * old_terms / (x^{weight} * old_terms) = (x + x')^{weight} / (x^{weight})`
-// 	// The number of new shares we need to make is then `old_shares * ((k'/k) - 1)`
-// 	// Whats very cool, is that this turns out to be the exact same `solveConstantFunctionInvariant` code
-// 	// with the answer's sign reversed.
+// 	// We don't charge swap fee on the token amount that we imagine as unswapped
+// (the normalized weight). 	// So effective_swapfee = swapfee * (1 -
+// normalized_token_weight) 	tokenAmountInAfterFee :=
+// tokenAmountIn.Mul(feeRatio(normalizedTokenWeightIn, swapFee)) 	// To figure
+// out the number of shares we add, first notice that in balancer we can treat
+// // the number of shares as linearly related to the `k` value function. This
+// is due to the normalization. 	// e.g.
+// 	// if x^.5 y^.5 = k, then we `n` x the liquidity to `(nx)^.5 (ny)^.5 = nk =
+// k'` 	// We generalize this linear relation to do the liquidity add for the
+// not-all-asset case. 	// Suppose we increase the supply of x by x', so we want
+// to solve for `k'/k`. 	// This is `(x + x')^{weight} * old_terms / (x^{weight}
+// * old_terms) = (x + x')^{weight} / (x^{weight})` 	// The number of new shares
+// we need to make is then `old_shares * ((k'/k) - 1)` 	// Whats very cool, is
+// that this turns out to be the exact same `solveConstantFunctionInvariant`
+// code 	// with the answer's sign reversed.
 // 	poolAmountOut := solveConstantFunctionInvariant(
 // 		tokenBalanceIn.Add(tokenAmountInAfterFee),
 // 		tokenBalanceIn,
@@ -102,10 +106,16 @@ fn calc_join_pool_shares_double_sided(
 ) -> StdResult<Uint128> {
     let provided_asset_1 = &provided_assets[0];
     let provided_asset_2 = &provided_assets[1];
-    let provided_asset_1_pool_balance =
-        pool_assets.iter().find(|c| c.denom == provided_asset_1.denom.to_string()).unwrap().amount;
-    let provided_asset_2_pool_balance =
-        pool_assets.iter().find(|c| c.denom == provided_asset_2.denom.to_string()).unwrap().amount;
+    let provided_asset_1_pool_balance = pool_assets
+        .iter()
+        .find(|c| c.denom == provided_asset_1.denom.to_string())
+        .unwrap()
+        .amount;
+    let provided_asset_2_pool_balance = pool_assets
+        .iter()
+        .find(|c| c.denom == provided_asset_2.denom.to_string())
+        .unwrap()
+        .amount;
     let shares_out_est_1 = provided_asset_1
         .amount
         .checked_mul(total_shares)?
@@ -117,7 +127,9 @@ fn calc_join_pool_shares_double_sided(
         .checked_div(provided_asset_2_pool_balance)?;
 
     if shares_out_est_1 != shares_out_est_2 {
-        Err(StdError::generic_err("assets being added to pool must be equal in value"))
+        Err(StdError::generic_err(
+            "assets being added to pool must be equal in value",
+        ))
     } else {
         Ok(shares_out_est_1)
     }
@@ -137,19 +149,21 @@ pub fn calc_pool_shares_out_given_single_asset_in(
     swap_fee: Decimal,
 ) -> StdResult<BigRational> {
     // deduct swapfee on the in asset.
-    // We don't charge swap fee on the token amount that we imagine as unswapped (the normalized weight).
-    // So effective_swapfee = swapfee * (1 - normalized_token_weight)
-    // tokenAmountInAfterFee := tokenAmountIn.Mul(feeRatio(normalizedTokenWeightIn, swap_fee))
-    // To figure out the number of shares we add, first notice that in balancer we can treat
-    // the number of shares as linearly related to the `k` value function. This is due to the normalization.
-    // e.g.
+    // We don't charge swap fee on the token amount that we imagine as unswapped
+    // (the normalized weight). So effective_swapfee = swapfee * (1 -
+    // normalized_token_weight) tokenAmountInAfterFee :=
+    // tokenAmountIn.Mul(feeRatio(normalizedTokenWeightIn, swap_fee))
+    // To figure out the number of shares we add, first notice that in balancer we
+    // can treat the number of shares as linearly related to the `k` value
+    // function. This is due to the normalization. e.g.
     // if x^.5 y^.5 = k, then we `n` x the liquidity to `(nx)^.5 (ny)^.5 = nk = k'`
-    // We generalize this linear relation to do the liquidity add for the not-all-asset case.
-    // Suppose we increase the supply of x by x', so we want to solve for `k'/k`.
-    // This is `(x + x')^{weight} * old_terms / (x^{weight} * old_terms) = (x + x')^{weight} / (x^{weight})`
-    // The number of new shares we need to make is then `old_shares * ((k'/k) - 1)`
-    // Whats very cool, is that this turns out to be the exact same `solveConstantFunctionInvariant` code
-    // with the answer's sign reversed.
+    // We generalize this linear relation to do the liquidity add for the
+    // not-all-asset case. Suppose we increase the supply of x by x', so we want
+    // to solve for `k'/k`. This is `(x + x')^{weight} * old_terms / (x^{weight}
+    // * old_terms) = (x + x')^{weight} / (x^{weight})` The number of new shares
+    // we need to make is then `old_shares * ((k'/k) - 1)` Whats very cool, is
+    // that this turns out to be the exact same `solveConstantFunctionInvariant`
+    // code with the answer's sign reversed.
     // poolAmountOut := solveConstantFunctionInvariant(
     // 	tokenBalanceIn.Add(tokenAmountInAfterFee),
     // 	tokenBalanceIn,
@@ -171,8 +185,9 @@ pub fn calc_pool_shares_out_given_single_asset_in(
     Ok(pool_amount_out)
 }
 
-// func (p *Pool) calcSingleAssetJoin(tokenIn sdk.Coin, swapFee sdk.Dec, tokenInPoolAsset PoolAsset, totalShares sdk.Int) (numShares sdk.Int, err error) {
-// 	_, err = p.GetPoolAsset(tokenIn.Denom)
+// func (p *Pool) calcSingleAssetJoin(tokenIn sdk.Coin, swapFee sdk.Dec,
+// tokenInPoolAsset PoolAsset, totalShares sdk.Int) (numShares sdk.Int, err
+// error) { 	_, err = p.GetPoolAsset(tokenIn.Denom)
 // 	if err != nil {
 // 		return sdk.ZeroInt(), err
 // 	}
@@ -210,14 +225,15 @@ pub struct Pool {
 //             .collect::<StdResult<Vec<PoolAsset>>>()?;
 //         let total_weight = Uint128::from_str(&proto_pool.total_weight)?;
 //         let total_shares_proto =
-//             proto_pool.total_shares.ok_or(StdError::generic_err("total shares not set"))?;
-//         let total_shares = Coin {
+//             proto_pool.total_shares.ok_or(StdError::generic_err("total shares
+// not set"))?;         let total_shares = Coin {
 //             amount: Uint128::from_str(total_shares_proto.amount.as_str())?,
 //             denom: total_shares_proto.denom,
 //         };
 
 //         let pool_params =
-//             proto_pool.pool_params.ok_or(StdError::generic_err("pool params not set"))?;
+//             proto_pool.pool_params.ok_or(StdError::generic_err("pool params
+// not set"))?;
 
 //         Ok(Pool {
 //             assets,
@@ -238,7 +254,8 @@ pub struct Pool {
 //     type Error = StdError;
 
 //     fn try_from(proto_pool_asset: ProtoPoolAsset) -> StdResult<Self> {
-//         let proto_coin = proto_pool_asset.token.ok_or(StdError::generic_err("token is missing"))?;
+//         let proto_coin =
+// proto_pool_asset.token.ok_or(StdError::generic_err("token is missing"))?;
 //         Ok(PoolAsset {
 //             token: Coin {
 //                 amount: Uint128::from_str(proto_coin.amount.as_str())?,
@@ -263,11 +280,15 @@ pub fn calc_single_asset_join(
 
     let total_weight = Uint128::from_str(&pool.total_weight)?;
     if total_weight.is_zero() {
-        return Err(StdError::generic_err("pool misconfigured, total weight = 0"));
+        return Err(StdError::generic_err(
+            "pool misconfigured, total weight = 0",
+        ));
     }
 
-    let normalized_weight =
-        Decimal::from_ratio(Uint128::from_str(&token_in_pool_asset.weight)?, total_weight);
+    let normalized_weight = Decimal::from_ratio(
+        Uint128::from_str(&token_in_pool_asset.weight)?,
+        total_weight,
+    );
     calc_pool_shares_out_given_single_asset_in(
         Decimal::from_ratio(
             Uint128::from_str(&token_in_pool_asset.token.as_ref().unwrap().amount)?,
@@ -292,13 +313,14 @@ pub fn calc_single_asset_join(
 // Returns totalNewShares and totalNewLiquidity from joining all tokensIn
 // by mimicking individually single asset joining each.
 // or error if fails to calculate join for any of the tokensIn.
-// func (p *Pool) calcJoinSingleAssetTokensIn(tokensIn sdk.Coins, totalShares sdk.Int, poolAssetsByDenom map[string]PoolAsset, swapFee sdk.Dec) (sdk.Int, sdk.Coins, error) {
-// 	totalNewShares := sdk.ZeroInt()
+// func (p *Pool) calcJoinSingleAssetTokensIn(tokensIn sdk.Coins, totalShares
+// sdk.Int, poolAssetsByDenom map[string]PoolAsset, swapFee sdk.Dec) (sdk.Int,
+// sdk.Coins, error) { 	totalNewShares := sdk.ZeroInt()
 // 	totalNewLiquidity := sdk.NewCoins()
 // 	for _, coin := range tokensIn {
-// 		newShares, err := p.calcSingleAssetJoin(coin, swapFee, poolAssetsByDenom[coin.Denom], totalShares.Add(totalNewShares))
-// 		if err != nil {
-// 			return sdk.ZeroInt(), sdk.Coins{}, err
+// 		newShares, err := p.calcSingleAssetJoin(coin, swapFee,
+// poolAssetsByDenom[coin.Denom], totalShares.Add(totalNewShares)) 		if err != nil
+// { 			return sdk.ZeroInt(), sdk.Coins{}, err
 // 		}
 
 // 		totalNewLiquidity = totalNewLiquidity.Add(coin)
@@ -334,9 +356,10 @@ pub fn calc_join_single_asset_tokens_in(
     Ok((total_new_shares, total_new_liquidity))
 }
 
-/// Calculates the [[`Coin`]] amounts that will be returned when withdrawing `exit_share_amount` LP shares from the pool
-/// with pool id `pool_id` on Osmosis. The implementation is a translation of the calculations performed in the Go code
-/// of the GAMM module. See
+/// Calculates the [[`Coin`]] amounts that will be returned when withdrawing
+/// `exit_share_amount` LP shares from the pool with pool id `pool_id` on
+/// Osmosis. The implementation is a translation of the calculations performed
+/// in the Go code of the GAMM module. See
 /// https://github.com/osmosis-labs/osmosis/blob/91c7830d7d195aad53378d60b24224a67e70fd7f/x/gamm/pool-models/internal/cfmm_common/lp.go#L16
 pub fn osmosis_calculate_exit_pool_amounts(
     querier: QuerierWrapper<OsmosisQuery>,
@@ -371,12 +394,14 @@ pub fn osmosis_calculate_exit_pool_amounts(
 
     // totalShares := pool.GetTotalShares()
     // if exitingShares.GTE(totalShares) {
-    // 	return sdk.Coins{}, sdkerrors.Wrapf(types.ErrLimitMaxAmount, errMsgFormatSharesLargerThanMax, exitingShares, totalShares)
-    // }
+    // 	return sdk.Coins{}, sdkerrors.Wrapf(types.ErrLimitMaxAmount,
+    // errMsgFormatSharesLargerThanMax, exitingShares, totalShares) }
 
     let total_shares = pool_state.shares.amount;
     if exit_lp_shares.amount >= total_shares {
-        return Err(StdError::generic_err("exit share amount must be less than total shares"));
+        return Err(StdError::generic_err(
+            "exit share amount must be less than total shares",
+        ));
     }
 
     // // refundedShares = exitingShares * (1 - exit fee)
@@ -449,10 +474,10 @@ pub fn osmosis_calculate_exit_pool_amounts(
 // amountY := tokenBalanceUnknownBefore.Mul(paranthetical)
 // return amountY
 
-/// Translation of the solveConstantFunctionInvariant function in the osmosis go code.
-/// The y_to_weight_ratio calculation is a workaround that works only for dual pools with
-/// even weight of the two assets. Go function in osmosis code can be found here:
-/// https://github.com/osmosis-labs/osmosis/blob/main/x/gamm/pool-models/balancer/amm.go#L94
+/// Translation of the solveConstantFunctionInvariant function in the osmosis go
+/// code. The y_to_weight_ratio calculation is a workaround that works only for
+/// dual pools with even weight of the two assets. Go function in osmosis code
+/// can be found here: https://github.com/osmosis-labs/osmosis/blob/main/x/gamm/pool-models/balancer/amm.go#L94
 fn osmosis_solve_constant_function_invariant(
     token_balance_fixed_before: Decimal,
     token_balance_fixed_after: Decimal,
@@ -466,8 +491,8 @@ fn osmosis_solve_constant_function_invariant(
 
     // // y = balanceXBefore/balanceXAfter
     // y := tokenBalanceFixedBefore.Quo(tokenBalanceFixedAfter)
-    // let y = Decimal::from_ratio(token_balance_fixed_before, token_balance_fixed_after);
-    // let y = BigRational::new_raw(
+    // let y = Decimal::from_ratio(token_balance_fixed_before,
+    // token_balance_fixed_after); let y = BigRational::new_raw(
     //     token_balance_fixed_before.u128().into(),
     //     token_balance_fixed_after.u128().into(),
     // );
@@ -545,18 +570,19 @@ fn _osmosis_pow_approx(base: Decimal, exp: Decimal, precision: Decimal) -> StdRe
     // let denom = base.denom().sqrt();
     // return BigRational::new_raw(numer, denom);
     // }
-    // TODO: Make an approx-equal function, and then check if exp * 3 = 1, and do a check accordingly
+    // TODO: Make an approx-equal function, and then check if exp * 3 = 1, and do a
+    // check accordingly
 
     // We compute this via taking the maclaurin series of (1 + x)^a
     // where x = base - 1.
     // The maclaurin series of (1 + x)^a = sum_{k=0}^{infty} binom(a, k) x^k
-    // Binom(a, k) takes the natural continuation on the first parameter, namely that
-    // Binom(a, k) = N/D, where D = k!, and N = a(a-1)(a-2)...(a-k+1)
+    // Binom(a, k) takes the natural continuation on the first parameter, namely
+    // that Binom(a, k) = N/D, where D = k!, and N = a(a-1)(a-2)...(a-k+1)
     // Next we show that the absolute value of each term is less than the last term.
-    // Note that the change in term n's value vs term n + 1 is a multiplicative factor of
-    // v_n = x(a - n) / (n+1)
-    // So if |v_n| < 1, we know that each term has a lesser impact on the result than the last.
-    // For our bounds on |x| < 1, |a| < 1,
+    // Note that the change in term n's value vs term n + 1 is a multiplicative
+    // factor of v_n = x(a - n) / (n+1)
+    // So if |v_n| < 1, we know that each term has a lesser impact on the result
+    // than the last. For our bounds on |x| < 1, |a| < 1,
     // it suffices to see for what n is |v_n| < 1,
     // in the worst parameterization of x = 1, a = -1.
     // v_n = |(-1 + epsilon - n) / (n+1)|
@@ -619,7 +645,8 @@ fn _osmosis_pow_approx(base: Decimal, exp: Decimal, precision: Decimal) -> StdRe
         // // a is mutated on absDifferenceWithSign, reset
         // a.Set(exp)
 
-        // a is never mutated in our implementation. i think we can remove it and use exp directly.
+        // a is never mutated in our implementation. i think we can remove it and use
+        // exp directly.
         a = exp.clone();
 
         // if term.isZero() {
@@ -756,17 +783,18 @@ fn _osmosis_abs_difference_with_sign(a: Decimal, b: Decimal) -> (Decimal, bool) 
 mod tests {
     // use super::*;
 
-    // // // #[test_case(1, vec!["uosmo".to_string(), "uatom".to_string()], Decimal::from_ratio(1u8,50u8), Decimal::from_ratio(1u8,500u8), 1, 0.5;"test_join_pool_calculation_single_sided")]
-    // // // fn test_join_pool_calculation_single_sided(
-    // // //     num_accounts: u64,
+    // // // #[test_case(1, vec!["uosmo".to_string(), "uatom".to_string()],
+    // Decimal::from_ratio(1u8,50u8), Decimal::from_ratio(1u8,500u8), 1,
+    // 0.5;"test_join_pool_calculation_single_sided")] // // fn
+    // test_join_pool_calculation_single_sided( // //     num_accounts: u64,
     // // //     pool_names: Vec<String>,
     // // //     base: Decimal,
     // // //     precision: Decimal,
     // // //     exp: Decimal,
     // // //     expected: Decimal,
     // // // ) {
-    // // //     let actual = join_pool_calculation(num_accounts, pool_names, base, precision, exp, false);
-    // // //     assert_eq!(actual, expected);
+    // // //     let actual = join_pool_calculation(num_accounts, pool_names,
+    // base, precision, exp, false); // //     assert_eq!(actual, expected);
     // // // }
 
     // #[derive(Clone)]
@@ -790,34 +818,35 @@ mod tests {
     //         weight: Uint128::new(100),
     //     };
     //     let one_trillion_even_pool_assets: Vec<PoolAsset> =
-    //         vec![default_osmo_pool_asset.clone(), default_atom_pool_asset.clone()];
+    //         vec![default_osmo_pool_asset.clone(),
+    // default_atom_pool_asset.clone()];
 
-    //     let calc_single_asset_join_test_cases: Vec<CalcJoinSharesTestCase> = vec![
-    //     CalcJoinSharesTestCase {
-    //         name:         "single tokens_in - equal weights with zero swap fee".to_string(),
-    //         swap_fee:      Decimal::zero(),
+    //     let calc_single_asset_join_test_cases: Vec<CalcJoinSharesTestCase> =
+    // vec![     CalcJoinSharesTestCase {
+    //         name:         "single tokens_in - equal weights with zero swap
+    // fee".to_string(),         swap_fee:      Decimal::zero(),
     //         pool_assets:   one_trillion_even_pool_assets.clone(),
     //         tokens_in:     vec![Coin::new(50_000, "uosmo")],
     //         expect_shares: Uint128::new(2_499_999_968_750),
     //     },
     //     CalcJoinSharesTestCase {
-    //         name:         "single tokens_in - equal weights with 0.01 swap fee".to_string(),
-    //         swap_fee:      Decimal::from_str("0.01").unwrap(),
-    //         pool_assets:   one_trillion_even_pool_assets.clone(),
-    //         tokens_in:     vec![Coin::new(50_000, "uosmo")],
-    //         expect_shares: Uint128::new(2_487_500_000_000),
-    //     },
+    //         name:         "single tokens_in - equal weights with 0.01 swap
+    // fee".to_string(),         swap_fee:
+    // Decimal::from_str("0.01").unwrap(),         pool_assets:
+    // one_trillion_even_pool_assets.clone(),         tokens_in:
+    // vec![Coin::new(50_000, "uosmo")],         expect_shares:
+    // Uint128::new(2_487_500_000_000),     },
     //     CalcJoinSharesTestCase {
-    //         name:         "single tokens_in - equal weights with 0.99 swap fee".to_string(),
-    //         swap_fee:      Decimal::from_str("0.99").unwrap(),
-    //         pool_assets:   one_trillion_even_pool_assets.clone(),
-    //         tokens_in:     vec![Coin::new(50_000, "uosmo")],
-    //         expect_shares: Uint128::new(1_262_500_000_000),
-    //     },
+    //         name:         "single tokens_in - equal weights with 0.99 swap
+    // fee".to_string(),         swap_fee:
+    // Decimal::from_str("0.99").unwrap(),         pool_assets:
+    // one_trillion_even_pool_assets.clone(),         tokens_in:
+    // vec![Coin::new(50_000, "uosmo")],         expect_shares:
+    // Uint128::new(1_262_500_000_000),     },
     //     CalcJoinSharesTestCase {
-    //         name:    "single tokens_in - unequal weights with 0.99 swap fee".to_string(),
-    //         swap_fee: Decimal::from_str("0.99").unwrap(),
-    //         pool_assets: vec![
+    //         name:    "single tokens_in - unequal weights with 0.99 swap
+    // fee".to_string(),         swap_fee:
+    // Decimal::from_str("0.99").unwrap(),         pool_assets: vec![
     //             default_osmo_pool_asset.clone(),
     //             PoolAsset {
     //                 token:  Coin::new(one_trillion, "uatom"),
@@ -828,9 +857,9 @@ mod tests {
     //         expect_shares: Uint128::new(321_875_000_000),
     //     },
     //     CalcJoinSharesTestCase {
-    //         name:    "single asset - token in weight is greater than the other token, with zero swap fee".to_string(),
-    //         swap_fee: Decimal::zero(),
-    //         pool_assets: vec![
+    //         name:    "single asset - token in weight is greater than the
+    // other token, with zero swap fee".to_string(),         swap_fee:
+    // Decimal::zero(),         pool_assets: vec![
     //             PoolAsset {
     //                 token:  Coin::new(one_trillion, "uosmo"),
     //                 weight: Uint128::new(500),
@@ -841,9 +870,9 @@ mod tests {
     //         expect_shares: Uint128::new(4_166_666_649_306),
     //     },
     //     CalcJoinSharesTestCase {
-    //         name:    "single asset - token in weight is greater than the other token, with non-zero swap fee".to_string(),
-    //         swap_fee: Decimal::from_str("0.01").unwrap(),
-    //         pool_assets: vec![
+    //         name:    "single asset - token in weight is greater than the
+    // other token, with non-zero swap fee".to_string(),         swap_fee:
+    // Decimal::from_str("0.01").unwrap(),         pool_assets: vec![
     //             PoolAsset {
     //                 token:  Coin::new(one_trillion, "uosmo"),
     //                 weight: Uint128::new(500),
@@ -854,9 +883,9 @@ mod tests {
     //         expect_shares: Uint128::new(4_159_722_200_000),
     //     },
     //     CalcJoinSharesTestCase {
-    //         name:    "single asset - token in weight is smaller than the other token, with zero swap fee".to_string(),
-    //         swap_fee: Decimal::from_str("0").unwrap(),
-    //         pool_assets: vec![
+    //         name:    "single asset - token in weight is smaller than the
+    // other token, with zero swap fee".to_string(),         swap_fee:
+    // Decimal::from_str("0").unwrap(),         pool_assets: vec![
     //             PoolAsset {
     //                 token:  Coin::new(one_trillion, "uosmo"),
     //                 weight: Uint128::new(200),
@@ -870,9 +899,9 @@ mod tests {
     //         expect_shares: Uint128::new(833_333_315_972),
     //     },
     //     CalcJoinSharesTestCase {
-    //         name:    "single asset - token in weight is smaller than the other token, with non-zero swap fee".to_string(),
-    //         swap_fee: Decimal::from_str("0.02").unwrap(),
-    //         pool_assets: vec![
+    //         name:    "single asset - token in weight is smaller than the
+    // other token, with non-zero swap fee".to_string(),         swap_fee:
+    // Decimal::from_str("0.02").unwrap(),         pool_assets: vec![
     //             PoolAsset {
     //                 token:  Coin::new(one_trillion, "uosmo"),
     //                 weight: Uint128::new(200),
@@ -886,8 +915,9 @@ mod tests {
     //         expect_shares: Uint128::new(819_444_430_000),
     //     },
     //     CalcJoinSharesTestCase {
-    //         name:    "single asset - tokenIn is large relative to liquidity, token in weight is smaller than the other token, with zero swap fee".to_string(),
-    //         swap_fee: Decimal::from_str("0").unwrap(),
+    //         name:    "single asset - tokenIn is large relative to liquidity,
+    // token in weight is smaller than the other token, with zero swap
+    // fee".to_string(),         swap_fee: Decimal::from_str("0").unwrap(),
     //         pool_assets: vec![
     //             PoolAsset {
     //                 token:  Coin::new(156_736, "uosmo"),
@@ -903,9 +933,10 @@ mod tests {
     //         expect_shares: Uint128::new(9_775_731_930_496_140_648),
     //     },
     //     CalcJoinSharesTestCase {
-    //         name:    "single asset - tokenIn is large relative to liquidity, token in weight is smaller than the other token, with non-zero swap fee".to_string(),
-    //         swap_fee: Decimal::from_str("0.02").unwrap(),
-    //         pool_assets: vec![
+    //         name:    "single asset - tokenIn is large relative to liquidity,
+    // token in weight is smaller than the other token, with non-zero swap
+    // fee".to_string(),         swap_fee:
+    // Decimal::from_str("0.02").unwrap(),         pool_assets: vec![
     //             PoolAsset {
     //                 token:  Coin::new(156_736, "uosmo"),
     //                 weight: Uint128::new(200),
@@ -920,8 +951,9 @@ mod tests {
     //         expect_shares: Uint128::new(9_644_655_900_000_000_000),
     //     },
     //     CalcJoinSharesTestCase {
-    //         name:    "single asset - (almost 1 == tokenIn / liquidity ratio), token in weight is smaller than the other token, with zero swap fee".to_string(),
-    //         swap_fee: Decimal::from_str("0").unwrap(),
+    //         name:    "single asset - (almost 1 == tokenIn / liquidity ratio),
+    // token in weight is smaller than the other token, with zero swap
+    // fee".to_string(),         swap_fee: Decimal::from_str("0").unwrap(),
     //         pool_assets: vec![
     //             PoolAsset {
     //                 token:  Coin::new(500_000, "uosmo"),
@@ -937,14 +969,17 @@ mod tests {
     //     },
     //     // TODO: Handle error and panic cases
     //     // CalcJoinSharesTestCase {
-    //     //     // Currently, our Pow approximation function does not work correctly when one tries
-    //     //     // to add liquidity that is larger than the existing liquidity.
-    //     //     // The ratio of tokenIn / existing liquidity that is larger than or equal to 1 causes a panic.
-    //     //     // This has been deemed as acceptable since it causes code complexity to fix
-    //     //     // & only affects UX in an edge case (user has to split up single asset joins)
-    //     //     name:    "single asset - (exactly 1 == tokenIn / liquidity ratio - failure), token in weight is smaller than the other token, with zero swap fee".to_string(),
-    //     //     swap_fee: Decimal::from_str("0").unwrap(),
-    //     //     pool_assets: vec![
+    //     //     // Currently, our Pow approximation function does not work
+    // correctly when one tries     //     // to add liquidity that is
+    // larger than the existing liquidity.     //     // The ratio of
+    // tokenIn / existing liquidity that is larger than or equal to 1 causes a
+    // panic.     //     // This has been deemed as acceptable since it
+    // causes code complexity to fix     //     // & only affects UX in an
+    // edge case (user has to split up single asset joins)     //     name:
+    // "single asset - (exactly 1 == tokenIn / liquidity ratio - failure), token
+    // in weight is smaller than the other token, with zero swap
+    // fee".to_string(),     //     swap_fee:
+    // Decimal::from_str("0").unwrap(),     //     pool_assets: vec![
     //     //         PoolAsset {
     //     //             token:  Coin::new(500_000, "uosmo"),
     //     //             weight: Uint128::new(100),
@@ -962,16 +997,17 @@ mod tests {
     //     //     name:         "tokenIn asset does not exist in pool",
     //     //     swap_fee:      Decimal::from_str("0"),
     //     //     pool_assets:   one_trillion_even_pool_assets,
-    //     //     tokens_in:     vec![](Uint128::new64Coin(doesNotExistDenom, 50_000)),
-    //     //     expect_shares: sdk.ZeroInt(),
-    //     //     expErr:       sdkerrors.Wrapf(types.ErrDenomNotFoundInPool, fmt.Sprintf(balancer.ErrMsgFormatNoPoolAssetFound, doesNotExistDenom)),
+    //     //     tokens_in:     vec![](Uint128::new64Coin(doesNotExistDenom,
+    // 50_000)),     //     expect_shares: sdk.ZeroInt(),
+    //     //     expErr:       sdkerrors.Wrapf(types.ErrDenomNotFoundInPool,
+    // fmt.Sprintf(balancer.ErrMsgFormatNoPoolAssetFound, doesNotExistDenom)),
     //     // },
     //     CalcJoinSharesTestCase {
     //         // Pool liquidity is changed by 1e-12 / 2
     //         // P_issued = 1e20 * 1e-12 / 2 = 1e8 / 2 = 50_000_000
-    //         name:    "minimum input single asset equal liquidity".to_string(),
-    //         swap_fee: Decimal::from_str("0").unwrap(),
-    //         pool_assets: vec![
+    //         name:    "minimum input single asset equal
+    // liquidity".to_string(),         swap_fee:
+    // Decimal::from_str("0").unwrap(),         pool_assets: vec![
     //             PoolAsset {
     //                 token:  Coin::new(one_trillion, "uosmo"),
     //                 weight: Uint128::new(100),
@@ -987,9 +1023,9 @@ mod tests {
     //     CalcJoinSharesTestCase {
     //         // P_issued should be 1/10th that of the previous test
     //         // p_issued = 50_000_000 / 10 = 5_000_000
-    //         name:    "minimum input single asset imbalanced liquidity".to_string(),
-    //         swap_fee: Decimal::from_str("0").unwrap(),
-    //         pool_assets: vec![
+    //         name:    "minimum input single asset imbalanced
+    // liquidity".to_string(),         swap_fee:
+    // Decimal::from_str("0").unwrap(),         pool_assets: vec![
     //             PoolAsset {
     //                 token:  Coin::new(10_000_000_000_000, "uosmo"),
     //                 weight: Uint128::new(100),
@@ -1003,9 +1039,9 @@ mod tests {
     //         expect_shares: Uint128::new(5_000_000),
     //     }];
 
-    //     // func assertExpectedSharesErrRatio(t *testing.T, expectedShares, actualShares sdk.Int) {
-    //     //     allowedErrRatioDec, err := sdk.NewDecFromStr(allowedErrRatio)
-    //     //     require.NoError(t, err)
+    //     // func assertExpectedSharesErrRatio(t *testing.T, expectedShares,
+    // actualShares sdk.Int) {     //     allowedErrRatioDec, err :=
+    // sdk.NewDecFromStr(allowedErrRatio)     //     require.NoError(t, err)
 
     //     //     errTolerance := osmoutils.ErrTolerance{
     //     //         MultiplicativeTolerance: allowedErrRatioDec,
@@ -1015,15 +1051,15 @@ mod tests {
     //     //         t,
     //     //         0,
     //     //         errTolerance.Compare(expectedShares, actualShares),
-    //     //         fmt.Sprintf("expectedShares: %s, actualShares: %s", expectedShares.String(), actualShares.String()))
-    //     // }
+    //     //         fmt.Sprintf("expectedShares: %s, actualShares: %s",
+    // expectedShares.String(), actualShares.String()))     // }
 
-    //     fn assert_expected_shares_err_ratio(expected_shares: Uint128, actual_shares: Uint128) {
-    //         fn compare(expected: Uint128, actual: Uint128) -> i8 {
-    //             let allowed_err_ratio_dec = Decimal::from_str("0.0000001").unwrap();
-    //             let multiplicative_tolerance = allowed_err_ratio_dec;
-    //             let diff = if expected > actual {
-    //                 expected - actual
+    //     fn assert_expected_shares_err_ratio(expected_shares: Uint128,
+    // actual_shares: Uint128) {         fn compare(expected: Uint128,
+    // actual: Uint128) -> i8 {             let allowed_err_ratio_dec =
+    // Decimal::from_str("0.0000001").unwrap();             let
+    // multiplicative_tolerance = allowed_err_ratio_dec;             let
+    // diff = if expected > actual {                 expected - actual
     //             } else {
     //                 actual - expected
     //             };
@@ -1036,11 +1072,11 @@ mod tests {
 
     //             //Check multiplicative tolerance equations
     //             if !multiplicative_tolerance.is_zero() {
-    //                 // let err_term = diff.to_decimal() / Decimal::from(expected.min(actual));
-    //                 let err_term = Decimal::from_ratio(diff, expected.min(actual));
-    //                 if err_term > multiplicative_tolerance {
-    //                     return comparison_sign;
-    //                 }
+    //                 // let err_term = diff.to_decimal() /
+    // Decimal::from(expected.min(actual));                 let err_term =
+    // Decimal::from_ratio(diff, expected.min(actual));                 if
+    // err_term > multiplicative_tolerance {                     return
+    // comparison_sign;                 }
     //             }
     //             return 0;
     //         }
@@ -1048,7 +1084,8 @@ mod tests {
     //         assert_eq!(0, compare(expected_shares, actual_shares));
     //     }
 
-    //     for (id, test_case) in calc_single_asset_join_test_cases.into_iter().enumerate() {
+    //     for (id, test_case) in
+    // calc_single_asset_join_test_cases.into_iter().enumerate() {
     //         let expected_new_liquidity = test_case.tokens_in.clone();
 
     //         let one_share = Uint128::from(10u128.pow(18));
@@ -1056,19 +1093,19 @@ mod tests {
 
     //         let pool = Pool {
     //             assets: test_case.pool_assets.clone(),
-    //             total_weight: test_case.pool_assets.iter().map(|a| a.weight).sum(),
-    //             total_shares: Coin {
+    //             total_weight: test_case.pool_assets.iter().map(|a|
+    // a.weight).sum(),             total_shares: Coin {
     //                 denom: test_case
     //                     .pool_assets
     //                     .iter()
-    //                     .fold("".to_string(), |acc, a| acc + &a.token.denom + " "),
-    //                 amount: init_pool_shares_supply,
+    //                     .fold("".to_string(), |acc, a| acc + &a.token.denom +
+    // " "),                 amount: init_pool_shares_supply,
     //             },
     //             swap_fee: test_case.swap_fee,
     //         };
 
-    //         let (total_num_shares, total_new_liquidity) = calc_join_single_asset_tokens_in(
-    //             pool.clone(),
+    //         let (total_num_shares, total_new_liquidity) =
+    // calc_join_single_asset_tokens_in(             pool.clone(),
     //             test_case.tokens_in,
     //             pool.total_shares.amount,
     //             test_case.pool_assets,
@@ -1076,11 +1113,12 @@ mod tests {
     //         )
     //         .unwrap();
 
-    //         println!("Running test for Test case id {}, name: {}", id, test_case.name);
+    //         println!("Running test for Test case id {}, name: {}", id,
+    // test_case.name);
 
     //         assert_eq!(expected_new_liquidity, total_new_liquidity);
 
-    //         assert_expected_shares_err_ratio(test_case.expect_shares, total_num_shares);
-    //     }
+    //         assert_expected_shares_err_ratio(test_case.expect_shares,
+    // total_num_shares);     }
     // }
 }

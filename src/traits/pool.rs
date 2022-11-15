@@ -1,5 +1,4 @@
-use cosmwasm_std::{Decimal, Env, Response, StdResult};
-use cosmwasm_std::{Deps, Uint128};
+use cosmwasm_std::{Decimal, Deps, Env, Response, StdResult, Uint128};
 use cw_asset::{Asset, AssetInfo, AssetList};
 
 use crate::error::CwDexError;
@@ -8,9 +7,9 @@ use crate::error::CwDexError;
 pub trait Pool {
     /// Provide liquidity to the pool.
     ///
-    /// Returns a Response with the necessary messages to provide liquidity to the pool.
-    /// `assets` must only contain the assets in the pool, but the ratio of
-    /// amounts does not need to be the same as the pool's ratio.
+    /// Returns a Response with the necessary messages to provide liquidity to
+    /// the pool. `assets` must only contain the assets in the pool, but the
+    /// ratio of amounts does not need to be the same as the pool's ratio.
     ///
     /// TODO: Document how slippage_tolerance works. When will it fail?
     fn provide_liquidity(
@@ -24,10 +23,12 @@ pub trait Pool {
     /// Withdraw liquidity from the pool.
     ///
     /// Arguments:
-    /// - `lp_token`: the LP tokens to withdraw as an [`Asset`]. The `info` field must correspond
-    ///       to the LP token of the pool. Else, an error is returned.
+    /// - `lp_token`: the LP tokens to withdraw as an [`Asset`]. The `info`
+    ///   field must correspond to the LP token of the pool. Else, an error is
+    ///   returned.
     ///
-    /// Returns a Response containing the messages to withdraw liquidity from the pool.
+    /// Returns a Response containing the messages to withdraw liquidity from
+    /// the pool.
     fn withdraw_liquidity(
         &self,
         deps: Deps,
@@ -56,7 +57,8 @@ pub trait Pool {
     /// Returns the current balance of the underlying assets in the pool.
     fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError>;
 
-    /// Returns an estimated number of LP tokens that would be minted for the given assets.
+    /// Returns an estimated number of LP tokens that would be minted for the
+    /// given assets.
     ///
     /// Arguments:
     /// - `assets`: the assets to provide liquidity with.
@@ -67,11 +69,13 @@ pub trait Pool {
         assets: AssetList,
     ) -> Result<Asset, CwDexError>;
 
-    /// Returns an estimated number of assets to be returned for withdrawing the given LP tokens.
+    /// Returns an estimated number of assets to be returned for withdrawing the
+    /// given LP tokens.
     ///
     /// Arguments:
-    /// - `lp_token`: the LP tokens to withdraw as an [`Asset`]. The `info` field must correspond to the
-    ///       LP token of the pool. Else, an error is returned.
+    /// - `lp_token`: the LP tokens to withdraw as an [`Asset`]. The `info`
+    ///   field must correspond to the LP token of the pool. Else, an error is
+    ///   returned.
     fn simulate_withdraw_liquidity(
         &self,
         deps: Deps,

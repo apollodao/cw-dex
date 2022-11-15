@@ -11,7 +11,8 @@ use crate::traits::pool::Pool as PoolTrait;
 /// An enum with all known variants that implement the Pool trait.
 /// The ideal solution would of course instead be to use a trait object so that
 /// the caller can pass in any type that implements the Pool trait, but trait
-/// objects require us not to implement the Sized trait, which cw_serde requires.
+/// objects require us not to implement the Sized trait, which cw_serde
+/// requires.
 #[cw_serde]
 pub enum Pool {
     Osmosis(OsmosisPool),
@@ -34,22 +35,21 @@ impl Pool {
                     return Err(CwDexError::NotLpToken {});
                 }
 
-                let pool_id_str =
-                    lp_token_denom.strip_prefix("gamm/pool/").ok_or(CwDexError::NotLpToken {})?;
+                let pool_id_str = lp_token_denom
+                    .strip_prefix("gamm/pool/")
+                    .ok_or(CwDexError::NotLpToken {})?;
 
                 let pool_id = u64::from_str(pool_id_str).map_err(|_| CwDexError::NotLpToken {})?;
 
-                Ok(Pool::Osmosis(OsmosisPool {
-                    pool_id,
-                }))
+                Ok(Pool::Osmosis(OsmosisPool { pool_id }))
             }
             _ => Err(CwDexError::NotLpToken {}), //TODO: Support Astroport, Junoswap, etc.
         }
     }
 }
 
-/// Implement the Pool trait for the Pool enum so we can use all the trait mehtods
-/// directly on the enum type.
+/// Implement the Pool trait for the Pool enum so we can use all the trait
+/// mehtods directly on the enum type.
 /// TODO: Use "enum_dispatch" macro instead? https://crates.io/crates/enum_dispatch
 impl PoolTrait for Pool {
     fn provide_liquidity(
@@ -59,7 +59,8 @@ impl PoolTrait for Pool {
         assets: AssetList,
         slippage_tolerance: Option<Decimal>,
     ) -> Result<Response, CwDexError> {
-        self.as_trait().provide_liquidity(deps, env, assets, slippage_tolerance)
+        self.as_trait()
+            .provide_liquidity(deps, env, assets, slippage_tolerance)
     }
 
     fn withdraw_liquidity(
@@ -79,7 +80,8 @@ impl PoolTrait for Pool {
         ask_asset_info: AssetInfo,
         minimum_out_amount: Uint128,
     ) -> Result<Response, CwDexError> {
-        self.as_trait().swap(deps, env, offer_asset, ask_asset_info, minimum_out_amount)
+        self.as_trait()
+            .swap(deps, env, offer_asset, ask_asset_info, minimum_out_amount)
     }
 
     fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {
@@ -110,6 +112,7 @@ impl PoolTrait for Pool {
         ask_asset_info: AssetInfo,
         sender: Option<String>,
     ) -> StdResult<Uint128> {
-        self.as_trait().simulate_swap(deps, offer_asset, ask_asset_info, sender)
+        self.as_trait()
+            .simulate_swap(deps, offer_asset, ask_asset_info, sender)
     }
 }

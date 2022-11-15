@@ -4,10 +4,9 @@ use astroport_core::querier::{query_supply, query_token_precision};
 use astroport_core::U256;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, wasm_execute, Addr, CosmosMsg, Decimal, Env, QuerierWrapper, QueryRequest, Response,
-    StdError, StdResult, WasmMsg, WasmQuery,
+    to_binary, wasm_execute, Addr, CosmosMsg, Decimal, Deps, Env, Event, QuerierWrapper,
+    QueryRequest, Response, StdError, StdResult, Uint128, WasmMsg, WasmQuery,
 };
-use cosmwasm_std::{Deps, Event, Uint128};
 use cw20::Cw20ExecuteMsg;
 use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 
@@ -33,8 +32,9 @@ pub struct AstroportPool {
 
 impl AstroportPool {
     pub fn new(deps: Deps, pair_addr: Addr) -> StdResult<Self> {
-        let pair_info: PairInfo =
-            deps.querier.query_wasm_smart(pair_addr.clone(), &PairQueryMsg::Pair {})?;
+        let pair_info = deps
+            .querier
+            .query_wasm_smart::<PairInfo>(pair_addr.clone(), &PairQueryMsg::Pair {})?;
 
         // Validate pair type. We only support XYK and stable swap pools
         match pair_info.pair_type {
@@ -60,7 +60,8 @@ impl AstroportPool {
         }))
     }
 
-    /// Math for LP shares calculation when providing liquidity to an Astroport constant product pool.
+    /// Math for LP shares calculation when providing liquidity to an Astroport
+    /// constant product pool.
     ///
     /// Copied from the astroport XYK pool implementation here:
     /// https://github.com/astroport-fi/astroport-core/blob/7bedc6f27e59ef8b921a0980be9bc30c4aab7459/contracts/pair/src/contract.rs#L297-L434
@@ -113,10 +114,10 @@ impl AstroportPool {
             // assert_slippage_tolerance(slippage_tolerance, &deposits, &pools)?;
 
             // min(1, 2)
-            // 1. sqrt(deposit_0 * exchange_rate_0_to_1 * deposit_0) * (total_share / sqrt(pool_0 * pool_1))
-            // == deposit_0 * total_share / pool_0
-            // 2. sqrt(deposit_1 * exchange_rate_1_to_0 * deposit_1) * (total_share / sqrt(pool_1 * pool_1))
-            // == deposit_1 * total_share / pool_1
+            // 1. sqrt(deposit_0 * exchange_rate_0_to_1 * deposit_0) * (total_share /
+            // sqrt(pool_0 * pool_1)) == deposit_0 * total_share / pool_0
+            // 2. sqrt(deposit_1 * exchange_rate_1_to_0 * deposit_1) * (total_share /
+            // sqrt(pool_1 * pool_1)) == deposit_1 * total_share / pool_1
             std::cmp::min(
                 deposits[0].multiply_ratio(total_share, pools[0].amount),
                 deposits[1].multiply_ratio(total_share, pools[1].amount),
@@ -141,7 +142,9 @@ impl AstroportPool {
         assets: AssetList,
     ) -> Result<Asset, CwDexError> {
         let config = query_pair_config(&deps.querier, self.pair_addr.clone())?;
-        let mut pools = config.pair_info.query_pools(&deps.querier, self.pair_addr.to_owned())?;
+        let mut pools = config
+            .pair_info
+            .query_pools(&deps.querier, self.pair_addr.to_owned())?;
         let deposits: [Uint128; 2] = [
             assets
                 .find(&pools[0].info.clone().into())
@@ -192,8 +195,9 @@ impl AstroportPool {
                 liquidity_token_precision,
             )?
         } else {
-            let leverage =
-                compute_current_amp(&config, env)?.checked_mul(u64::from(N_COINS)).unwrap();
+            let leverage = compute_current_amp(&config, env)?
+                .checked_mul(u64::from(N_COINS))
+                .unwrap();
 
             let mut pool_amount_0 =
                 adjust_precision(pools[0].amount, token_precision_0, greater_precision)?;
@@ -209,7 +213,8 @@ impl AstroportPool {
             let d_after_addition_liquidity =
                 compute_d(leverage, pool_amount_0.u128(), pool_amount_1.u128()).unwrap();
 
-            // d after adding liquidity may be less than or equal to d before adding liquidity because of rounding
+            // d after adding liquidity may be less than or equal to d before adding
+            // liquidity because of rounding
             if d_before_addition_liquidity >= d_after_addition_liquidity {
                 return Err(CwDexError::LiquidityAmountTooSmall {});
             }
@@ -221,7 +226,9 @@ impl AstroportPool {
         };
 
         if share.is_zero() {
-            return Err(CwDexError::Std(StdError::generic_err("Insufficient amount of liquidity")));
+            return Err(CwDexError::Std(StdError::generic_err(
+                "Insufficient amount of liquidity",
+            )));
         }
 
         let lp_token = Asset {
@@ -256,7 +263,9 @@ impl Pool for AstroportPool {
             .add_attribute("pair_addr", &self.pair_addr)
             .add_attribute("assets", format!("{:?}", assets));
 
-        Ok(Response::new().add_message(provide_liquidity).add_event(event))
+        Ok(Response::new()
+            .add_message(provide_liquidity)
+            .add_event(event))
     }
 
     fn withdraw_liquidity(
@@ -281,11 +290,11 @@ impl Pool for AstroportPool {
                 .add_attribute("asset", format!("{:?}", asset))
                 .add_attribute("token_amount", asset.amount);
 
-            Ok(Response::new().add_message(withdraw_liquidity).add_event(event))
+            Ok(Response::new()
+                .add_message(withdraw_liquidity)
+                .add_event(event))
         } else {
-            Err(CwDexError::InvalidInAsset {
-                a: asset,
-            })
+            Err(CwDexError::InvalidInAsset { a: asset })
         }
     }
 
@@ -297,8 +306,9 @@ impl Pool for AstroportPool {
         ask_asset_info: AssetInfo,
         minimum_out_amount: Uint128,
     ) -> Result<Response, CwDexError> {
-        // Setting belief price to the minimium acceptable return and max spread to zero simplifies things
-        // Astroport will make the best possible swap that returns at least minimum_out_amount
+        // Setting belief price to the minimium acceptable return and max spread to zero
+        // simplifies things Astroport will make the best possible swap that
+        // returns at least minimum_out_amount
         let belief_price = Some(Decimal::from_ratio(offer_asset.amount, minimum_out_amount));
         let swap_msg = match &offer_asset.info {
             AssetInfo::Native(_) => {
@@ -350,9 +360,9 @@ impl Pool for AstroportPool {
         match self.pair_type {
             PairType::Xyk {} => self.xyk_simulate_provide_liquidity(deps, env, assets),
             PairType::Stable {} => self.stable_simulate_provide_liquidity(deps, env, assets),
-            PairType::Custom(_) => {
-                Err(CwDexError::Std(StdError::generic_err("custom pair type not supported")))
-            }
+            PairType::Custom(_) => Err(CwDexError::Std(StdError::generic_err(
+                "custom pair type not supported",
+            ))),
         }
     }
 

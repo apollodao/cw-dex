@@ -20,7 +20,8 @@ use super::helpers::ToProtobufDuration;
 /// `lockup_duration` is the duration of the lockup period in nano seconds.
 #[cw_serde]
 pub struct OsmosisStaking {
-    /// Lockup duration in nano seconds. Allowed values 1 day, 1 week or 2 weeks.
+    /// Lockup duration in nano seconds. Allowed values 1 day, 1 week or 2
+    /// weeks.
     pub lockup_duration: Duration,
 
     pub lock_id: Option<u64>,
@@ -29,20 +30,24 @@ pub struct OsmosisStaking {
 }
 
 impl OsmosisStaking {
-    /// Creates a new OsmosisStaking instance with lock up duration set to `lockup_duration`.
+    /// Creates a new OsmosisStaking instance with lock up duration set to
+    /// `lockup_duration`.
     ///
     /// Arguments:
     /// - `lockup_duration` is the duration of the lockup period in seconds.
     ///
     /// Returns an error if `lockup_duration` is not one of the allowed values,
-    /// 86400, 604800 or 1209600, representing 1 day, 1 week or 2 weeks respectively.
+    /// 86400, 604800 or 1209600, representing 1 day, 1 week or 2 weeks
+    /// respectively.
     pub fn new(
         lockup_duration: u64,
         lock_id: Option<u64>,
         lp_token_denom: String,
     ) -> StdResult<Self> {
         if !(vec![86400u64, 604800u64, 1209600u64].contains(&lockup_duration)) {
-            return Err(StdError::generic_err("osmosis error: invalid lockup duration"));
+            return Err(StdError::generic_err(
+                "osmosis error: invalid lockup duration",
+            ));
         }
         Ok(Self {
             lockup_duration: Duration::from_secs(lockup_duration),
@@ -88,7 +93,10 @@ impl Stake for OsmosisStaking {
         let event = Event::new("apollo/cw-dex/stake")
             .add_attribute("type", "osmosis_staking")
             .add_attribute("asset", asset.to_string())
-            .add_attribute("lockup_duration_secs", self.lockup_duration.as_secs().to_string());
+            .add_attribute(
+                "lockup_duration_secs",
+                self.lockup_duration.as_secs().to_string(),
+            );
 
         Ok(Response::new()
             .add_submessage(SubMsg {
@@ -105,7 +113,9 @@ impl Unlock for OsmosisStaking {
     fn unlock(&self, _deps: Deps, env: &Env, amount: Uint128) -> Result<Response, CwDexError> {
         let asset = Coin::new(amount.u128(), self.lp_token_denom.clone());
 
-        let id = self.lock_id.ok_or(StdError::generic_err("osmosis error: lock id not set"))?;
+        let id = self
+            .lock_id
+            .ok_or(StdError::generic_err("osmosis error: lock id not set"))?;
 
         let unstake_msg = MsgBeginUnlocking {
             owner: env.contract.address.to_string(),
@@ -116,7 +126,10 @@ impl Unlock for OsmosisStaking {
         let event = Event::new("apollo/cw-dex/unstake")
             .add_attribute("type", "osmosis_staking")
             .add_attribute("asset", asset.to_string())
-            .add_attribute("lockup_duration_secs", self.lockup_duration.as_secs().to_string())
+            .add_attribute(
+                "lockup_duration_secs",
+                self.lockup_duration.as_secs().to_string(),
+            )
             .add_attribute("lock_id", id.to_string());
 
         Ok(Response::new()
@@ -156,7 +169,9 @@ impl ForceUnlock for OsmosisStaking {
     ) -> Result<Response, CwDexError> {
         let lockup_id = match lockup_id {
             Some(id) => Ok(id),
-            None => self.lock_id.ok_or(StdError::generic_err("osmosis error: lock id not set")),
+            None => self
+                .lock_id
+                .ok_or(StdError::generic_err("osmosis error: lock id not set")),
         }?;
 
         let coin_to_unlock = Coin::new(amount.u128(), self.lp_token_denom.clone());
@@ -172,7 +187,9 @@ impl ForceUnlock for OsmosisStaking {
             .add_attribute("amount", amount)
             .add_attribute("lockup_id", lockup_id.to_string());
 
-        Ok(Response::new().add_message(force_unlock_msg).add_event(event))
+        Ok(Response::new()
+            .add_message(force_unlock_msg)
+            .add_event(event))
     }
 }
 
@@ -248,8 +265,9 @@ impl Stake for OsmosisSuperfluidStaking {
 
 impl Unlock for OsmosisSuperfluidStaking {
     fn unlock(&self, _deps: Deps, env: &Env, _amount: Uint128) -> Result<Response, CwDexError> {
-        let lock_id =
-            self.lock_id.ok_or(StdError::generic_err("osmosis error: lock id not set"))?;
+        let lock_id = self
+            .lock_id
+            .ok_or(StdError::generic_err("osmosis error: lock id not set"))?;
 
         let unstake_msg = MsgSuperfluidUnbondLock {
             sender: env.contract.address.to_string(),

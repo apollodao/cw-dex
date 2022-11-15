@@ -82,7 +82,11 @@ pub struct JunoAssetList(pub(crate) Vec<JunoAsset>);
 impl TryFrom<AssetList> for JunoAssetList {
     type Error = StdError;
     fn try_from(list: AssetList) -> StdResult<Self> {
-        Ok(Self(list.into_iter().map(|a| a.try_into()).collect::<StdResult<Vec<_>>>()?))
+        Ok(Self(
+            list.into_iter()
+                .map(|a| a.try_into())
+                .collect::<StdResult<Vec<_>>>()?,
+        ))
     }
 }
 
@@ -115,19 +119,21 @@ impl JunoAssetList {
     pub(crate) fn find(&self, token: JunoAssetInfo) -> StdResult<&JunoAsset> {
         self.into_iter()
             .find(|a| a.info == token)
-            .ok_or(StdError::generic_err("Token not found in JunoAssetList instance"))
+            .ok_or(StdError::generic_err(
+                "Token not found in JunoAssetList instance",
+            ))
     }
 }
 
-/// Prepare the `funds` vec to send native tokens to a contract and construct the
-/// messages to increase allowance for cw20 tokens.
+/// Prepare the `funds` vec to send native tokens to a contract and construct
+/// the messages to increase allowance for cw20 tokens.
 ///
 /// ### Returns
 /// `(funds, messages)` tuple where,
 /// - `funds` is a `Vec<Coin> of the native tokens present in the `assets` list
-///                that were also exist in the `info.funds` list.
+///   that were also exist in the `info.funds` list.
 /// - `increase_allowances` is a `Vec<CosmosMsg>` with the messages to increase
-///                allowance for the CW20 tokens in the `assets` list.
+///   allowance for the CW20 tokens in the `assets` list.
 pub(crate) fn prepare_funds_and_increase_allowances(
     env: &Env,
     assets: &AssetList,
@@ -169,7 +175,9 @@ pub(crate) fn juno_get_lp_token_amount_to_mint(
     if liquidity_supply == Uint128::zero() {
         Ok(token1_amount)
     } else {
-        Ok(token1_amount.checked_mul(liquidity_supply)?.checked_div(token1_reserve)?)
+        Ok(token1_amount
+            .checked_mul(liquidity_supply)?
+            .checked_div(token1_reserve)?)
     }
 }
 
