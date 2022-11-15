@@ -1,3 +1,6 @@
+//! Contains an enum with variants for Pool implementations.
+//! For use in serialization.
+
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Decimal, Deps, Env, Response, StdResult, Uint128};
 use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
@@ -14,11 +17,14 @@ use crate::traits::pool::Pool as PoolTrait;
 /// objects require us not to implement the Sized trait, which cw_serde requires.
 #[cw_serde]
 pub enum Pool {
+    /// Contains an Osmosis pool implementation
     Osmosis(OsmosisPool),
+    /// Contains an Junoswap pool implementation
     Junoswap(JunoswapPool),
 }
 
 impl Pool {
+    /// Returns a specific `Pool` instance as a boxed generic `Pool` trait
     pub fn as_trait(&self) -> Box<dyn PoolTrait> {
         match self {
             Pool::Osmosis(x) => Box::new(x.clone()),
@@ -26,6 +32,10 @@ impl Pool {
         }
     }
 
+    /// Returns the matching pool given a LP token.
+    ///
+    /// Arguments:
+    /// - `lp_token`: Said LP token
     pub fn get_pool_for_lp_token(_deps: Deps, lp_token: &AssetInfo) -> Result<Self, CwDexError> {
         match lp_token {
             AssetInfoBase::Native(lp_token_denom) => {
@@ -48,9 +58,9 @@ impl Pool {
     }
 }
 
-/// Implement the Pool trait for the Pool enum so we can use all the trait mehtods
-/// directly on the enum type.
-/// TODO: Use "enum_dispatch" macro instead? https://crates.io/crates/enum_dispatch
+// Implement the Pool trait for the Pool enum so we can use all the trait mehtods
+// directly on the enum type.
+// TODO: Use "enum_dispatch" macro instead? https://crates.io/crates/enum_dispatch
 impl PoolTrait for Pool {
     fn provide_liquidity(
         &self,
