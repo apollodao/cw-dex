@@ -17,8 +17,6 @@ use crate::{
     CwDexError,
 };
 
-use super::helpers::cw_asset_to_astro_asset;
-
 #[cw_serde]
 pub struct AstroportStaking {
     pub lp_token_addr: Addr,
@@ -83,10 +81,7 @@ impl Rewards for AstroportStaking {
         let pending_rewards: Vec<AstroAsset> = pending_on_proxy
             .unwrap_or_default()
             .into_iter()
-            .chain(vec![cw_asset_to_astro_asset(&Asset::cw20(
-                self.astro_addr.clone(),
-                pending_astro,
-            ))?])
+            .chain(vec![Asset::cw20(self.astro_addr.clone(), pending_astro).into()])
             .collect::<Vec<_>>()
             .into();
 

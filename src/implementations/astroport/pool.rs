@@ -21,8 +21,7 @@ use crate::traits::Pool;
 use crate::CwDexError;
 
 use super::helpers::{
-    adjust_precision, astro_asset_info_to_cw_asset_info, compute_current_amp, compute_d,
-    cw_asset_to_astro_asset, query_pair_config, N_COINS,
+    adjust_precision, compute_current_amp, compute_d, query_pair_config, N_COINS,
 };
 
 #[cw_serde]
@@ -78,11 +77,11 @@ impl AstroportPool {
 
         let deposits = [
             assets
-                .find(&astro_asset_info_to_cw_asset_info(&pools[0].info))
+                .find(&pools[0].info.clone().into())
                 .map(|a| a.amount)
                 .expect("Wrong asset info is given"),
             assets
-                .find(&astro_asset_info_to_cw_asset_info(&pools[1].info))
+                .find(&pools[1].info.clone().into())
                 .map(|a| a.amount)
                 .expect("Wrong asset info is given"),
         ];
@@ -145,11 +144,11 @@ impl AstroportPool {
         let mut pools = config.pair_info.query_pools(&deps.querier, self.pair_addr.to_owned())?;
         let deposits: [Uint128; 2] = [
             assets
-                .find(&astro_asset_info_to_cw_asset_info(&pools[0].info))
+                .find(&pools[0].info.clone().into())
                 .map(|a| a.amount)
                 .expect("Wrong asset info is given"),
             assets
-                .find(&astro_asset_info_to_cw_asset_info(&pools[1].info))
+                .find(&pools[1].info.clone().into())
                 .map(|a| a.amount)
                 .expect("Wrong asset info is given"),
         ];
@@ -303,7 +302,7 @@ impl Pool for AstroportPool {
         let belief_price = Some(Decimal::from_ratio(offer_asset.amount, minimum_out_amount));
         let swap_msg = match &offer_asset.info {
             AssetInfo::Native(_) => {
-                let asset = cw_asset_to_astro_asset(&offer_asset)?;
+                let asset = offer_asset.clone().into();
                 wasm_execute(
                     self.pair_addr.to_string(),
                     &PairExecMsg::Swap {
@@ -373,7 +372,7 @@ impl Pool for AstroportPool {
         Ok(pools
             .iter()
             .map(|a| Asset {
-                info: astro_asset_info_to_cw_asset_info(&a.info),
+                info: a.info.clone().into(),
                 amount: a.amount * share_ratio,
             })
             .collect::<Vec<Asset>>()
@@ -392,7 +391,7 @@ impl Pool for AstroportPool {
             .query::<SimulationResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
                 contract_addr: self.pair_addr.to_string(),
                 msg: to_binary(&QueryMsg::Simulation {
-                    offer_asset: cw_asset_to_astro_asset(&offer_asset)?,
+                    offer_asset: offer_asset.into(),
                 })?,
             }))?
             .return_amount)
