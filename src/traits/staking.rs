@@ -1,9 +1,12 @@
+//! Contains traits related to various forms of staking
+
 use cosmwasm_std::{Addr, Deps, Env, QuerierWrapper, Response, Uint128};
 use cw_asset::AssetList;
 use cw_utils::Duration as CwDuration;
 
 use crate::error::CwDexError;
 
+/// Defines an interface for claiming and querying rewards accrued from staking
 pub trait Rewards {
     /// Claim the pending rewards from the staking contract.
     ///
@@ -32,6 +35,7 @@ pub trait Stake: Rewards {
     fn stake(&self, deps: Deps, env: &Env, amount: Uint128) -> Result<Response, CwDexError>;
 }
 
+/// Defines an interface for unstaking
 pub trait Unstake {
     /// Unstake the given assets.
     ///
@@ -42,8 +46,10 @@ pub trait Unstake {
     fn unstake(&self, deps: Deps, env: &Env, amount: Uint128) -> Result<Response, CwDexError>;
 }
 
+/// A compound trait containing `Stake`, `Unstake` and `Rewards`
 pub trait Staking: Stake + Unstake + Rewards {}
 
+/// Defines an interface for unlocking assets
 pub trait Unlock {
     /// Start unlocking `amount` of the locked asset. Depending on the implementation,
     /// some kind of unlocking ID will be returned in an event and you may need to handle
@@ -60,11 +66,13 @@ pub trait Unlock {
     ) -> Result<Response, CwDexError>;
 }
 
+/// Defines an interface for interacting with locked staked assets
 pub trait LockedStaking: Stake + Unlock + Rewards {
     /// Returns the lockup duration for the staked assets.
     fn get_lockup_duration(&self, deps: Deps) -> Result<CwDuration, CwDexError>;
 }
 
+/// Defines an interface for forced unlocking of locked assets§
 pub trait ForceUnlock: LockedStaking {
     /// Force unlock a lockup position. This can (at least in the case of Osmosis)
     /// only be called by whitelisted addresses and is used in the case of liquidation.

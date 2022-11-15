@@ -1,3 +1,5 @@
+//! Pool trait implementation for Astroport
+
 use astroport_core::asset::PairInfo;
 use astroport_core::factory::PairType;
 use astroport_core::querier::{query_supply, query_token_precision};
@@ -24,14 +26,22 @@ use super::helpers::{
     adjust_precision, compute_current_amp, compute_d, query_pair_config, N_COINS,
 };
 
+/// Represents an AMM pool on Astroport
 #[cw_serde]
 pub struct AstroportPool {
+    /// The address of the associated pair contract
     pub pair_addr: Addr,
+    /// The address of the associated LP token contract
     pub lp_token_addr: Addr,
+    /// The type of pool represented: Constant product (*Xyk*) or *Stableswap*
     pub pair_type: PairType,
 }
 
 impl AstroportPool {
+    /// Creates a new instance of `AstroportPool`
+    ///
+    /// Arguments:
+    /// - `pair_addr`: The address of the pair contract associated with the pool
     pub fn new(deps: Deps, pair_addr: Addr) -> StdResult<Self> {
         let pair_info =
             deps.querier.query_wasm_smart::<PairInfo>(pair_addr.clone(), &PairQueryMsg::Pair {})?;
@@ -49,6 +59,7 @@ impl AstroportPool {
         })
     }
 
+    /// Returns the total supply of the associated LP token
     pub fn query_lp_token_supply(&self, querier: &QuerierWrapper) -> StdResult<Uint128> {
         query_supply(querier, self.lp_token_addr.to_owned())
     }
