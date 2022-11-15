@@ -7,8 +7,8 @@ use apollo_utils::assets::{
     assert_native_asset_info, assert_native_coin, assert_only_native_coins, merge_assets,
 };
 use osmosis_std::types::osmosis::gamm::v1beta1::{
-    GammQuerier, MsgExitPool, MsgJoinPool, MsgJoinSwapShareAmountOut,
-    MsgSwapExactAmountIn, SwapAmountInRoute,
+    GammQuerier, MsgExitPool, MsgJoinPool, MsgJoinSwapShareAmountOut, MsgSwapExactAmountIn,
+    SwapAmountInRoute,
 };
 
 use cosmwasm_schema::cw_serde;
@@ -49,16 +49,8 @@ impl Pool for OsmosisPool {
         // Remove all zero amount Coins, merge duplicates and assert that all assets are native.
         let assets = assert_only_native_coins(merge_assets(assets.purge().deref())?)?;
 
-        // TODO: Provide liquidity double sided.
-        // For now we only provide liquidity single sided since the ratio of the underlying tokens
-        // needs to be exactly the same as the the pool ratio otherwise the remainder is returned
-        // and there are no queries yet
-
         let expected_shares =
-            self.simulate_provide_liquidity(deps, env, assets.to_owned().into())?;
-
-        // Calculate minimum shares
-        let shares_out_min = slippage_tolerance * expected_shares.amount;
+            self.simulate_provide_liquidity(deps, env, assets.to_owned().into())?.amount;
 
         let join_pool: CosmosMsg;
 
@@ -66,7 +58,7 @@ impl Pool for OsmosisPool {
             join_pool = MsgJoinSwapShareAmountOut {
                 sender: env.contract.address.to_string(),
                 pool_id: self.pool_id,
-                share_out_amount: shares_out_min.to_string(),
+                share_out_amount: expected_shares.to_string(),
                 token_in_denom: assets[0].denom.to_string(),
                 token_in_max_amount: assets[0].amount.to_string(),
             }
@@ -75,24 +67,24 @@ impl Pool for OsmosisPool {
             join_pool = MsgJoinPool {
                 sender: env.contract.address.to_string(),
                 pool_id: self.pool_id,
-                share_out_amount: shares_out_min.to_string(),
+                share_out_amount: expected_shares.to_string(),
                 token_in_maxs: vec_into(assets.to_owned()),
             }
             .into();
         }
 
         // Assert slippage tolerance
-        let expected_lps = shares_out.iter().sum::<Uint128>();
-        if min_out < expected_lps {
+        if min_out < expected_shares {
             return Err(CwDexError::MinOutNotReceived {
                 min_out,
-                received: expected_lps,
+                received: expected_shares,
             });
         }
 
         let event = Event::new("apollo/cw-dex/provide_liquidity")
             .add_attribute("pool_id", self.pool_id.to_string())
-            .add_attribute("minimum_shares_out", shares_out_min);
+            .add_attribute("min_out", min_out)
+            .add_attribute("expected_shares", expected_shares);
 
         Ok(Response::new().add_message(join_pool).add_event(event))
     }
@@ -173,9 +165,9 @@ impl Pool for OsmosisPool {
     ) -> Result<Asset, CwDexError> {
         let querier = GammQuerier::new(&deps.querier);
 
-        let lp_denom: String;
-        let shares_out_amount: Uint128;
+        let lp_denom = query_lp_denom(&deps.querier, self.pool_id)?;
 
+        let shares_out_amount: Uint128;
         if assets.len() == 1 {
             shares_out_amount = Uint128::from_str(
                 &querier
@@ -185,8 +177,6 @@ impl Pool for OsmosisPool {
                     )?
                     .share_out_amount,
             )?;
-
-            lp_denom = query_lp_denom(&deps.querier, self.pool_id)?;
         } else {
             shares_out_amount = Uint128::from_str(
                 &querier
@@ -196,8 +186,6 @@ impl Pool for OsmosisPool {
                     )?
                     .shares_out,
             )?;
-
-            lp_denom = query_lp_denom(&deps.querier, self.pool_id)?;
         }
 
         Ok(Asset::new(AssetInfo::native(lp_denom), shares_out_amount))
