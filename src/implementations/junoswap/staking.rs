@@ -1,3 +1,5 @@
+//! Staking/rewards traits implementations for Junoswap
+
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_binary, Addr, CosmosMsg, Deps, Env, Event, QuerierWrapper, QueryRequest, ReplyOn, Response,
@@ -24,9 +26,12 @@ use stake_cw20_external_rewards::msg::{
     QueryMsg as StakeCw20ExternalRewardsQueryMsg,
 };
 
+/// Represents staking of LP tokens on Junoswap
 #[cw_serde]
 pub struct JunoswapStaking {
+    /// Address of the staking contract
     pub addr: Addr,
+    /// Address of the LP token contract
     pub lp_token_addr: Addr,
 }
 

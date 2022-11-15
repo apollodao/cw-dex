@@ -1,3 +1,5 @@
+//! Pool trait implementation for Junoswap
+
 use std::vec;
 
 use cosmwasm_schema::cw_serde;
@@ -17,12 +19,15 @@ use super::helpers::{
     JunoAssetInfo, JunoAssetList,
 };
 
+/// Represents an AMM pool on Astroport
 #[cw_serde]
 pub struct JunoswapPool {
+    /// Address of the pool contract
     pub addr: Addr,
 }
 
 impl JunoswapPool {
+    /// Queries the pool contract for information
     pub fn query_info(&self, querier: &QuerierWrapper) -> StdResult<InfoResponse> {
         querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: self.addr.to_string(),
