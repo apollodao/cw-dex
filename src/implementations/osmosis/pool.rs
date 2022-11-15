@@ -7,7 +7,8 @@ use apollo_utils::assets::{
     assert_native_asset_info, assert_native_coin, assert_only_native_coins, merge_assets,
 };
 use osmosis_std::types::osmosis::gamm::v1beta1::{
-    GammQuerier, MsgExitPool, MsgJoinSwapExternAmountIn, MsgSwapExactAmountIn, SwapAmountInRoute,
+    GammQuerier, MsgExitPool, MsgJoinPool, MsgJoinSwapShareAmountOut, MsgSwapExactAmountIn,
+    SwapAmountInRoute,
 };
 
 use cosmwasm_schema::cw_serde;
@@ -48,46 +49,44 @@ impl Pool for OsmosisPool {
         // Remove all zero amount Coins, merge duplicates and assert that all assets are native.
         let assets = assert_only_native_coins(merge_assets(assets.purge().deref())?)?;
 
-        // TODO: Provide liquidity double sided.
-        // For now we only provide liquidity single sided since the ratio of the underlying tokens
-        // needs to be exactly the same as the the pool ratio otherwise the remainder is returned
-        // and there are no queries yet
-        let (join_msgs, shares_out): (Vec<CosmosMsg>, Vec<Uint128>) = assets
-            .into_iter()
-            .map(|coin| {
-                // Query expected amount of lp shares with stargate query
-                let expected_shares =
-                    self.simulate_provide_liquidity(deps, env, vec![coin.clone()].into())?.amount;
+        let expected_shares =
+            self.simulate_provide_liquidity(deps, env, assets.to_owned().into())?.amount;
 
-                Ok((
-                    MsgJoinSwapExternAmountIn {
-                        sender: env.contract.address.to_string(),
-                        pool_id: self.pool_id,
-                        token_in: Some(coin.into()),
-                        share_out_min_amount: expected_shares.to_string(),
-                    }
-                    .into(),
-                    expected_shares,
-                ))
-            })
-            .collect::<StdResult<Vec<_>>>()?
-            .into_iter()
-            .unzip();
+        let join_pool: CosmosMsg;
+
+        if assets.len() == 1 {
+            join_pool = MsgJoinSwapShareAmountOut {
+                sender: env.contract.address.to_string(),
+                pool_id: self.pool_id,
+                share_out_amount: expected_shares.to_string(),
+                token_in_denom: assets[0].denom.to_string(),
+                token_in_max_amount: assets[0].amount.to_string(),
+            }
+            .into();
+        } else {
+            join_pool = MsgJoinPool {
+                sender: env.contract.address.to_string(),
+                pool_id: self.pool_id,
+                share_out_amount: expected_shares.to_string(),
+                token_in_maxs: vec_into(assets.to_owned()),
+            }
+            .into();
+        }
 
         // Assert slippage tolerance
-        let expected_lps = shares_out.iter().sum::<Uint128>();
-        if min_out < expected_lps {
+        if min_out < expected_shares {
             return Err(CwDexError::MinOutNotReceived {
                 min_out,
-                received: expected_lps,
+                received: expected_shares,
             });
         }
 
         let event = Event::new("apollo/cw-dex/provide_liquidity")
             .add_attribute("pool_id", self.pool_id.to_string())
-            .add_attribute("minimum_shares_out", shares_out.iter().sum::<Uint128>().to_string());
+            .add_attribute("min_out", min_out)
+            .add_attribute("expected_shares", expected_shares);
 
-        Ok(Response::new().add_messages(join_msgs).add_event(event))
+        Ok(Response::new().add_message(join_pool).add_event(event))
     }
 
     fn withdraw_liquidity(
@@ -166,13 +165,28 @@ impl Pool for OsmosisPool {
     ) -> Result<Asset, CwDexError> {
         let querier = GammQuerier::new(&deps.querier);
 
-        let shares_out_amount = Uint128::from_str(
-            &querier
-                .calc_join_pool_shares(self.pool_id, vec_into(assert_only_native_coins(assets)?))?
-                .share_out_amount,
-        )?;
-
         let lp_denom = query_lp_denom(&deps.querier, self.pool_id)?;
+
+        let shares_out_amount: Uint128;
+        if assets.len() == 1 {
+            shares_out_amount = Uint128::from_str(
+                &querier
+                    .calc_join_pool_shares(
+                        self.pool_id,
+                        vec_into(assert_only_native_coins(assets)?),
+                    )?
+                    .share_out_amount,
+            )?;
+        } else {
+            shares_out_amount = Uint128::from_str(
+                &querier
+                    .calc_join_pool_no_swap_shares(
+                        self.pool_id,
+                        vec_into(assert_only_native_coins(assets)?),
+                    )?
+                    .shares_out,
+            )?;
+        }
 
         Ok(Asset::new(AssetInfo::native(lp_denom), shares_out_amount))
     }
