@@ -115,7 +115,7 @@ impl JunoAssetList {
     pub(crate) fn find(&self, token: JunoAssetInfo) -> StdResult<&JunoAsset> {
         self.into_iter()
             .find(|a| a.info == token)
-            .ok_or(StdError::generic_err("Token not found in JunoAssetList instance"))
+            .ok_or_else(|| StdError::generic_err("Token not found in JunoAssetList instance"))
     }
 }
 

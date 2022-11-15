@@ -21,7 +21,7 @@ pub enum Pool {
 impl Pool {
     pub fn as_trait(&self) -> Box<dyn PoolTrait> {
         match self {
-            Pool::Osmosis(x) => Box::new(x.clone()),
+            Pool::Osmosis(x) => Box::new(*x),
             Pool::Junoswap(x) => Box::new(x.clone()),
         }
     }
@@ -98,7 +98,7 @@ impl PoolTrait for Pool {
     fn simulate_withdraw_liquidity(
         &self,
         deps: Deps,
-        asset: Asset,
+        asset: &Asset,
     ) -> Result<AssetList, CwDexError> {
         self.as_trait().simulate_withdraw_liquidity(deps, asset)
     }

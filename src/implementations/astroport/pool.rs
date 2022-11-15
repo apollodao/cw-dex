@@ -359,7 +359,7 @@ impl Pool for AstroportPool {
     fn simulate_withdraw_liquidity(
         &self,
         deps: Deps,
-        asset: Asset,
+        asset: &Asset,
     ) -> Result<AssetList, CwDexError> {
         let amount = asset.amount;
         let total_share = self.query_lp_token_supply(&deps.querier)?;

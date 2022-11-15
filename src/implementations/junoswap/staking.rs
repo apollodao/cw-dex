@@ -1,11 +1,11 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, Deps, Env, Event, QuerierWrapper, QueryRequest, ReplyOn, Response,
-    StdResult, SubMsg, Uint128, WasmMsg, WasmQuery,
+    to_binary, Addr, CosmosMsg, Deps, Env, Event, QuerierWrapper, QueryRequest, Response, Uint128,
+    WasmMsg, WasmQuery,
 };
-use cw20::{Cw20ExecuteMsg, Denom};
+use cw20::Cw20ExecuteMsg;
 
-use cw_asset::{Asset, AssetInfo, AssetList};
+use cw_asset::AssetList;
 use cw_utils::Duration;
 use stake_cw20::{
     msg::{
@@ -18,10 +18,6 @@ use stake_cw20::{
 use crate::{
     traits::{LockedStaking, Rewards, Stake, Unlock, Unstake},
     CwDexError,
-};
-use stake_cw20_external_rewards::msg::{
-    ExecuteMsg as StakeCw20ExternalRewardsExecuteMsg, PendingRewardsResponse,
-    QueryMsg as StakeCw20ExternalRewardsQueryMsg,
 };
 
 #[cw_serde]
@@ -74,7 +70,7 @@ impl Unstake for JunoswapStaking {
 }
 
 impl Rewards for JunoswapStaking {
-    fn claim_rewards(&self, deps: Deps, _env: &Env) -> Result<Response, CwDexError> {
+    fn claim_rewards(&self, _deps: Deps, _env: &Env) -> Result<Response, CwDexError> {
         todo!("Implement JunoswapStaking::claim_rewards")
         // let claim_messages = deps
         //     .querier

@@ -75,7 +75,7 @@ pub trait Pool {
     fn simulate_withdraw_liquidity(
         &self,
         deps: Deps,
-        lp_token: Asset,
+        lp_token: &Asset,
     ) -> Result<AssetList, CwDexError>;
 
     fn simulate_swap(
