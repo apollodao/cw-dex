@@ -58,7 +58,7 @@ impl Pool {
     }
 }
 
-// Implement the Pool trait for the Pool enum so we can use all the trait mehtods
+// Implement the Pool trait for the Pool enum so we can use all the trait methods
 // directly on the enum type.
 // TODO: Use "enum_dispatch" macro instead? https://crates.io/crates/enum_dispatch
 impl PoolTrait for Pool {

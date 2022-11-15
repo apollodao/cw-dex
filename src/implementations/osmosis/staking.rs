@@ -1,4 +1,4 @@
-//! Staking/rewards traits implementations for Junoswap
+//! Staking/rewards traits implementations for Osmosis
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
