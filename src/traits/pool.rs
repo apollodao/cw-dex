@@ -14,6 +14,11 @@ pub trait Pool {
     /// `assets` must only contain the assets in the pool, but the ratio of
     /// amounts does not need to be the same as the pool's ratio.
     ///
+    /// All implementations of this trait should try to use as much of the provided
+    /// assets as possible, but it may leave some in the contracts balance if they
+    /// are not exactly in the same ratio as the pool. All implementations should
+    /// return an error if the returned amount of LP tokens is less than `min_out`.
+    ///
     /// Arguments:
     /// - `assets`: the assets to provide liquidity with
     /// - `min_out`: the minimum amount of LP tokens to receive
