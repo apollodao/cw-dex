@@ -42,8 +42,9 @@ pub trait Pool {
     /// Swap assets in the pool.
     ///
     /// Arguments:
-    /// - `offer`: the offer asset
-    /// - `ask`: the ask asset
+    /// - `offer_asset`: The asset we want to swap.
+    /// - `ask_asset`: The asset we want to receive from the swap.
+    /// - `min_out`: The minimum amount of `ask_asset` to receive.
     ///
     /// Returns a Response containing the messages to swap assets in the pool.
     fn swap(
