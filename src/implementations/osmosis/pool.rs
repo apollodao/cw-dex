@@ -88,26 +88,19 @@ impl Pool for OsmosisPool {
 
     fn withdraw_liquidity(
         &self,
-        deps: Deps,
+        _deps: Deps,
         env: &Env,
         asset: Asset,
     ) -> Result<Response, CwDexError> {
-        let token_out_mins = self
-            .simulate_withdraw_liquidity(deps, &asset)?
-            .into_iter()
-            .map(|asset| asset.try_into())
-            .collect::<StdResult<Vec<Coin>>>()?;
-
         let exit_msg = MsgExitPool {
             sender: env.contract.address.to_string(),
             pool_id: self.pool_id,
             share_in_amount: asset.amount.to_string(),
-            token_out_mins: vec_into(token_out_mins.clone()),
+            token_out_mins: vec![],
         };
 
         let event = Event::new("apollo/cw-dex/withdraw_liquidity")
             .add_attribute("pool_id", self.pool_id.to_string())
-            .add_attribute("minimum_tokens_out", format!("{:?}", token_out_mins))
             .add_attribute("shares_in", asset.to_string());
 
         Ok(Response::new().add_message(exit_msg).add_event(event))
