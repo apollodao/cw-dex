@@ -1,9 +1,5 @@
-use astroport_core::{
-    asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo},
-    U256,
-};
-use cosmwasm_std::{StdError, StdResult};
-use cw_asset::{Asset, AssetInfo};
+use astroport_core::U256;
+use cosmwasm_std::StdResult;
 use cw_storage_plus::Item;
 use std::cmp::Ordering;
 
@@ -14,44 +10,6 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use astroport_core::asset::PairInfo;
-
-pub(crate) fn astro_asset_to_cw_asset(astro_asset: &AstroAsset) -> Asset {
-    Asset {
-        info: astro_asset_info_to_cw_asset_info(&astro_asset.info),
-        amount: astro_asset.amount,
-    }
-}
-
-pub(crate) fn cw_asset_to_astro_asset(asset: &Asset) -> StdResult<AstroAsset> {
-    Ok(AstroAsset {
-        info: cw_asset_info_to_astro_asset_info(&asset.info)?,
-        amount: asset.amount,
-    })
-}
-
-pub(crate) fn cw_asset_info_to_astro_asset_info(
-    asset_info: &AssetInfo,
-) -> StdResult<AstroAssetInfo> {
-    match asset_info {
-        AssetInfo::Native(denom) => Ok(AstroAssetInfo::NativeToken {
-            denom: denom.to_string(),
-        }),
-        AssetInfo::Cw20(contract_addr) => Ok(AstroAssetInfo::Token {
-            contract_addr: contract_addr.clone(),
-        }),
-    }
-}
-
-pub(crate) fn astro_asset_info_to_cw_asset_info(asset_info: &AstroAssetInfo) -> AssetInfo {
-    match asset_info {
-        AstroAssetInfo::NativeToken {
-            denom,
-        } => AssetInfo::Native(denom.clone()),
-        AstroAssetInfo::Token {
-            contract_addr,
-        } => AssetInfo::cw20(contract_addr.clone()),
-    }
-}
 
 /// ## Description
 /// Returns self multiplied by b
