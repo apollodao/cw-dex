@@ -77,7 +77,7 @@ pub trait Pool {
     fn simulate_withdraw_liquidity(
         &self,
         deps: Deps,
-        lp_token: Asset,
+        lp_token: &Asset,
     ) -> Result<AssetList, CwDexError>;
 
     /// Simulates a swap and returns the estimated amount of the asset asked for, given the offered asset

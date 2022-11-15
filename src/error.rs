@@ -39,6 +39,10 @@ pub enum CwDexError {
         a: Asset,
     },
 
+    /// Invalid LP token
+    #[error("Invalid LP token")]
+    InvalidLpToken {},
+
     /// Overflow when converting to from BigInt to Uint128
     #[error("Overflow when converting to from BigInt to Uint128")]
     BigIntOverflow {},
