@@ -5,13 +5,13 @@ use apollo_utils::assets::{
     assert_native_asset_info, assert_native_coin, assert_only_native_coins, merge_assets,
 };
 use osmosis_std::types::osmosis::gamm::v1beta1::{
-    GammQuerier, MsgExitPool, MsgJoinPool, MsgJoinSwapExternAmountIn, MsgSwapExactAmountIn,
-    SwapAmountInRoute, MsgJoinSwapShareAmountOut,
+    GammQuerier, MsgExitPool, MsgJoinPool, MsgJoinSwapShareAmountOut,
+    MsgSwapExactAmountIn, SwapAmountInRoute,
 };
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_vec, Coin, CosmosMsg, Decimal, Deps, Env, Event, Response, StdError, StdResult, Uint128,
+    Coin, CosmosMsg, Decimal, Deps, Env, Event, Response, StdError, StdResult, Uint128,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
 
@@ -62,17 +62,19 @@ impl Pool for OsmosisPool {
         // Calculate minimum shares
         let shares_out_min = slippage_tolerance * expected_shares.amount;
 
+        let join_pool: CosmosMsg;
+
         if assets.len() == 1 {
-            let join_pool: CosmosMsg = MsgJoinSwapShareAmountOut {
+            join_pool = MsgJoinSwapShareAmountOut {
                 sender: env.contract.address.to_string(),
                 pool_id: self.pool_id,
                 share_out_amount: shares_out_min.to_string(),
                 token_in_denom: assets[0].denom.to_string(),
-                token_in_max_amount: assets[0].amount.to_string()
+                token_in_max_amount: assets[0].amount.to_string(),
             }
             .into();
         } else {
-            let join_pool: CosmosMsg = MsgJoinPool {
+            join_pool = MsgJoinPool {
                 sender: env.contract.address.to_string(),
                 pool_id: self.pool_id,
                 share_out_amount: shares_out_min.to_string(),
