@@ -246,14 +246,22 @@ impl AstroportPool {
 impl Pool for AstroportPool {
     fn provide_liquidity(
         &self,
-        _deps: Deps,
-        _env: &Env,
+        deps: Deps,
+        env: &Env,
         assets: AssetList,
-        slippage_tolerance: Option<Decimal>,
+        min_out: Uint128,
     ) -> Result<Response, CwDexError> {
+        let lp_out = self.simulate_provide_liquidity(deps, env, assets.clone())?;
+        if min_out < lp_out.amount {
+            return Err(CwDexError::MinOutNotReceived {
+                min_out,
+                received: lp_out.amount,
+            });
+        }
+
         let msg = PairExecMsg::ProvideLiquidity {
             assets: assets.to_owned().try_into()?,
-            slippage_tolerance,
+            slippage_tolerance: None,
             auto_stake: Some(false),
             receiver: None,
         };

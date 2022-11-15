@@ -3,7 +3,7 @@
 
 use std::num::TryFromIntError;
 
-use cosmwasm_std::{DivideByZeroError, OverflowError, StdError};
+use cosmwasm_std::{DivideByZeroError, OverflowError, StdError, Uint128};
 use cw_asset::Asset;
 use thiserror::Error;
 
@@ -66,6 +66,17 @@ pub enum CwDexError {
     /// When unstaking/unbonding is expected to be instant
     #[error("Expected no unbonding period")]
     UnstakingDurationNotSupported {},
+
+    /// The minimum amount of tokens requested was not returned from the action
+    #[error(
+        "Did not receive expected amount of tokens. Expected: {min_out}, received: {received}"
+    )]
+    MinOutNotReceived {
+        /// The minimum amount of tokens the user requested
+        min_out: Uint128,
+        /// The actual amount of tokens received
+        received: Uint128,
+    },
 }
 
 impl From<CwDexError> for StdError {

@@ -1,7 +1,7 @@
 //! Contains the `Pool` trait which describes an interface to an AMM pool.
 
-use cosmwasm_std::{Decimal, Env, Response, StdResult};
 use cosmwasm_std::{Deps, Uint128};
+use cosmwasm_std::{Env, Response, StdResult};
 use cw_asset::{Asset, AssetInfo, AssetList};
 
 use crate::error::CwDexError;
@@ -14,13 +14,15 @@ pub trait Pool {
     /// `assets` must only contain the assets in the pool, but the ratio of
     /// amounts does not need to be the same as the pool's ratio.
     ///
-    /// TODO: Document how slippage_tolerance works. When will it fail?
+    /// Arguments:
+    /// - `assets`: the assets to provide liquidity with
+    /// - `min_out`: the minimum amount of LP tokens to receive
     fn provide_liquidity(
         &self,
         deps: Deps,
         env: &Env,
         assets: AssetList,
-        slippage_tolerance: Option<Decimal>,
+        min_out: Uint128,
     ) -> Result<Response, CwDexError>;
 
     /// Withdraw liquidity from the pool.
