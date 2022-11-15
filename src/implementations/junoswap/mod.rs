@@ -1,3 +1,5 @@
+//! Module containing Pool and Staking implementations for Junoswap
+
 mod helpers;
 mod pool;
 mod staking;

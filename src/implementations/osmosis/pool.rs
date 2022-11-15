@@ -1,3 +1,5 @@
+//! Pool trait implementation for Osmosis
+
 use std::ops::Deref;
 use std::str::FromStr;
 
@@ -10,9 +12,7 @@ use osmosis_std::types::osmosis::gamm::v1beta1::{
 };
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{
-    Coin, CosmosMsg, Decimal, Deps, Env, Event, Response, StdError, StdResult, Uint128,
-};
+use cosmwasm_std::{Coin, CosmosMsg, Deps, Env, Event, Response, StdError, StdResult, Uint128};
 use cw_asset::{Asset, AssetInfo, AssetList};
 
 use crate::traits::Pool;
@@ -30,6 +30,7 @@ pub struct OsmosisPool {
 }
 
 impl OsmosisPool {
+    /// Creates a new `OsmosisPool` instance with the given `pool_id`.
     pub fn new(pool_id: u64) -> Self {
         Self {
             pool_id,
@@ -43,13 +44,10 @@ impl Pool for OsmosisPool {
         deps: Deps,
         env: &Env,
         mut assets: AssetList,
-        slippage_tolerance: Option<Decimal>,
+        min_out: Uint128,
     ) -> Result<Response, CwDexError> {
         // Remove all zero amount Coins, merge duplicates and assert that all assets are native.
         let assets = assert_only_native_coins(merge_assets(assets.purge().deref())?)?;
-
-        // Unwrap slppage tolerance or set to 0% if not provided.
-        let slippage_tolerance = Decimal::one() - slippage_tolerance.unwrap_or_else(Decimal::one);
 
         // TODO: Provide liquidity double sided.
         // For now we only provide liquidity single sided since the ratio of the underlying tokens
@@ -81,6 +79,15 @@ impl Pool for OsmosisPool {
                 token_in_maxs: vec_into(assets.to_owned()),
             }
             .into();
+        }
+
+        // Assert slippage tolerance
+        let expected_lps = shares_out.iter().sum::<Uint128>();
+        if min_out < expected_lps {
+            return Err(CwDexError::MinOutNotReceived {
+                min_out,
+                received: expected_lps,
+            });
         }
 
         let event = Event::new("apollo/cw-dex/provide_liquidity")
@@ -116,7 +123,7 @@ impl Pool for OsmosisPool {
         env: &Env,
         offer_asset: Asset,
         ask_asset_info: AssetInfo,
-        minimum_out_amount: Uint128,
+        min_out: Uint128,
     ) -> Result<Response, CwDexError> {
         let offer = assert_native_coin(&offer_asset)?;
         let ask_denom = assert_native_asset_info(&ask_asset_info)?;
@@ -128,14 +135,14 @@ impl Pool for OsmosisPool {
                 token_out_denom: ask_denom.clone(),
             }],
             token_in: Some(offer.clone().into()),
-            token_out_min_amount: minimum_out_amount.to_string(),
+            token_out_min_amount: min_out.to_string(),
         };
 
         let event = Event::new("apollo/cw-dex/swap")
             .add_attribute("pool_id", self.pool_id.to_string())
             .add_attribute("offer", offer.to_string())
             .add_attribute("ask", ask_denom)
-            .add_attribute("token_out_min_amount", minimum_out_amount);
+            .add_attribute("token_out_min_amount", min_out);
 
         Ok(Response::new().add_message(swap_msg).add_event(event))
     }

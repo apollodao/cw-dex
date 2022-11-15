@@ -1,5 +1,7 @@
-use cosmwasm_std::{Decimal, Env, Response, StdResult};
+//! Contains the `Pool` trait which describes an interface to an AMM pool.
+
 use cosmwasm_std::{Deps, Uint128};
+use cosmwasm_std::{Env, Response, StdResult};
 use cw_asset::{Asset, AssetInfo, AssetList};
 
 use crate::error::CwDexError;
@@ -12,13 +14,20 @@ pub trait Pool {
     /// `assets` must only contain the assets in the pool, but the ratio of
     /// amounts does not need to be the same as the pool's ratio.
     ///
-    /// TODO: Document how slippage_tolerance works. When will it fail?
+    /// All implementations of this trait should try to use as much of the provided
+    /// assets as possible, but it may leave some in the contracts balance if they
+    /// are not exactly in the same ratio as the pool. All implementations should
+    /// return an error if the returned amount of LP tokens is less than `min_out`.
+    ///
+    /// Arguments:
+    /// - `assets`: the assets to provide liquidity with
+    /// - `min_out`: the minimum amount of LP tokens to receive
     fn provide_liquidity(
         &self,
         deps: Deps,
         env: &Env,
         assets: AssetList,
-        slippage_tolerance: Option<Decimal>,
+        min_out: Uint128,
     ) -> Result<Response, CwDexError>;
 
     /// Withdraw liquidity from the pool.
@@ -38,8 +47,9 @@ pub trait Pool {
     /// Swap assets in the pool.
     ///
     /// Arguments:
-    /// - `offer`: the offer asset
-    /// - `ask`: the ask asset
+    /// - `offer_asset`: The asset we want to swap.
+    /// - `ask_asset`: The asset we want to receive from the swap.
+    /// - `min_out`: The minimum amount of `ask_asset` to receive.
     ///
     /// Returns a Response containing the messages to swap assets in the pool.
     fn swap(
@@ -48,7 +58,7 @@ pub trait Pool {
         env: &Env,
         offer_asset: Asset,
         ask_asset_info: AssetInfo,
-        minimum_out_amount: Uint128,
+        min_out: Uint128,
     ) -> Result<Response, CwDexError>;
 
     // === Query functions ===
@@ -78,6 +88,12 @@ pub trait Pool {
         lp_token: &Asset,
     ) -> Result<AssetList, CwDexError>;
 
+    /// Simulates a swap and returns the estimated amount of the asset asked for, given the offered asset
+    ///
+    /// Arguments:
+    /// - `offer_asset`: The asset offered in the swap
+    /// - `ask_asset_info`: The asset asked for in the swap
+    /// - `sender`: Sender address (required for Osmosis)
     fn simulate_swap(
         &self,
         deps: Deps,

@@ -1,3 +1,5 @@
+//! Pool trait implementation for Astroport
+
 use astroport_core::asset::PairInfo;
 use astroport_core::factory::PairType;
 use astroport_core::querier::{query_supply, query_token_precision};
@@ -24,14 +26,22 @@ use super::helpers::{
     adjust_precision, compute_current_amp, compute_d, query_pair_config, N_COINS,
 };
 
+/// Represents an AMM pool on Astroport
 #[cw_serde]
 pub struct AstroportPool {
+    /// The address of the associated pair contract
     pub pair_addr: Addr,
+    /// The address of the associated LP token contract
     pub lp_token_addr: Addr,
+    /// The type of pool represented: Constant product (*Xyk*) or *Stableswap*
     pub pair_type: PairType,
 }
 
 impl AstroportPool {
+    /// Creates a new instance of `AstroportPool`
+    ///
+    /// Arguments:
+    /// - `pair_addr`: The address of the pair contract associated with the pool
     pub fn new(deps: Deps, pair_addr: Addr) -> StdResult<Self> {
         let pair_info =
             deps.querier.query_wasm_smart::<PairInfo>(pair_addr.clone(), &PairQueryMsg::Pair {})?;
@@ -49,6 +59,7 @@ impl AstroportPool {
         })
     }
 
+    /// Returns the total supply of the associated LP token
     pub fn query_lp_token_supply(&self, querier: &QuerierWrapper) -> StdResult<Uint128> {
         query_supply(querier, self.lp_token_addr.to_owned())
     }
@@ -235,14 +246,22 @@ impl AstroportPool {
 impl Pool for AstroportPool {
     fn provide_liquidity(
         &self,
-        _deps: Deps,
-        _env: &Env,
+        deps: Deps,
+        env: &Env,
         assets: AssetList,
-        slippage_tolerance: Option<Decimal>,
+        min_out: Uint128,
     ) -> Result<Response, CwDexError> {
+        let lp_out = self.simulate_provide_liquidity(deps, env, assets.clone())?;
+        if min_out < lp_out.amount {
+            return Err(CwDexError::MinOutNotReceived {
+                min_out,
+                received: lp_out.amount,
+            });
+        }
+
         let msg = PairExecMsg::ProvideLiquidity {
             assets: assets.to_owned().try_into()?,
-            slippage_tolerance,
+            slippage_tolerance: None,
             auto_stake: Some(false),
             receiver: None,
         };
@@ -295,11 +314,11 @@ impl Pool for AstroportPool {
         env: &Env,
         offer_asset: Asset,
         ask_asset_info: AssetInfo,
-        minimum_out_amount: Uint128,
+        min_out: Uint128,
     ) -> Result<Response, CwDexError> {
         // Setting belief price to the minimium acceptable return and max spread to zero simplifies things
-        // Astroport will make the best possible swap that returns at least minimum_out_amount
-        let belief_price = Some(Decimal::from_ratio(offer_asset.amount, minimum_out_amount));
+        // Astroport will make the best possible swap that returns at least `min_out`.
+        let belief_price = Some(Decimal::from_ratio(offer_asset.amount, min_out));
         let swap_msg = match &offer_asset.info {
             AssetInfo::Native(_) => {
                 let asset = offer_asset.clone().into();
@@ -332,7 +351,7 @@ impl Pool for AstroportPool {
             .add_attribute("pair_addr", &self.pair_addr)
             .add_attribute("ask_asset", format!("{:?}", ask_asset_info))
             .add_attribute("offer_asset", format!("{:?}", offer_asset.info))
-            .add_attribute("minimum_out_amount", minimum_out_amount);
+            .add_attribute("minimum_out_amount", min_out);
         Ok(Response::new().add_message(swap_msg).add_event(event))
     }
 

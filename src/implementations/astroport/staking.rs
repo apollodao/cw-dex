@@ -1,3 +1,5 @@
+//! Staking/rewards traits implementations for Astroport
+
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_binary, Addr, CosmosMsg, Deps, Env, Event, QuerierWrapper, QueryRequest, Response, Uint128,
@@ -17,10 +19,14 @@ use crate::{
     CwDexError,
 };
 
+/// Represents staking of tokens on Astroport
 #[cw_serde]
 pub struct AstroportStaking {
+    /// The address of the associated LP token contract
     pub lp_token_addr: Addr,
+    /// The address of the associated generator contract
     pub generator_addr: Addr,
+    /// The address of the ASTRO token contract
     pub astro_addr: Addr,
 }
 

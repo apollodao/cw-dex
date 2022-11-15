@@ -1,9 +1,11 @@
+//! Pool trait implementation for Junoswap
+
 use std::vec;
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, Decimal, Deps, Env, Event, QuerierWrapper, QueryRequest, Response,
-    StdError, StdResult, Uint128, WasmMsg, WasmQuery,
+    to_binary, Addr, CosmosMsg, Deps, Env, Event, QuerierWrapper, QueryRequest, Response, StdError,
+    StdResult, Uint128, WasmMsg, WasmQuery,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
 use wasmswap::msg::{
@@ -17,12 +19,15 @@ use super::helpers::{
     JunoAssetInfo, JunoAssetList,
 };
 
+/// Represents an AMM pool on Astroport
 #[cw_serde]
 pub struct JunoswapPool {
+    /// Address of the pool contract
     pub addr: Addr,
 }
 
 impl JunoswapPool {
+    /// Queries the pool contract for information
     pub fn query_info(&self, querier: &QuerierWrapper) -> StdResult<InfoResponse> {
         querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: self.addr.to_string(),
@@ -40,7 +45,7 @@ impl Pool for JunoswapPool {
         deps: Deps,
         env: &Env,
         assets: AssetList,
-        slippage_tolerance: Option<Decimal>,
+        min_out: Uint128,
     ) -> Result<Response, CwDexError> {
         let pool_info = self.query_info(&deps.querier)?;
 
@@ -48,11 +53,14 @@ impl Pool for JunoswapPool {
         let provide_liquidity_info =
             juno_simulate_provide_liquidity(&assets.try_into()?, pool_info)?;
 
-        // TODO: Is this the behavior of slippage_tolerance that we want? Right now
-        // It's a bit unclear what slippage_tolerance is supposed to do. We must
-        // define it more clearly in the trait doc comments.
-        let min_liquidity = provide_liquidity_info.lp_token_expected_amount
-            * Decimal::one().checked_sub(slippage_tolerance.unwrap_or_else(Decimal::one))?;
+        // Check if minimum LPs is met
+        let lp_out = provide_liquidity_info.lp_token_expected_amount;
+        if min_out < lp_out {
+            return Err(CwDexError::MinOutNotReceived {
+                min_out,
+                received: lp_out,
+            });
+        }
 
         // Increase allowance for cw20 tokens and add native tokens to the funds vec.
         let assets_to_use = vec![
@@ -71,7 +79,7 @@ impl Pool for JunoswapPool {
             funds,
             msg: to_binary(&ExecuteMsg::AddLiquidity {
                 token1_amount: provide_liquidity_info.token1_to_use.amount,
-                min_liquidity,
+                min_liquidity: min_out,
                 max_token2: provide_liquidity_info.token2_to_use.amount,
                 expiration: None,
             })?,
@@ -115,7 +123,7 @@ impl Pool for JunoswapPool {
         env: &Env,
         offer_asset: Asset,
         ask_asset_info: AssetInfo,
-        minimum_out_amount: Uint128,
+        min_out: Uint128,
     ) -> Result<Response, CwDexError> {
         let pool_info = self.query_info(&deps.querier)?;
 
@@ -149,7 +157,7 @@ impl Pool for JunoswapPool {
             msg: to_binary(&ExecuteMsg::Swap {
                 input_token,
                 input_amount,
-                min_output: minimum_out_amount,
+                min_output: min_out,
                 expiration: None,
             })?,
         });
@@ -158,7 +166,7 @@ impl Pool for JunoswapPool {
             .add_attribute("type", "junoswap")
             .add_attribute("offer_asset", format!("{:?}", offer_asset))
             .add_attribute("ask_asset_info", format!("{:?}", ask_asset_info))
-            .add_attribute("minimum_out_amount", minimum_out_amount.to_string());
+            .add_attribute("minimum_out_amount", min_out.to_string());
 
         Ok(Response::new().add_messages(increase_allowances).add_message(swap).add_event(event))
     }

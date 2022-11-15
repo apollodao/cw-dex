@@ -1,3 +1,5 @@
+//! Staking/rewards traits implementations for Junoswap
+
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_binary, Addr, CosmosMsg, Deps, Env, Event, QuerierWrapper, QueryRequest, Response, Uint128,
@@ -20,9 +22,12 @@ use crate::{
     CwDexError,
 };
 
+/// Represents staking of LP tokens on Junoswap
 #[cw_serde]
 pub struct JunoswapStaking {
+    /// Address of the staking contract
     pub addr: Addr,
+    /// Address of the LP token contract
     pub lp_token_addr: Addr,
 }
 
@@ -104,8 +109,8 @@ impl Rewards for JunoswapStaking {
 
     fn query_pending_rewards(
         &self,
-        querier: &QuerierWrapper,
-        user: &Addr,
+        _querier: &QuerierWrapper,
+        _user: &Addr,
     ) -> Result<AssetList, CwDexError> {
         todo!("Implement JunoswapStaking::query_pending_rewards")
         // let hooks = querier

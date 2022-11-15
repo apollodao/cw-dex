@@ -1,5 +1,8 @@
+//! Contains an enum with variants for Pool implementations.
+//! For use in serialization.
+
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Decimal, Deps, Env, Response, StdResult, Uint128};
+use cosmwasm_std::{Deps, Env, Response, StdResult, Uint128};
 use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use std::str::FromStr;
 
@@ -14,11 +17,14 @@ use crate::traits::pool::Pool as PoolTrait;
 /// objects require us not to implement the Sized trait, which cw_serde requires.
 #[cw_serde]
 pub enum Pool {
+    /// Contains an Osmosis pool implementation
     Osmosis(OsmosisPool),
+    /// Contains an Junoswap pool implementation
     Junoswap(JunoswapPool),
 }
 
 impl Pool {
+    /// Returns a specific `Pool` instance as a boxed generic `Pool` trait
     pub fn as_trait(&self) -> Box<dyn PoolTrait> {
         match self {
             Pool::Osmosis(x) => Box::new(*x),
@@ -26,6 +32,10 @@ impl Pool {
         }
     }
 
+    /// Returns the matching pool given a LP token.
+    ///
+    /// Arguments:
+    /// - `lp_token`: Said LP token
     pub fn get_pool_for_lp_token(_deps: Deps, lp_token: &AssetInfo) -> Result<Self, CwDexError> {
         match lp_token {
             AssetInfoBase::Native(lp_token_denom) => {
@@ -48,18 +58,18 @@ impl Pool {
     }
 }
 
-/// Implement the Pool trait for the Pool enum so we can use all the trait mehtods
-/// directly on the enum type.
-/// TODO: Use "enum_dispatch" macro instead? https://crates.io/crates/enum_dispatch
+// Implement the Pool trait for the Pool enum so we can use all the trait methods
+// directly on the enum type.
+// TODO: Use "enum_dispatch" macro instead? https://crates.io/crates/enum_dispatch
 impl PoolTrait for Pool {
     fn provide_liquidity(
         &self,
         deps: Deps,
         env: &Env,
         assets: AssetList,
-        slippage_tolerance: Option<Decimal>,
+        min_out: Uint128,
     ) -> Result<Response, CwDexError> {
-        self.as_trait().provide_liquidity(deps, env, assets, slippage_tolerance)
+        self.as_trait().provide_liquidity(deps, env, assets, min_out)
     }
 
     fn withdraw_liquidity(
@@ -77,9 +87,9 @@ impl PoolTrait for Pool {
         env: &Env,
         offer_asset: Asset,
         ask_asset_info: AssetInfo,
-        minimum_out_amount: Uint128,
+        min_out: Uint128,
     ) -> Result<Response, CwDexError> {
-        self.as_trait().swap(deps, env, offer_asset, ask_asset_info, minimum_out_amount)
+        self.as_trait().swap(deps, env, offer_asset, ask_asset_info, min_out)
     }
 
     fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {
