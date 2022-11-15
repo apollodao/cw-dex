@@ -1,3 +1,5 @@
+//! Contains the `Pool` trait which describes an interface to an AMM pool.
+
 use cosmwasm_std::{Decimal, Env, Response, StdResult};
 use cosmwasm_std::{Deps, Uint128};
 use cw_asset::{Asset, AssetInfo, AssetList};
@@ -78,6 +80,12 @@ pub trait Pool {
         lp_token: Asset,
     ) -> Result<AssetList, CwDexError>;
 
+    /// Simulates a swap and returns the estimated amount of the asset asked for, given the offered asset
+    ///
+    /// Arguments:
+    /// - `offer_asset`: The asset offered in the swap
+    /// - `ask_asset_info`: The asset asked for in the swap
+    /// - `sender`: Sender address (required for Osmosis)
     fn simulate_swap(
         &self,
         deps: Deps,
