@@ -16,7 +16,7 @@ osmosis-std = { git = "https://github.com/osmosis-labs/osmosis-rust", rev = "3ea
 cosmwasm-schema = "1.1.0"
 cosmwasm-std = {version = "1.1.0", features = ["stargate"]}
 cosmwasm-storage = "1.1.0"
-cw-asset = "2.3.0"
+cw-asset = { git="https://github.com/apollodao/cw-asset.git", features = ["astroport"] }
 cw-storage-plus = "0.16"
 cw-utils = "0.11"
 cw20 = "0.16"

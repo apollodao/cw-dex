@@ -43,7 +43,6 @@ pub enum CwDexError {
     #[error("It is not possible to provide liquidity with one token for an empty pool")]
     InvalidProvideLPsWithSingleToken {},
 
-
     #[error("Asset is not an LP token")]
     NotLpToken {},
 

@@ -22,7 +22,7 @@ checksum = "216261ddc8289130e551ddcd5ce8a064710c0d064a4d2895c67151c92b5443f6"
 [[package]]
 name = "apollo-utils"
 version = "0.1.0"
-source = "git+https://github.com/apollodao/apollo-utils.git#b9caacbb112f92eaf486694759d5cf7de8af172d"
+source = "git+https://github.com/apollodao/apollo-utils.git#a4e1333ffe720b689a511844eff9c44e39641863"
 dependencies = [
  "cosmwasm-std",
  "cw-asset",
@@ -245,15 +245,15 @@ dependencies = [
 
 [[package]]
 name = "cw-asset"
-version = "2.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "28e955303c96778b58ad52bbbabbe10b170ae1c8df2fec08ce7d7eedf2c22701"
+version = "0.3.0"
+source = "git+https://github.com/apollodao/cw-asset.git#7c202162dca9148c65cb784f286f1da69f9bd354"
 dependencies = [
- "cosmwasm-schema",
+ "astroport",
  "cosmwasm-std",
  "cw-storage-plus 0.16.0",
- "cw1155",
  "cw20 0.16.0",
+ "schemars",
+ "serde",
 ]
 
 [[package]]
@@ -419,19 +419,6 @@ dependencies = [
  "schemars",
  "serde",
  "thiserror",
-]
-
-[[package]]
-name = "cw1155"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4be0ebb4d95abc0e3f8ea00fbcf10afec5416b0aa1122c703de69850296897c5"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-utils 0.16.0",
- "schemars",
- "serde",
 ]
 
 [[package]]

@@ -18,7 +18,6 @@ impl TryFrom<AssetInfo> for JunoAssetInfo {
         match info {
             AssetInfo::Native(denom) => Ok(JunoAssetInfo(Denom::Native(denom))),
             AssetInfo::Cw20(addr) => Ok(JunoAssetInfo(Denom::Cw20(addr))),
-            _ => Err(StdError::generic_err("Can only convert native or Cw20 to JunoAssetInfo")),
         }
     }
 }
