@@ -123,7 +123,7 @@ impl Pool for JunoswapPool {
         env: &Env,
         offer_asset: Asset,
         ask_asset_info: AssetInfo,
-        minimum_out_amount: Uint128,
+        min_out: Uint128,
     ) -> Result<Response, CwDexError> {
         let pool_info = self.query_info(&deps.querier)?;
 
@@ -157,7 +157,7 @@ impl Pool for JunoswapPool {
             msg: to_binary(&ExecuteMsg::Swap {
                 input_token,
                 input_amount,
-                min_output: minimum_out_amount,
+                min_output: min_out,
                 expiration: None,
             })?,
         });
@@ -166,7 +166,7 @@ impl Pool for JunoswapPool {
             .add_attribute("type", "junoswap")
             .add_attribute("offer_asset", format!("{:?}", offer_asset))
             .add_attribute("ask_asset_info", format!("{:?}", ask_asset_info))
-            .add_attribute("minimum_out_amount", minimum_out_amount.to_string());
+            .add_attribute("minimum_out_amount", min_out.to_string());
 
         Ok(Response::new().add_messages(increase_allowances).add_message(swap).add_event(event))
     }

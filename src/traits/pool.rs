@@ -52,7 +52,7 @@ pub trait Pool {
         env: &Env,
         offer_asset: Asset,
         ask_asset_info: AssetInfo,
-        minimum_out_amount: Uint128,
+        min_out: Uint128,
     ) -> Result<Response, CwDexError>;
 
     // === Query functions ===

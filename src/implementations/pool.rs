@@ -87,9 +87,9 @@ impl PoolTrait for Pool {
         env: &Env,
         offer_asset: Asset,
         ask_asset_info: AssetInfo,
-        minimum_out_amount: Uint128,
+        min_out: Uint128,
     ) -> Result<Response, CwDexError> {
-        self.as_trait().swap(deps, env, offer_asset, ask_asset_info, minimum_out_amount)
+        self.as_trait().swap(deps, env, offer_asset, ask_asset_info, min_out)
     }
 
     fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {
