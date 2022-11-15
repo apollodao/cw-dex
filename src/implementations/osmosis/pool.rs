@@ -1,3 +1,5 @@
+//! Pool trait implementation for Osmosis
+
 use std::ops::Deref;
 use std::str::FromStr;
 
@@ -32,6 +34,7 @@ pub struct OsmosisPool {
 }
 
 impl OsmosisPool {
+    /// Creates a new `OsmosisPool` instance with the given `pool_id`.
     pub fn new(pool_id: u64) -> Self {
         Self {
             pool_id,

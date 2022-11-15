@@ -1,3 +1,5 @@
+//! Staking/rewards traits implementations for Junoswap
+
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     Addr, Coin, Deps, Env, Event, QuerierWrapper, ReplyOn, Response, StdError, StdResult, SubMsg,
@@ -22,9 +24,9 @@ use super::helpers::ToProtobufDuration;
 pub struct OsmosisStaking {
     /// Lockup duration in nano seconds. Allowed values 1 day, 1 week or 2 weeks.
     pub lockup_duration: Duration,
-
+    /// ID for the lockup record
     pub lock_id: Option<u64>,
-
+    /// Denomination of the associated LP token
     pub lp_token_denom: String,
 }
 
@@ -52,7 +54,9 @@ impl OsmosisStaking {
     }
 }
 
+/// Reply ID for locking tokens
 pub const OSMOSIS_LOCK_TOKENS_REPLY_ID: u64 = 123;
+/// Reply ID for unlocking tokens
 pub const OSMOSIS_UNLOCK_TOKENS_REPLY_ID: u64 = 124;
 
 impl Rewards for OsmosisStaking {
@@ -187,6 +191,12 @@ pub struct OsmosisSuperfluidStaking {
 const TWO_WEEKS_IN_SECS: u64 = 14 * 24 * 60 * 60;
 
 impl OsmosisSuperfluidStaking {
+    /// Creates a new instance of `OsmosisSuperfluidStaking`.
+    ///
+    /// Arguments:
+    /// - `validator_address`: Address of the associated validator
+    /// - `lock_id`: ID of the lockup record
+    /// - `lp_token_denom`: LP token denomination
     pub fn new(
         validator_address: Addr,
         lock_id: Option<u64>,
