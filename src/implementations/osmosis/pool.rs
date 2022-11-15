@@ -21,7 +21,8 @@ use crate::CwDexError;
 
 use super::helpers::query_lp_denom;
 
-/// Struct for interacting with Osmosis v1beta1 balancer pools. If `pool_id` maps to another type of pool this will fail.
+/// Struct for interacting with Osmosis v1beta1 balancer pools. If `pool_id`
+/// maps to another type of pool this will fail.
 #[cw_serde]
 #[derive(Copy)]
 pub struct OsmosisPool {
@@ -32,9 +33,7 @@ pub struct OsmosisPool {
 impl OsmosisPool {
     /// Creates a new `OsmosisPool` instance with the given `pool_id`.
     pub fn new(pool_id: u64) -> Self {
-        Self {
-            pool_id,
-        }
+        Self { pool_id }
     }
 }
 
@@ -46,11 +45,15 @@ impl Pool for OsmosisPool {
         mut assets: AssetList,
         min_out: Uint128,
     ) -> Result<Response, CwDexError> {
-        // Remove all zero amount Coins, merge duplicates and assert that all assets are native.
+        let mut assets = assets;
+
+        // Remove all zero amount Coins, merge duplicates and assert that all assets are
+        // native.
         let assets = assert_only_native_coins(merge_assets(assets.purge().deref())?)?;
 
-        let expected_shares =
-            self.simulate_provide_liquidity(deps, env, assets.to_owned().into())?.amount;
+        let expected_shares = self
+            .simulate_provide_liquidity(deps, env, assets.to_owned().into())?
+            .amount;
 
         let join_pool: CosmosMsg;
 

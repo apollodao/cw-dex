@@ -14,10 +14,8 @@ use astroport_core::generator::{
 };
 use cw_asset::{Asset, AssetList};
 
-use crate::{
-    traits::{Rewards, Stake, Staking, Unstake},
-    CwDexError,
-};
+use crate::traits::{Rewards, Stake, Staking, Unstake};
+use crate::CwDexError;
 
 /// Represents staking of tokens on Astroport
 #[cw_serde]
@@ -65,7 +63,9 @@ impl Rewards for AstroportStaking {
 
         let event =
             Event::new("apollo/cw-dex/claim_rewards").add_attribute("type", "astroport_staking");
-        Ok(Response::new().add_message(claim_rewards_msg).add_event(event))
+        Ok(Response::new()
+            .add_message(claim_rewards_msg)
+            .add_event(event))
     }
 
     fn query_pending_rewards(
@@ -87,7 +87,9 @@ impl Rewards for AstroportStaking {
         let pending_rewards: Vec<AstroAsset> = pending_on_proxy
             .unwrap_or_default()
             .into_iter()
-            .chain(vec![Asset::cw20(self.astro_addr.clone(), pending_astro).into()])
+            .chain(vec![
+                Asset::cw20(self.astro_addr.clone(), pending_astro).into()
+            ])
             .collect::<Vec<_>>()
             .into();
 

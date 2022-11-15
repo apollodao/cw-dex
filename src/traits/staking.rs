@@ -24,7 +24,8 @@ pub trait Rewards {
     ) -> Result<AssetList, CwDexError>;
 }
 
-/// Trait to abstract interaction with a staking contract or module with an optional lockup time.
+/// Trait to abstract interaction with a staking contract or module with an
+/// optional lockup time.
 pub trait Stake: Rewards {
     /// Stake the given assets.
     ///
@@ -51,9 +52,9 @@ pub trait Staking: Stake + Unstake + Rewards {}
 
 /// Defines an interface for unlocking assets
 pub trait Unlock {
-    /// Start unlocking `amount` of the locked asset. Depending on the implementation,
-    /// some kind of unlocking ID will be returned in an event and you may need to handle
-    /// this in a reply.
+    /// Start unlocking `amount` of the locked asset. Depending on the
+    /// implementation, some kind of unlocking ID will be returned in an
+    /// event and you may need to handle this in a reply.
     fn unlock(&self, deps: Deps, env: &Env, amount: Uint128) -> Result<Response, CwDexError>;
 
     /// Claim the assets after they have become fully unlocked. Depending on
@@ -74,8 +75,9 @@ pub trait LockedStaking: Stake + Unlock + Rewards {
 
 /// Defines an interface for forced unlocking of locked assets§
 pub trait ForceUnlock: LockedStaking {
-    /// Force unlock a lockup position. This can (at least in the case of Osmosis)
-    /// only be called by whitelisted addresses and is used in the case of liquidation.
+    /// Force unlock a lockup position. This can (at least in the case of
+    /// Osmosis) only be called by whitelisted addresses and is used in the
+    /// case of liquidation.
     ///
     /// Arguments:
     /// `lockup_id`: The ID of the lockup position to force unlock.

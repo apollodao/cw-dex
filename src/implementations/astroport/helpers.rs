@@ -3,8 +3,7 @@ use cosmwasm_std::StdResult;
 use cw_storage_plus::Item;
 use std::cmp::Ordering;
 
-use cosmwasm_std::Uint128;
-use cosmwasm_std::{Addr, Env, QuerierWrapper};
+use cosmwasm_std::{Addr, Env, QuerierWrapper, Uint128};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -38,9 +37,9 @@ const ITERATIONS: u8 = 32;
 ///
 /// * **env** is an object of type [`Env`].
 ///
-/// This function is needed to calculate how many LP shares a user should get when providing liquidity but is
-/// not publicly exposed in the package. Copied from the astro implementation here:
-/// https://github.com/astroport-fi/astroport-core/blob/c216ecd4f350113316be44d06a95569f451ac681/contracts/pair_stable/src/contract.rs#L1492-L1515
+/// This function is needed to calculate how many LP shares a user should get
+/// when providing liquidity but is not publicly exposed in the package. Copied
+/// from the astro implementation here: https://github.com/astroport-fi/astroport-core/blob/c216ecd4f350113316be44d06a95569f451ac681/contracts/pair_stable/src/contract.rs#L1492-L1515
 pub(crate) fn compute_current_amp(config: &Config, env: &Env) -> StdResult<u64> {
     let block_time = env.block.time.seconds();
 
@@ -69,11 +68,14 @@ pub(crate) fn compute_current_amp(config: &Config, env: &Env) -> StdResult<u64> 
 /// ## Description
 /// Return a value using a newly specified precision.
 /// ## Params
-/// * **value** is an object of type [`Uint128`]. This is the value that will have its precision adjusted.
+/// * **value** is an object of type [`Uint128`]. This is the value that will
+///   have its precision adjusted.
 ///
-/// * **current_precision** is an object of type [`u8`]. This is the `value`'s current precision
+/// * **current_precision** is an object of type [`u8`]. This is the `value`'s
+///   current precision
 ///
-/// * **new_precision** is an object of type [`u8`]. This is the new precision to use when returning the `value`.
+/// * **new_precision** is an object of type [`u8`]. This is the new precision
+///   to use when returning the `value`.
 ///
 /// Copied from the astro code here:
 /// https://github.com/astroport-fi/astroport-core/blob/c216ecd4f350113316be44d06a95569f451ac681/contracts/pair_stable/src/contract.rs#L1269
@@ -84,10 +86,12 @@ pub(crate) fn adjust_precision(
 ) -> StdResult<Uint128> {
     Ok(match current_precision.cmp(&new_precision) {
         Ordering::Equal => value,
-        Ordering::Less => value
-            .checked_mul(Uint128::new(10_u128.pow((new_precision - current_precision) as u32)))?,
-        Ordering::Greater => value
-            .checked_div(Uint128::new(10_u128.pow((current_precision - new_precision) as u32)))?,
+        Ordering::Less => value.checked_mul(Uint128::new(
+            10_u128.pow((new_precision - current_precision) as u32),
+        ))?,
+        Ordering::Greater => value.checked_div(Uint128::new(
+            10_u128.pow((current_precision - new_precision) as u32),
+        ))?,
     })
 }
 
@@ -119,10 +123,15 @@ pub(crate) fn compute_d(leverage: u64, amount_a: u128, amount_b: u128) -> Option
         // Newton's method to approximate D
         for _ in 0..ITERATIONS {
             let mut d_product = d;
-            d_product = d_product.checked_mul(d)?.checked_div(amount_a_times_coins)?;
-            d_product = d_product.checked_mul(d)?.checked_div(amount_b_times_coins)?;
+            d_product = d_product
+                .checked_mul(d)?
+                .checked_div(amount_a_times_coins)?;
+            d_product = d_product
+                .checked_mul(d)?
+                .checked_div(amount_b_times_coins)?;
             d_previous = d;
-            //d = (leverage * sum_x + d_p * n_coins) * d / ((leverage - 1) * d + (n_coins + 1) * d_p);
+            //d = (leverage * sum_x + d_p * n_coins) * d / ((leverage - 1) * d + (n_coins +
+            // 1) * d_p);
             d = calculate_step(&d, leverage, sum_x, &d_product)?;
             // Equality with the precision of 1
             if d == d_previous {
@@ -138,7 +147,8 @@ pub(crate) fn compute_d(leverage: u64, amount_a: u128, amount_b: u128) -> Option
 ///
 /// * **Equation**:
 ///
-/// d = (leverage * sum_x + d_product * n_coins) * initial_d / ((leverage - 1) * initial_d + (n_coins + 1) * d_product)
+/// d = (leverage * sum_x + d_product * n_coins) * initial_d / ((leverage - 1) *
+/// initial_d + (n_coins + 1) * d_product)
 fn calculate_step(initial_d: &U256, leverage: u64, sum_x: u128, d_product: &U256) -> Option<U256> {
     let leverage_mul = U256::from(leverage).checked_mul(sum_x.into())? / AMP_PRECISION;
     let d_p_mul = checked_u8_mul(d_product, N_COINS)?;
@@ -154,8 +164,8 @@ fn calculate_step(initial_d: &U256, leverage: u64, sum_x: u128, d_product: &U256
     l_val.checked_div(r_val)
 }
 
-// Astroport StableSwap pair does not return needed Config elements with smart query
-// Raw query gets all the necessary elements
+// Astroport StableSwap pair does not return needed Config elements with smart
+// query Raw query gets all the necessary elements
 pub(crate) fn query_pair_config(querier: &QuerierWrapper, pair: Addr) -> StdResult<Config> {
     Item::<Config>::new("config").query(querier, pair)
 }
