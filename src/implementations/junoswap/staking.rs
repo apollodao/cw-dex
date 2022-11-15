@@ -109,8 +109,8 @@ impl Rewards for JunoswapStaking {
 
     fn query_pending_rewards(
         &self,
-        querier: &QuerierWrapper,
-        user: &Addr,
+        _querier: &QuerierWrapper,
+        _user: &Addr,
     ) -> Result<AssetList, CwDexError> {
         todo!("Implement JunoswapStaking::query_pending_rewards")
         // let hooks = querier

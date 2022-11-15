@@ -2,7 +2,7 @@
 //! For use in serialization.
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Decimal, Deps, Env, Response, StdResult, Uint128};
+use cosmwasm_std::{Deps, Env, Response, StdResult, Uint128};
 use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use std::str::FromStr;
 
@@ -67,9 +67,9 @@ impl PoolTrait for Pool {
         deps: Deps,
         env: &Env,
         assets: AssetList,
-        slippage_tolerance: Option<Decimal>,
+        min_out: Uint128,
     ) -> Result<Response, CwDexError> {
-        self.as_trait().provide_liquidity(deps, env, assets, slippage_tolerance)
+        self.as_trait().provide_liquidity(deps, env, assets, min_out)
     }
 
     fn withdraw_liquidity(
@@ -87,9 +87,9 @@ impl PoolTrait for Pool {
         env: &Env,
         offer_asset: Asset,
         ask_asset_info: AssetInfo,
-        minimum_out_amount: Uint128,
+        min_out: Uint128,
     ) -> Result<Response, CwDexError> {
-        self.as_trait().swap(deps, env, offer_asset, ask_asset_info, minimum_out_amount)
+        self.as_trait().swap(deps, env, offer_asset, ask_asset_info, min_out)
     }
 
     fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {
