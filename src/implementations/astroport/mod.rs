@@ -6,3 +6,6 @@ mod staking;
 
 pub use pool::AstroportPool;
 pub use staking::AstroportStaking;
+
+#[cfg(test)]
+mod helper_test;

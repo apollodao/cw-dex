@@ -4,7 +4,7 @@ use cw_storage_plus::Item;
 use std::cmp::Ordering;
 
 use cosmwasm_std::Uint128;
-use cosmwasm_std::{Addr, Env, QuerierWrapper};
+use cosmwasm_std::{Addr, QuerierWrapper};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -41,9 +41,7 @@ const ITERATIONS: u8 = 32;
 /// This function is needed to calculate how many LP shares a user should get when providing liquidity but is
 /// not publicly exposed in the package. Copied from the astro implementation here:
 /// https://github.com/astroport-fi/astroport-core/blob/c216ecd4f350113316be44d06a95569f451ac681/contracts/pair_stable/src/contract.rs#L1492-L1515
-pub(crate) fn compute_current_amp(config: &Config, env: &Env) -> StdResult<u64> {
-    let block_time = env.block.time.seconds();
-
+pub(crate) fn compute_current_amp(config: &Config, block_time: u64) -> StdResult<u64> {
     if block_time < config.next_amp_time {
         let elapsed_time =
             Uint128::from(block_time).checked_sub(Uint128::from(config.init_amp_time))?;
@@ -52,14 +50,19 @@ pub(crate) fn compute_current_amp(config: &Config, env: &Env) -> StdResult<u64> 
         let init_amp = Uint128::from(config.init_amp);
         let next_amp = Uint128::from(config.next_amp);
 
+        // Using checked functions to avoid over/under flows
         if config.next_amp > config.init_amp {
-            let amp_range = next_amp - init_amp;
-            let res = init_amp + (amp_range * elapsed_time).checked_div(time_range)?;
-            Ok(res.u128() as u64)
+            let amp_range = next_amp.checked_sub(init_amp)?;
+            let res = init_amp
+                .checked_add((amp_range.checked_mul(elapsed_time))?.checked_div(time_range)?)?;
+            // Ok(res.u128() as u64) -> downgrading from u128 to u64 implies loose conversion
+            Ok(u64::try_from(res.u128()).unwrap())
         } else {
-            let amp_range = init_amp - next_amp;
-            let res = init_amp - (amp_range * elapsed_time).checked_div(time_range)?;
-            Ok(res.u128() as u64)
+            let amp_range = init_amp.checked_sub(next_amp)?;
+            let res = init_amp
+                .checked_sub((amp_range.checked_mul(elapsed_time))?.checked_div(time_range)?)?;
+            // Ok(res.u128() as u64) -> downgrading from u128 to u64 implies loose conversion
+            Ok(u64::try_from(res.u128()).unwrap())
         }
     } else {
         Ok(config.next_amp)

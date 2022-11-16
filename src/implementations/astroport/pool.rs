@@ -204,7 +204,7 @@ impl AstroportPool {
             )?
         } else {
             let leverage =
-                compute_current_amp(&config, env)?.checked_mul(u64::from(N_COINS)).unwrap();
+                compute_current_amp(&config, env.block.time.seconds())?.checked_mul(u64::from(N_COINS)).unwrap();
 
             let mut pool_amount_0 =
                 adjust_precision(pools[0].amount, token_precision_0, greater_precision)?;
