@@ -1,5 +1,16 @@
 name: Test
-on: [pull_request]
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      description: 'Log level'
+      required: false
+      default: 'warning'
+      type: choice
+      options:
+        - info
+        - warning
+        - debug
 
 env:
   RUSTFLAGS: -D warnings
