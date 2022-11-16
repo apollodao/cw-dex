@@ -33,10 +33,12 @@ pub struct JunoswapStaking {
 
 impl Stake for JunoswapStaking {
     fn stake(&self, deps: Deps, _env: &Env, amount: Uint128) -> Result<Response, CwDexError> {
-        let cfg = deps.querier.query::<Config>(&QueryRequest::Wasm(WasmQuery::Smart {
-            contract_addr: self.addr.to_string(),
-            msg: to_binary(&Cw20StakeQueryMsg::GetConfig {})?,
-        }))?;
+        let cfg = deps
+            .querier
+            .query::<Config>(&QueryRequest::Wasm(WasmQuery::Smart {
+                contract_addr: self.addr.to_string(),
+                msg: to_binary(&Cw20StakeQueryMsg::GetConfig {})?,
+            }))?;
 
         let stake_msg = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: cfg.token_address.to_string(),
@@ -60,10 +62,12 @@ impl Unstake for JunoswapStaking {
     fn unstake(&self, deps: Deps, env: &Env, amount: Uint128) -> Result<Response, CwDexError> {
         // Verify that the vault does not have an unbonding period. Our design assumes
         // that the vault does not have an unbonding period when unstake can be called.
-        let cfg = deps.querier.query::<Config>(&QueryRequest::Wasm(WasmQuery::Smart {
-            contract_addr: self.addr.to_string(),
-            msg: to_binary(&Cw20StakeQueryMsg::GetConfig {})?,
-        }))?;
+        let cfg = deps
+            .querier
+            .query::<Config>(&QueryRequest::Wasm(WasmQuery::Smart {
+                contract_addr: self.addr.to_string(),
+                msg: to_binary(&Cw20StakeQueryMsg::GetConfig {})?,
+            }))?;
 
         if cfg.unstaking_duration.is_some() {
             return Err(CwDexError::UnstakingDurationNotSupported {});
@@ -86,15 +90,16 @@ impl Rewards for JunoswapStaking {
         //     .hooks
         //     .iter()
         //     .map(|addr| {
-        //         // Call as SubMsg since we don't know if the contracts in the hooks are
-        //         // always going to be reward contracts. If not the messages for that
-        //         // contract should fail without failing the transaction.
-        //         Ok(SubMsg {
+        //         // Call as SubMsg since we don't know if the contracts in the
+        // hooks are         // always going to be reward contracts. If
+        // not the messages for that         // contract should fail
+        // without failing the transaction.         Ok(SubMsg {
         //             id: 0,
         //             msg: CosmosMsg::Wasm(WasmMsg::Execute {
         //                 contract_addr: addr.to_string(),
         //                 funds: vec![],
-        //                 msg: to_binary(&StakeCw20ExternalRewardsExecuteMsg::Claim {})?,
+        //                 msg:
+        // to_binary(&StakeCw20ExternalRewardsExecuteMsg::Claim {})?,
         //             }),
         //             gas_limit: None,
         //             reply_on: ReplyOn::Error,
@@ -102,7 +107,9 @@ impl Rewards for JunoswapStaking {
         //     })
         //     .collect::<StdResult<Vec<SubMsg>>>()?;
         //
-        // let event = Event::new("apollo/cw-dex/claim_rewards").add_attribute("type", "junoswap");
+        // let event =
+        // Event::new("apollo/cw-dex/claim_rewards").add_attribute("type",
+        // "junoswap");
         //
         // Ok(Response::new().add_submessages(claim_messages).add_event(event))
     }
@@ -122,12 +129,14 @@ impl Rewards for JunoswapStaking {
         //
         // let mut assets = AssetList::new();
         // for hook in hooks {
-        //     // Since we can't be sure that the hook is actually a reward contract we must
-        //     // do .ok() and match only on `Some` values to avoid failing the entire query.
+        //     // Since we can't be sure that the hook is actually a reward
+        // contract we must     // do .ok() and match only on `Some`
+        // values to avoid failing the entire query.
         //     let pending_rewards = querier
-        //         .query::<PendingRewardsResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
-        //             contract_addr: hook.to_string(),
-        //             msg: to_binary(&StakeCw20ExternalRewardsQueryMsg::GetPendingRewards {
+        //         .query::<PendingRewardsResponse>(&
+        // QueryRequest::Wasm(WasmQuery::Smart {
+        // contract_addr: hook.to_string(),             msg:
+        // to_binary(&StakeCw20ExternalRewardsQueryMsg::GetPendingRewards {
         //                 address: user.to_string(),
         //             })?,
         //         }))
@@ -139,8 +148,8 @@ impl Rewards for JunoswapStaking {
         //             Denom::Cw20(x) => AssetInfo::Cw20(x),
         //         };
         //
-        //         assets.add(&Asset::new(asset_info, pending_rewards.pending_rewards))?;
-        //     }
+        //         assets.add(&Asset::new(asset_info,
+        // pending_rewards.pending_rewards))?;     }
         // }
         //
         // Ok(assets)
@@ -164,16 +173,16 @@ impl Unlock for JunoswapStaking {
             .add_attribute("type", "junoswap")
             .add_attribute("amount", amount.to_string());
 
-        Ok(Response::new().add_message(claim_unlocked_msg).add_event(event))
+        Ok(Response::new()
+            .add_message(claim_unlocked_msg)
+            .add_event(event))
     }
 
     fn unlock(&self, _deps: Deps, _env: &Env, amount: Uint128) -> Result<Response, CwDexError> {
         let unstake_msg = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.addr.to_string(),
             funds: vec![],
-            msg: to_binary(&Cw20StakeExecuteMsg::Unstake {
-                amount,
-            })?,
+            msg: to_binary(&Cw20StakeExecuteMsg::Unstake { amount })?,
         });
 
         let event = Event::new("cw-dex/staking/unstake")

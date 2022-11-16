@@ -14,7 +14,8 @@ use crate::traits::pool::Pool as PoolTrait;
 /// An enum with all known variants that implement the Pool trait.
 /// The ideal solution would of course instead be to use a trait object so that
 /// the caller can pass in any type that implements the Pool trait, but trait
-/// objects require us not to implement the Sized trait, which cw_serde requires.
+/// objects require us not to implement the Sized trait, which cw_serde
+/// requires.
 #[cw_serde]
 pub enum Pool {
     /// Contains an Osmosis pool implementation
@@ -44,14 +45,13 @@ impl Pool {
                     return Err(CwDexError::NotLpToken {});
                 }
 
-                let pool_id_str =
-                    lp_token_denom.strip_prefix("gamm/pool/").ok_or(CwDexError::NotLpToken {})?;
+                let pool_id_str = lp_token_denom
+                    .strip_prefix("gamm/pool/")
+                    .ok_or(CwDexError::NotLpToken {})?;
 
                 let pool_id = u64::from_str(pool_id_str).map_err(|_| CwDexError::NotLpToken {})?;
 
-                Ok(Pool::Osmosis(OsmosisPool {
-                    pool_id,
-                }))
+                Ok(Pool::Osmosis(OsmosisPool { pool_id }))
             }
             _ => Err(CwDexError::NotLpToken {}), //TODO: Support Astroport, Junoswap, etc.
         }
@@ -69,7 +69,8 @@ impl PoolTrait for Pool {
         assets: AssetList,
         min_out: Uint128,
     ) -> Result<Response, CwDexError> {
-        self.as_trait().provide_liquidity(deps, env, assets, min_out)
+        self.as_trait()
+            .provide_liquidity(deps, env, assets, min_out)
     }
 
     fn withdraw_liquidity(
@@ -89,7 +90,8 @@ impl PoolTrait for Pool {
         ask_asset_info: AssetInfo,
         min_out: Uint128,
     ) -> Result<Response, CwDexError> {
-        self.as_trait().swap(deps, env, offer_asset, ask_asset_info, min_out)
+        self.as_trait()
+            .swap(deps, env, offer_asset, ask_asset_info, min_out)
     }
 
     fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {
@@ -120,6 +122,7 @@ impl PoolTrait for Pool {
         ask_asset_info: AssetInfo,
         sender: Option<String>,
     ) -> StdResult<Uint128> {
-        self.as_trait().simulate_swap(deps, offer_asset, ask_asset_info, sender)
+        self.as_trait()
+            .simulate_swap(deps, offer_asset, ask_asset_info, sender)
     }
 }

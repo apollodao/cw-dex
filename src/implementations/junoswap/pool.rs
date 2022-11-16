@@ -12,7 +12,8 @@ use wasmswap::msg::{
     ExecuteMsg, InfoResponse, QueryMsg, Token1ForToken2PriceResponse, TokenSelect,
 };
 
-use crate::{traits::Pool, CwDexError};
+use crate::traits::Pool;
+use crate::CwDexError;
 
 use super::helpers::{
     juno_simulate_provide_liquidity, prepare_funds_and_increase_allowances, JunoAsset,
@@ -38,8 +39,8 @@ impl JunoswapPool {
 
 impl Pool for JunoswapPool {
     // TODO: Does not work when assets are unbalanced. We also need a function that
-    // balances the assets before providing liquidity so we can liquidate multiple rewards
-    // and provide liquidity.
+    // balances the assets before providing liquidity so we can liquidate multiple
+    // rewards and provide liquidity.
     fn provide_liquidity(
         &self,
         deps: Deps,
@@ -114,7 +115,9 @@ impl Pool for JunoswapPool {
             .add_attribute("type", "junoswap")
             .add_attribute("asset", format!("{:?}", asset));
 
-        Ok(Response::new().add_message(withdraw_liquidity).add_event(event))
+        Ok(Response::new()
+            .add_message(withdraw_liquidity)
+            .add_event(event))
     }
 
     fn swap(
@@ -136,15 +139,20 @@ impl Pool for JunoswapPool {
             input_token = TokenSelect::Token2;
             output_token = JunoAssetInfo(pool_info.token1_denom).into();
         } else {
-            return Err(CwDexError::Std(StdError::generic_err("Offered asset is not in the pool")));
+            return Err(CwDexError::Std(StdError::generic_err(
+                "Offered asset is not in the pool",
+            )));
         };
         if output_token != ask_asset_info {
-            return Err(CwDexError::Std(StdError::generic_err("Asked asset is not in the pool")));
+            return Err(CwDexError::Std(StdError::generic_err(
+                "Asked asset is not in the pool",
+            )));
         }
 
         let input_amount = offer_asset.amount;
 
-        // Add native token to the funds vec and build increase allowance message for cw20 token.
+        // Add native token to the funds vec and build increase allowance message for
+        // cw20 token.
         let (funds, increase_allowances) = prepare_funds_and_increase_allowances(
             env,
             &vec![offer_asset.clone()].into(),
@@ -168,7 +176,10 @@ impl Pool for JunoswapPool {
             .add_attribute("ask_asset_info", format!("{:?}", ask_asset_info))
             .add_attribute("minimum_out_amount", min_out.to_string());
 
-        Ok(Response::new().add_messages(increase_allowances).add_message(swap).add_event(event))
+        Ok(Response::new()
+            .add_messages(increase_allowances)
+            .add_message(swap)
+            .add_event(event))
     }
 
     fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {
@@ -253,7 +264,10 @@ impl Pool for JunoswapPool {
 
         let amount = if token1 == offer_asset.info {
             if token2 != ask_asset_info {
-                return Err(StdError::generic_err(format!("Invalid ask asset {}", ask_asset_info)));
+                return Err(StdError::generic_err(format!(
+                    "Invalid ask asset {}",
+                    ask_asset_info
+                )));
             }
 
             Ok(deps
@@ -267,7 +281,10 @@ impl Pool for JunoswapPool {
                 .token2_amount)
         } else if token2 == offer_asset.info {
             if token1 != ask_asset_info {
-                return Err(StdError::generic_err(format!("Invalid ask asset {}", ask_asset_info)));
+                return Err(StdError::generic_err(format!(
+                    "Invalid ask asset {}",
+                    ask_asset_info
+                )));
             }
 
             Ok(deps

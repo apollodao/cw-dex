@@ -1,0 +1,56 @@
+name: Lints
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      description: 'Log level'
+      required: false
+      default: 'warning'
+      type: choice
+      options:
+        - info
+        - warning
+        - debug
+
+env:
+  RUSTFLAGS: -D warnings
+
+jobs:
+  lints:
+    name: Lints
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+          components: rustfmt, clippy
+
+      - name: Install cargo-machete
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: cargo-machete
+
+      - name: Run cargo clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --fix -- -D warnings
+
+      - name: Run cargo fmt
+        uses: actions-rs/cargo@v1
+        with:
+          toolchain: nightly
+          command: fmt
+          args: --all -- --check
+
+      - name: Run cargo machete
+        uses: actions-rs/cargo@v1
+        with:
+          command: machete

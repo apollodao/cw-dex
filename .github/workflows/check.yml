@@ -1,0 +1,48 @@
+name: Check
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      description: 'Log level'
+      required: false
+      default: 'warning'
+      type: choice
+      options:
+        - info
+        - warning
+        - debug
+
+env:
+  RUSTFLAGS: -D warnings
+
+jobs:
+  cargo-deny:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        checks:
+          - advisories
+          - bans licenses sources
+
+    # Prevent sudden announcement of a new advisory from failing ci:
+    continue-on-error: ${{ matrix.checks == 'advisories' }}
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: 1.59.0
+          target: wasm32-unknown-unknown
+          override: true
+
+      - name: cargo deny
+        uses: actions/checkout@v2
+
+      - name: run cargo deny
+        uses: EmbarkStudios/cargo-deny-action@v1
+        with:
+          command: check ${{ matrix.checks }}
