@@ -3,6 +3,17 @@ on:
   push:
     branches:
       - master
+  workflow_dispatch:
+    inputs:
+      description: 'Log level'
+      required: false
+      default: 'warning'
+      type: choice
+      options:
+        - info
+        - warning
+        - debug
+
 jobs:
   changelog:
     name: Generate changelog
