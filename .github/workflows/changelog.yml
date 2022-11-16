@@ -4,15 +4,16 @@ on:
     branches:
       - master
   workflow_dispatch:
-    inputs:
-      description: 'Log level'
-      required: false
-      default: 'warning'
-      type: choice
-      options:
-        - info
-        - warning
-        - debug
+    logLevel:
+      inputs:
+        description: 'Log level'
+        required: false
+        default: 'warning'
+        type: choice
+        options:
+          - info
+          - warning
+          - debug
 
 jobs:
   changelog:
