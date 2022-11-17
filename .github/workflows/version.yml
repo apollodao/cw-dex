@@ -27,7 +27,7 @@ jobs:
 
       - name: Determine version number
         id: semver
-        uses: grumpy-programmer/conventional-commits-semver-release@v1
+        uses: ietf-tools/semver-action@v1
         with:
           token: ${{ secrets.APOLLO_CI_PAT }}
           branch: master
