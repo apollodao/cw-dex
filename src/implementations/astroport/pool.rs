@@ -149,7 +149,7 @@ impl AstroportPool {
     fn stable_simulate_provide_liquidity(
         &self,
         deps: Deps,
-        env: &Env,
+        block_time: u64,
         assets: AssetList,
     ) -> Result<Asset, CwDexError> {
         let config = query_pair_config(&deps.querier, self.pair_addr.clone())?;
@@ -206,7 +206,7 @@ impl AstroportPool {
                 liquidity_token_precision,
             )?
         } else {
-            let leverage = compute_current_amp(&config, env.block.time.seconds())?
+            let leverage = compute_current_amp(&config, block_time)?
                 .checked_mul(u64::from(N_COINS))
                 .unwrap();
 
@@ -378,7 +378,7 @@ impl Pool for AstroportPool {
     ) -> Result<Asset, CwDexError> {
         match self.pair_type {
             PairType::Xyk {} => self.xyk_simulate_provide_liquidity(deps, env, assets),
-            PairType::Stable {} => self.stable_simulate_provide_liquidity(deps, env, assets),
+            PairType::Stable {} => self.stable_simulate_provide_liquidity(deps, env.block.time.seconds(), assets),
             PairType::Custom(_) => Err(CwDexError::Std(StdError::generic_err(
                 "custom pair type not supported",
             ))),

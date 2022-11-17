@@ -102,13 +102,24 @@ pub(crate) fn adjust_precision(
 
 /// ## Description
 /// Computes stable swap invariant (D)
+/// 
+/// [Paper](https://curve.fi/files/stableswap-paper.pdf)
+/// [playground](https://github.com/asquare08/AMM-Models/blob/main/Curve%20AMM%20plots.ipynb)
 ///
 /// * **Equation**
 ///
 /// A * sum(x_i) * n**n + D = A * D * n**n + D**(n+1) / (n**n * prod(x_i))
 ///
+/// Where:
+/// - sum(x_i) = D
+/// - prod(x_i) = (D/n)**n
+/// 
+/// Considerations:
+/// - n = 2 ( two stable coins, x1 and x2)
+/// - Number of iterations on Newton's method to approximate D will be 32
+/// 
 /// ## Params
-/// * **leverage** is the object of type [`u128`].
+/// * **leverage** is the object of type [`u64`].
 ///
 /// * **amount_a** is the object of type [`u128`].
 ///
@@ -127,6 +138,7 @@ pub(crate) fn compute_d(leverage: u64, amount_a: u128, amount_b: u128) -> Option
 
         // Newton's method to approximate D
         for _ in 0..ITERATIONS {
+            // do we need clone here since the reference d_product is mut? -> d.clone()
             let mut d_product = d;
             d_product = d_product
                 .checked_mul(d)?
@@ -137,11 +149,24 @@ pub(crate) fn compute_d(leverage: u64, amount_a: u128, amount_b: u128) -> Option
             d_previous = d;
             //d = (leverage * sum_x + d_p * n_coins) * d / ((leverage - 1) * d + (n_coins +
             // 1) * d_p);
-            d = calculate_step(&d, leverage, sum_x, &d_product)?;
-            // Equality with the precision of 1
-            if d == d_previous {
-                break;
-            }
+
+            d = match calculate_step(&d, leverage, sum_x, &d_product){
+                Some(new_d) => {
+                    // Equality with the precision of 1
+                    if new_d == d {
+                        break;
+                    }else{
+                        new_d
+                    }
+                },
+                None => break,
+            };
+
+            // d = calculate_step(&d, leverage, sum_x, &d_product)?;
+            // // Equality with the precision of 1
+            // if d == d_previous {
+            //     break;
+            // }
         }
         u128::try_from(d).ok()
     }
@@ -154,7 +179,7 @@ pub(crate) fn compute_d(leverage: u64, amount_a: u128, amount_b: u128) -> Option
 ///
 /// d = (leverage * sum_x + d_product * n_coins) * initial_d / ((leverage - 1) *
 /// initial_d + (n_coins + 1) * d_product)
-fn calculate_step(initial_d: &U256, leverage: u64, sum_x: u128, d_product: &U256) -> Option<U256> {
+pub fn calculate_step(initial_d: &U256, leverage: u64, sum_x: u128, d_product: &U256) -> Option<U256> {
     let leverage_mul = U256::from(leverage).checked_mul(sum_x.into())? / AMP_PRECISION;
     let d_p_mul = checked_u8_mul(d_product, N_COINS)?;
 
