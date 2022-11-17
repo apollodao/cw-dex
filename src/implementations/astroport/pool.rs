@@ -259,7 +259,7 @@ impl Pool for AstroportPool {
         min_out: Uint128,
     ) -> Result<Response, CwDexError> {
         let lp_out = self.simulate_provide_liquidity(deps, env, assets.clone())?;
-        if min_out < lp_out.amount {
+        if min_out > lp_out.amount {
             return Err(CwDexError::MinOutNotReceived {
                 min_out,
                 received: lp_out.amount,

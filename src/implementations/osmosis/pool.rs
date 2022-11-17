@@ -77,7 +77,7 @@ impl Pool for OsmosisPool {
         }
 
         // Assert slippage tolerance
-        if min_out < expected_shares {
+        if min_out > expected_shares {
             return Err(CwDexError::MinOutNotReceived {
                 min_out,
                 received: expected_shares,

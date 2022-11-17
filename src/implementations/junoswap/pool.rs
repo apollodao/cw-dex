@@ -56,7 +56,7 @@ impl Pool for JunoswapPool {
 
         // Check if minimum LPs is met
         let lp_out = provide_liquidity_info.lp_token_expected_amount;
-        if min_out < lp_out {
+        if min_out > lp_out {
             return Err(CwDexError::MinOutNotReceived {
                 min_out,
                 received: lp_out,
