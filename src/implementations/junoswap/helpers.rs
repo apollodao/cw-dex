@@ -227,6 +227,13 @@ pub(crate) struct JunoProvideLiquidityInfo {
 /// ### Returns
 /// The amount of token1 and token2 that should be sent to Junoswap to provide
 /// liquidity and the expected amount of lp tokens to be minted.
+/// 
+/// ### Requirements
+/// - pool_info.token2_reserve > 0
+/// - token2.amount > 0
+/// 
+/// ### Note
+/// This function does not take into account protocol_fee_percent and lp_fee_percent
 pub(crate) fn juno_simulate_provide_liquidity(
     assets: &JunoAssetList,
     pool_info: InfoResponse,
@@ -247,11 +254,14 @@ pub(crate) fn juno_simulate_provide_liquidity(
     let pool_ratio =
         Decimal::checked_from_ratio(pool_info.token1_reserve, pool_info.token2_reserve)
             .unwrap_or_default();
+    // TODO: if token2.amount and token1.amount = 1_000_000 the result is always zero
     let asset_ratio = Decimal::checked_from_ratio(token1.amount, token2.amount).unwrap_or_default();
+    println!("token1.amount [{}] token2.amount [{}] asset_ratio[{}] pool_ratio[{}]",token1.amount,token2.amount,asset_ratio,pool_ratio);
 
     let token1_to_use;
     let token2_to_use;
 
+    // TODO: What happens if pool_ratio == asset_ratio?
     if pool_ratio < asset_ratio {
         // We have a higher ratio of token 1 than the pool, so if we try to use
         // all of our token1 we will get an error because we don't have enough
@@ -263,7 +273,9 @@ pub(crate) fn juno_simulate_provide_liquidity(
             pool_info.token1_reserve,
             pool_info.token2_reserve,
         )?;
+        println!("pool_ratio < asset_ratio -> token1_to_use [{}] token2_to_use[{}]",token1_to_use,token2_to_use);
     } else {
+        // TODO: consider pool_ratio == asset_ratio
         // We have a higher ratio of token 2 than token1, so calculate how much
         // token2 to use (and approve spend for, since we don't want to approve
         // spend on any extra).
@@ -275,6 +287,7 @@ pub(crate) fn juno_simulate_provide_liquidity(
             pool_info.token2_reserve,
             pool_info.token1_reserve,
         )?;
+        println!("pool_ratio <= asset_ratio -> token1_to_use [{}] token2_to_use[{}]",token1_to_use,token2_to_use);
     }
 
     let expected_lps = juno_get_lp_token_amount_to_mint(
@@ -282,6 +295,8 @@ pub(crate) fn juno_simulate_provide_liquidity(
         pool_info.lp_token_supply,
         pool_info.token1_reserve,
     )?;
+
+    println!("expected_lps [{}]",expected_lps);
 
     Ok(JunoProvideLiquidityInfo {
         token1_to_use: Asset {

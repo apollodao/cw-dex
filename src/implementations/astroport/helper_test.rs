@@ -111,7 +111,7 @@ fn adjust_precision_test(
 }
 
 // Edge borders testing
-#[test_case(10000,10,10 => Some(2);"if a eq b then d should be the sum of both")]
+#[test_case(10000,10,10 => Some(20);"if a eq b then d should be the sum of both")]
 #[test_case(10,0,0 => Some(0);"if a is zero and b is zero then d should be 0")]
 #[test_case(1000,10,1 => Some(10); "if a is 1000 and b is 10 then d should be 10")]
 #[test_case(1,0,1000 => Some(1000);"if a is zero and b is 1000 then d should be 1000")]

@@ -6,3 +6,6 @@ mod staking;
 
 pub use pool::*;
 pub use staking::*;
+
+#[cfg(test)]
+mod helper_test;
