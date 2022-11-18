@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use astroport_core::asset::PairInfo;
 
 /// ## Description
-/// Returns self multiplied by b
+/// Returns self multiplied by b.
 pub fn checked_u8_mul(a: &U256, b: u8) -> Option<U256> {
     let mut result = *a;
     for _ in 1..b {
@@ -36,10 +36,6 @@ const ITERATIONS: u8 = 32;
 /// * **config** is an object of type [`Config`].
 ///
 /// * **env** is an object of type [`Env`].
-///
-/// This function is needed to calculate how many LP shares a user should get
-/// when providing liquidity but is not publicly exposed in the package. Copied
-/// from the astro implementation here: https://github.com/astroport-fi/astroport-core/blob/c216ecd4f350113316be44d06a95569f451ac681/contracts/pair_stable/src/contract.rs#L1492-L1515
 pub(crate) fn compute_current_amp(config: &Config, env: &Env) -> StdResult<u64> {
     let block_time = env.block.time.seconds();
 
@@ -74,11 +70,7 @@ pub(crate) fn compute_current_amp(config: &Config, env: &Env) -> StdResult<u64> 
 /// * **current_precision** is an object of type [`u8`]. This is the `value`'s
 ///   current precision
 ///
-/// * **new_precision** is an object of type [`u8`]. This is the new precision
-///   to use when returning the `value`.
-///
-/// Copied from the astro code here:
-/// https://github.com/astroport-fi/astroport-core/blob/c216ecd4f350113316be44d06a95569f451ac681/contracts/pair_stable/src/contract.rs#L1269
+/// * **new_precision** is an object of type [`u8`]. This is the new precision to use when returning the `value`.
 pub(crate) fn adjust_precision(
     value: Uint128,
     current_precision: u8,
@@ -96,18 +88,18 @@ pub(crate) fn adjust_precision(
 }
 
 /// ## Description
-/// Computes stable swap invariant (D)
+/// Computes the stableswap invariant (D).
 ///
 /// * **Equation**
 ///
 /// A * sum(x_i) * n**n + D = A * D * n**n + D**(n+1) / (n**n * prod(x_i))
 ///
 /// ## Params
-/// * **leverage** is the object of type [`u128`].
+/// * **leverage** is an object of type [`u128`].
 ///
-/// * **amount_a** is the object of type [`u128`].
+/// * **amount_a** is an object of type [`u128`].
 ///
-/// * **amount_b** is the object of type [`u128`].
+/// * **amount_b** is an object of type [`u128`].
 pub(crate) fn compute_d(leverage: u64, amount_a: u128, amount_b: u128) -> Option<u128> {
     let amount_a_times_coins =
         checked_u8_mul(&U256::from(amount_a), N_COINS)?.checked_add(U256::one())?;
@@ -130,8 +122,7 @@ pub(crate) fn compute_d(leverage: u64, amount_a: u128, amount_b: u128) -> Option
                 .checked_mul(d)?
                 .checked_div(amount_b_times_coins)?;
             d_previous = d;
-            //d = (leverage * sum_x + d_p * n_coins) * d / ((leverage - 1) * d + (n_coins +
-            // 1) * d_p);
+            // d = (leverage * sum_x + d_p * n_coins) * d / ((leverage - 1) * d + (n_coins + 1) * d_p);
             d = calculate_step(&d, leverage, sum_x, &d_product)?;
             // Equality with the precision of 1
             if d == d_previous {
@@ -143,7 +134,7 @@ pub(crate) fn compute_d(leverage: u64, amount_a: u128, amount_b: u128) -> Option
 }
 
 /// ## Description
-/// Calculates step
+/// Helper function used to calculate the D invariant as a last step in the `compute_d` public function.
 ///
 /// * **Equation**:
 ///
