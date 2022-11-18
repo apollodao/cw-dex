@@ -64,7 +64,8 @@ impl AstroportPool {
         query_supply(querier, self.lp_token_addr.to_owned())
     }
 
-    fn get_pool_liquidity_impl(&self, querier: &QuerierWrapper) -> StdResult<PoolResponse> {
+    /// Queries the pair contract for the current pool state
+    pub fn query_pool_info(&self, querier: &QuerierWrapper) -> StdResult<PoolResponse> {
         querier.query::<PoolResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: self.pair_addr.to_string(),
             msg: to_binary(&QueryMsg::Pool {})?,
@@ -85,7 +86,7 @@ impl AstroportPool {
         let PoolResponse {
             assets: pools,
             total_share,
-        } = self.get_pool_liquidity_impl(&deps.querier)?;
+        } = self.query_pool_info(&deps.querier)?;
 
         let deposits = [
             assets
@@ -365,7 +366,7 @@ impl Pool for AstroportPool {
     }
 
     fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {
-        let resp = self.get_pool_liquidity_impl(&deps.querier)?;
+        let resp = self.query_pool_info(&deps.querier)?;
         Ok(resp.assets.to_vec().into())
     }
 
@@ -396,7 +397,7 @@ impl Pool for AstroportPool {
             share_ratio = Decimal::from_ratio(amount, total_share);
         }
 
-        let pools = self.get_pool_liquidity_impl(&deps.querier)?.assets;
+        let pools = self.query_pool_info(&deps.querier)?.assets;
         Ok(pools
             .iter()
             .map(|a| Asset {
