@@ -9,18 +9,14 @@ use cw20::Cw20ExecuteMsg;
 
 use cw_asset::AssetList;
 use cw_utils::Duration;
-use stake_cw20::{
-    msg::{
-        ExecuteMsg as Cw20StakeExecuteMsg, QueryMsg as Cw20StakeQueryMsg,
-        ReceiveMsg as Cw20StakeReceiveMsg,
-    },
-    state::Config,
+use stake_cw20::msg::{
+    ExecuteMsg as Cw20StakeExecuteMsg, QueryMsg as Cw20StakeQueryMsg,
+    ReceiveMsg as Cw20StakeReceiveMsg,
 };
+use stake_cw20::state::Config;
 
-use crate::{
-    traits::{LockedStaking, Rewards, Stake, Unlock, Unstake},
-    CwDexError,
-};
+use crate::traits::{LockedStaking, Rewards, Stake, Unlock, Unstake};
+use crate::CwDexError;
 
 /// Represents staking of LP tokens on Junoswap
 #[cw_serde]
