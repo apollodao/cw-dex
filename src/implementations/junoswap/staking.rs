@@ -197,8 +197,14 @@ impl LockedStaking for JunoswapStaking {
                 contract_addr: self.addr.to_string(),
                 msg: to_binary(&Cw20StakeQueryMsg::GetConfig {})?,
             }))?
-            .unstaking_duration;
+            .unstaking_duration
+            .unwrap_or(cw_utils_0_11::Duration::Time(0));
 
-        Ok(duration.unwrap_or(Duration::Time(0)))
+        let duration = match duration {
+            cw_utils_0_11::Duration::Time(x) => Duration::Time(x),
+            cw_utils_0_11::Duration::Height(x) => Duration::Height(x),
+        };
+
+        Ok(duration)
     }
 }
