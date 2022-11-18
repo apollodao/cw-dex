@@ -105,28 +105,14 @@ impl AstroportPool {
             return Err(StdError::generic_err("Either asset cannot be zero").into());
         };
 
-        // map over pools
-        const MINIMUM_LIQUIDITY_AMOUNT: Uint128 = Uint128::new(1_000);
         let share = if total_share.is_zero() {
             // Initial share = collateral amount
-            let share = Uint128::new(
+            Uint128::new(
                 (U256::from(deposits[0].u128()) * U256::from(deposits[1].u128()))
                     .integer_sqrt()
                     .as_u128(),
-            );
-
-            if share.lt(&MINIMUM_LIQUIDITY_AMOUNT) {
-                return Err(StdError::generic_err(
-                    "Share cannot be less than minimum liquidity amount",
-                )
-                .into());
-            }
-
-            share
+            )
         } else {
-            // Assert slippage tolerance
-            // assert_slippage_tolerance(slippage_tolerance, &deposits, &pools)?;
-
             // min(1, 2)
             // 1. sqrt(deposit_0 * exchange_rate_0_to_1 * deposit_0) * (total_share /
             // sqrt(pool_0 * pool_1)) == deposit_0 * total_share / pool_0
@@ -148,7 +134,7 @@ impl AstroportPool {
     /// Math for providing liquidity to an Astroport stable swap pool.
     ///
     /// This logic is copied from the astroport implementation here:
-    /// https://github.com/astroport-fi/astroport-core/blob/c216ecd4f350113316be44d06a95569f451ac681/contracts/pair_stable/src/contract.rs#L338-L501
+    /// https://github.com/astroport-fi/astroport-core/blob/f1caf2e4cba74d60ff0e8ae3abba9d9e1f88c06e/contracts/pair_stable/src/contract.rs#L338-L501
     fn stable_simulate_provide_liquidity(
         &self,
         deps: Deps,
