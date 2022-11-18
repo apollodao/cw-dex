@@ -39,13 +39,7 @@ pub(crate) const N_COINS: u8 = 2;
 const AMP_PRECISION: u64 = 100;
 const ITERATIONS: u8 = 32;
 
-/// ## Description
-/// Compute the current pool amplification coefficient (AMP).
-/// ## Params
-/// * **config** is an object of type [`Config`].
-///
-/// * **env** is an object of type [`Env`].
-/// Copied from the astro implementation here:
+/// Compute actual amplification coefficient (A)
 pub(crate) fn compute_current_amp(config: &Config, env: &Env) -> StdResult<u64> {
     let block_time = env.block.time.seconds();
 
@@ -70,18 +64,6 @@ pub(crate) fn compute_current_amp(config: &Config, env: &Env) -> StdResult<u64> 
         Ok(config.next_amp)
     }
 }
-
-/// ## Description
-/// Return a value using a newly specified precision.
-/// ## Params
-/// * **value** is an object of type [`Uint128`]. This is the value that will
-///   have its precision adjusted.
-///
-/// * **current_precision** is an object of type [`u8`]. This is the `value`'s
-///   current precision
-///
-/// * **new_precision** is an object of type [`u8`]. This is the new precision to use when returning the `value`.
-/// Copied from the astro code here:
 pub(crate) fn adjust_precision(
     value: Uint128,
     current_precision: u8,
@@ -97,20 +79,9 @@ pub(crate) fn adjust_precision(
         ))?,
     })
 }
-
-/// ## Description
-/// Computes the stableswap invariant (D).
-///
-/// * **Equation**
-///
+/// Compute stable swap invariant (D)
+/// Equation:
 /// A * sum(x_i) * n**n + D = A * D * n**n + D**(n+1) / (n**n * prod(x_i))
-///
-/// ## Params
-/// * **leverage** is an object of type [`u128`].
-///
-/// * **amount_a** is an object of type [`u128`].
-///
-/// * **amount_b** is an object of type [`u128`].
 pub(crate) fn compute_d(leverage: u64, amount_a: u128, amount_b: u128) -> Option<u128> {
     let amount_a_times_coins =
         checked_u8_mul(&U256::from(amount_a), N_COINS)?.checked_add(U256::one())?;
@@ -144,13 +115,7 @@ pub(crate) fn compute_d(leverage: u64, amount_a: u128, amount_b: u128) -> Option
     }
 }
 
-/// ## Description
-/// Helper function used to calculate the D invariant as a last step in the `compute_d` public function.
-///
-/// * **Equation**:
-///
-/// d = (leverage * sum_x + d_product * n_coins) * initial_d / ((leverage - 1) *
-/// initial_d + (n_coins + 1) * d_product)
+/// d = (leverage * sum_x + d_product * n_coins) * initial_d / ((leverage - 1) * initial_d + (n_coins + 1) * d_product)
 fn calculate_step(initial_d: &U256, leverage: u64, sum_x: u128, d_product: &U256) -> Option<U256> {
     let leverage_mul = U256::from(leverage).checked_mul(sum_x.into())? / AMP_PRECISION;
     let d_p_mul = checked_u8_mul(d_product, N_COINS)?;
