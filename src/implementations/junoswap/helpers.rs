@@ -193,6 +193,7 @@ pub(crate) fn juno_get_token2_amount_required(
     token2_reserve: Uint128,
     token1_reserve: Uint128,
 ) -> Result<Uint128, CwDexError> {
+    // TODO: on master they handle errors https://github.com/Wasmswap/wasmswap-contracts/blob/main/src/contract.rs#L222-L240
     if liquidity_supply == Uint128::zero() {
         Ok(max_token)
     } else {
@@ -212,6 +213,7 @@ pub(crate) fn juno_get_token1_amount_required(
     token2_reserve: Uint128,
     token1_reserve: Uint128,
 ) -> Result<Uint128, CwDexError> {
+    // TODO: why liquidity_supply is not used here?
     Ok(token2_amount
         .checked_sub(Uint128::one())?
         .checked_mul(token1_reserve)?
@@ -254,9 +256,7 @@ pub(crate) fn juno_simulate_provide_liquidity(
     let pool_ratio =
         Decimal::checked_from_ratio(pool_info.token1_reserve, pool_info.token2_reserve)
             .unwrap_or_default();
-    // TODO: if token2.amount and token1.amount = 1_000_000 the result is always zero
     let asset_ratio = Decimal::checked_from_ratio(token1.amount, token2.amount).unwrap_or_default();
-    println!("token1.amount [{}] token2.amount [{}] asset_ratio[{}] pool_ratio[{}]",token1.amount,token2.amount,asset_ratio,pool_ratio);
 
     let token1_to_use;
     let token2_to_use;
@@ -273,9 +273,7 @@ pub(crate) fn juno_simulate_provide_liquidity(
             pool_info.token1_reserve,
             pool_info.token2_reserve,
         )?;
-        println!("pool_ratio < asset_ratio -> token1_to_use [{}] token2_to_use[{}]",token1_to_use,token2_to_use);
     } else {
-        // TODO: consider pool_ratio == asset_ratio
         // We have a higher ratio of token 2 than token1, so calculate how much
         // token2 to use (and approve spend for, since we don't want to approve
         // spend on any extra).
@@ -287,7 +285,6 @@ pub(crate) fn juno_simulate_provide_liquidity(
             pool_info.token2_reserve,
             pool_info.token1_reserve,
         )?;
-        println!("pool_ratio <= asset_ratio -> token1_to_use [{}] token2_to_use[{}]",token1_to_use,token2_to_use);
     }
 
     let expected_lps = juno_get_lp_token_amount_to_mint(
@@ -295,8 +292,6 @@ pub(crate) fn juno_simulate_provide_liquidity(
         pool_info.lp_token_supply,
         pool_info.token1_reserve,
     )?;
-
-    println!("expected_lps [{}]",expected_lps);
 
     Ok(JunoProvideLiquidityInfo {
         token1_to_use: Asset {
@@ -309,4 +304,139 @@ pub(crate) fn juno_simulate_provide_liquidity(
         },
         lp_token_expected_amount: expected_lps,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cosmwasm_std::{ Addr, StdError, Uint128, Decimal };
+    use cw20_0_10_3::Denom;
+    use test_case::test_case;
+    use wasmswap::msg::InfoResponse;
+    
+    
+    // Edge borders testing
+    #[test_case(100,0,100,1 => matches Err(_); "when reserve_a is zero should err")]
+    #[test_case(100,1,100,0 => matches Err(_); "when reserve_b is zero should err FAILS")]
+    #[test_case(10000000,1,0,1 => matches Err(_); "when amount_b is zero should err FAILS")]
+    #[test_case(0,1,0,1 => Ok( (0,0,0) ); "when amount_a and amount_b zero should work")]
+    #[test_case(30,1,1,1 => with |i: Result<(u128,u128,u128),StdError> | assert!(i.unwrap().2 == 1u128); "when asset_ratio gt pool_ratio with amount_a gt amount_b")] // TODO: what happens with the rest of amount_a? 
+    #[test_case(1,2,1,2 => Ok( (1,2,1) ); "when pool_ratio greater than asset_ratio")]
+    fn juno_simulate_provide_liquidity_test(
+        amount_a: u128,
+        reserve_a: u128,
+        amount_b: u128,
+        reserve_b: u128
+    ) -> Result<(u128, u128, u128), StdError> {
+        let usdc = JunoAsset {
+            info: JunoAssetInfo(Denom::Cw20(Addr::unchecked("usdc"))),
+            amount: Uint128::from(amount_a),
+        };
+        let dai = JunoAsset {
+            info: JunoAssetInfo(Denom::Cw20(Addr::unchecked("dai"))),
+            amount: Uint128::from(amount_b),
+        };
+        let assets: JunoAssetList = JunoAssetList(vec![usdc.to_owned(), dai.to_owned()]);
+        let pool_info: InfoResponse = InfoResponse {
+            token1_reserve: Uint128::from(reserve_a),
+            token1_denom: usdc.info.0,
+            token2_reserve: Uint128::from(reserve_b),
+            token2_denom: dai.info.0,
+            lp_token_supply: usdc.amount + dai.amount, // should this be reserve_a+reserve_b?
+            lp_token_address: "lp_token_address".to_string(),
+            owner: Some("owner".to_string()),
+            lp_fee_percent: Decimal::new(Uint128::from(0u128)),
+            protocol_fee_percent: Decimal::new(Uint128::from(0u128)),
+            protocol_fee_recipient: "protocol_fee_recipient_addr".to_string(),
+        };
+    
+        let result: JunoProvideLiquidityInfo = juno_simulate_provide_liquidity(&assets, pool_info)?;
+    
+        Ok((
+            result.token1_to_use.amount.u128(),
+            result.token2_to_use.amount.u128(),
+            result.lp_token_expected_amount.u128(),
+        ))
+    }
+    
+    #[test]
+    #[should_panic]
+    fn juno_simulate_provide_liquidity_test_tokens_not_found() {
+        let usdc = JunoAsset {
+            info: JunoAssetInfo(Denom::Cw20(Addr::unchecked("usdc"))),
+            amount: Uint128::from(1u128),
+        };
+        let dai = JunoAsset {
+            info: JunoAssetInfo(Denom::Cw20(Addr::unchecked("dai"))),
+            amount: Uint128::from(1u128),
+        };
+        let rare = JunoAsset {
+            info: JunoAssetInfo(Denom::Cw20(Addr::unchecked("rare"))),
+            amount: Uint128::from(1u128),
+        };
+        let assets: JunoAssetList = JunoAssetList(vec![rare, dai.to_owned()]);
+        let pool_info: InfoResponse = InfoResponse {
+            token1_reserve: Uint128::from(1u128),
+            token1_denom: usdc.info.0,
+            token2_reserve: Uint128::from(1u128),
+            token2_denom: dai.info.0,
+            lp_token_supply: usdc.amount + dai.amount, // should this be reserve_a+reserve_b?
+            lp_token_address: "lp_token_address".to_string(),
+            owner: Some("owner".to_string()),
+            lp_fee_percent: Decimal::new(Uint128::from(0u128)),
+            protocol_fee_percent: Decimal::new(Uint128::from(0u128)),
+            protocol_fee_recipient: "protocol_fee_recipient_addr".to_string(),
+        };
+    
+        juno_simulate_provide_liquidity(&assets, pool_info).unwrap();
+    }
+    
+    // Property testing
+    // proptest! {
+    //     #![proptest_config(ProptestConfig {
+    //         //cases: 99,
+    //         max_global_rejects: 10000,
+    //         .. ProptestConfig::default()
+    //       })]
+    //     #[test]
+    //     fn compute_current_amp_test_prop_testing(init_amp in 0..1000u64,init_amp_time in 0..1000u64, next_amp in 0..1000u64, next_amp_time in 0..1000u64, block_time in 0..1000u64) {
+    
+    //         // Requirements
+    //         prop_assume!(next_amp > init_amp);
+    //         prop_assume!(next_amp_time > init_amp_time);
+    //         prop_assume!(block_time > init_amp_time);
+    
+    //         // Given
+    //         let pair_info: PairInfo = PairInfo {
+    //             asset_infos: [
+    //                 AssetInfo::Token {
+    //                     contract_addr: Addr::unchecked("asset0000"),
+    //                 },
+    //                 AssetInfo::NativeToken {
+    //                     denom: "uusd".to_string(),
+    //                 },
+    //             ],
+    //             contract_addr: Addr::unchecked("pair0000"),
+    //             liquidity_token: Addr::unchecked("liquidity0000"),
+    //             pair_type: PairType::Xyk {},
+    //         };
+    
+    //         let config: Config = Config {
+    //                     pair_info,
+    //                     factory_addr: Addr::unchecked("addr"),
+    //                     block_time_last: 0u64,
+    //                     price0_cumulative_last: Uint128::new(0),
+    //                     price1_cumulative_last: Uint128::new(0),
+    //                     init_amp,
+    //                     init_amp_time,
+    //                     next_amp,
+    //                     next_amp_time,
+    //                 };
+    
+    //         // When
+    //         compute_current_amp(&config, block_time)?;
+    
+    //         // Then Should not panic
+    //     }
+    // }
 }

@@ -34,6 +34,7 @@ apollo-utils = { git = "https://github.com/apollodao/apollo-utils.git" }
 osmosis-std = { git = "https://github.com/apollodao/osmosis-rust", branch = "feat/latest-build" }
 
 # Junoswap
+# TODO: is it safe to use a beta, unaudited code?
 wasmswap = { git = "https://github.com/Wasmswap/wasmswap-contracts.git", tag = "v1.1.0-beta", features = ["library"] }
 cw20-0_10_3 = { package = "cw20", version = "0.10.3" } # We must import this version separately since it is what wasmswap uses.
 stake-cw20 = "0.2"

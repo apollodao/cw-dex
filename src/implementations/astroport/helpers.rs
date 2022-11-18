@@ -38,7 +38,6 @@ const ITERATIONS: u8 = 32;
 ///
 /// * **env** is an object of type [`Env`].
 ///
-
 /// This function is needed to calculate how many LP shares a user should get
 /// when providing liquidity but is not publicly exposed in the package. Copied
 /// from the astro implementation here: https://github.com/astroport-fi/astroport-core/blob/c216ecd4f350113316be44d06a95569f451ac681/contracts/pair_stable/src/contract.rs#L1492-L1515
@@ -51,19 +50,14 @@ pub(crate) fn compute_current_amp(config: &Config, block_time: u64) -> StdResult
         let init_amp = Uint128::from(config.init_amp);
         let next_amp = Uint128::from(config.next_amp);
 
-        // Using checked functions to avoid over/under flows
         if config.next_amp > config.init_amp {
-            let amp_range = next_amp.checked_sub(init_amp)?;
-            let res = init_amp
-                .checked_add((amp_range.checked_mul(elapsed_time))?.checked_div(time_range)?)?;
-            // Ok(res.u128() as u64) -> downgrading from u128 to u64 implies loose conversion
-            Ok(u64::try_from(res.u128()).unwrap())
+            let amp_range = next_amp - init_amp;
+            let res = init_amp + (amp_range * elapsed_time).checked_div(time_range)?;
+            Ok(res.u128() as u64)
         } else {
-            let amp_range = init_amp.checked_sub(next_amp)?;
-            let res = init_amp
-                .checked_sub((amp_range.checked_mul(elapsed_time))?.checked_div(time_range)?)?;
-            // Ok(res.u128() as u64) -> downgrading from u128 to u64 implies loose conversion
-            Ok(u64::try_from(res.u128()).unwrap())
+            let amp_range = init_amp - next_amp;
+            let res = init_amp - (amp_range * elapsed_time).checked_div(time_range)?;
+            Ok(res.u128() as u64)
         }
     } else {
         Ok(config.next_amp)
@@ -102,24 +96,13 @@ pub(crate) fn adjust_precision(
 
 /// ## Description
 /// Computes stable swap invariant (D)
-/// 
-/// [Paper](https://curve.fi/files/stableswap-paper.pdf)
-/// [playground](https://github.com/asquare08/AMM-Models/blob/main/Curve%20AMM%20plots.ipynb)
 ///
 /// * **Equation**
 ///
 /// A * sum(x_i) * n**n + D = A * D * n**n + D**(n+1) / (n**n * prod(x_i))
-///
-/// Where:
-/// - sum(x_i) = D
-/// - prod(x_i) = (D/n)**n
-/// 
-/// Considerations:
-/// - n = 2 ( two stable coins, x1 and x2)
-/// - Number of iterations on Newton's method to approximate D will be 32
 /// 
 /// ## Params
-/// * **leverage** is the object of type [`u64`].
+/// * **leverage** is the object of type [`u128`].
 ///
 /// * **amount_a** is the object of type [`u128`].
 ///
@@ -138,7 +121,6 @@ pub(crate) fn compute_d(leverage: u64, amount_a: u128, amount_b: u128) -> Option
 
         // Newton's method to approximate D
         for _ in 0..ITERATIONS {
-            // do we need clone here since the reference d_product is mut? -> d.clone()
             let mut d_product = d;
             d_product = d_product
                 .checked_mul(d)?
@@ -149,24 +131,11 @@ pub(crate) fn compute_d(leverage: u64, amount_a: u128, amount_b: u128) -> Option
             d_previous = d;
             //d = (leverage * sum_x + d_p * n_coins) * d / ((leverage - 1) * d + (n_coins +
             // 1) * d_p);
-
-            d = match calculate_step(&d, leverage, sum_x, &d_product){
-                Some(new_d) => {
+            d = calculate_step(&d, leverage, sum_x, &d_product)?;
                     // Equality with the precision of 1
-                    if new_d == d {
+            if d == d_previous {
                         break;
-                    }else{
-                        new_d
                     }
-                },
-                None => break,
-            };
-
-            // d = calculate_step(&d, leverage, sum_x, &d_product)?;
-            // // Equality with the precision of 1
-            // if d == d_previous {
-            //     break;
-            // }
         }
         u128::try_from(d).ok()
     }
@@ -218,4 +187,146 @@ pub(crate) struct Config {
     pub init_amp_time: u64,
     pub next_amp: u64,
     pub next_amp_time: u64,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use astroport_core::{ asset::{ AssetInfo, PairInfo }, factory::PairType };
+    use astroport_core::U256;
+    use cosmwasm_std::{ Addr, StdError, Uint128 };
+    use test_case::test_case;
+    use proptest::prelude::*;
+
+    // Edge borders testing
+    #[test_case(1,0,0,5, 2 => Ok(5); "block_time greater than config.next_amp_time")]
+    #[test_case(1,2,0,0, 0 => matches Err(_); "should panic when init_amp_time greater than next_amp_time")]
+    #[test_case(1,0,2,1, 0 => Ok(2); "init_amp greater than next_amp")]
+    #[test_case(1,0,1,2, 0 => Ok(1); "next_amp greater than init_amp")]
+    #[test_case(2,2,0,0, 1 => matches Err(_); "should panic when init_amp_time greater than blocktime")]
+    fn compute_current_amp_test(
+        next_amp_time: u64,
+        init_amp_time: u64,
+        init_amp: u64,
+        next_amp: u64,
+        block_time: u64
+    ) -> Result<u64, StdError> {
+        let pair_info: PairInfo = PairInfo {
+            asset_infos: [
+                AssetInfo::Token {
+                    contract_addr: Addr::unchecked("asset0000"),
+                },
+                AssetInfo::NativeToken {
+                    denom: "uusd".to_string(),
+                },
+            ],
+            contract_addr: Addr::unchecked("pair0000"),
+            liquidity_token: Addr::unchecked("liquidity0000"),
+            pair_type: PairType::Xyk {},
+        };
+        let config: Config = Config {
+            pair_info,
+            factory_addr: Addr::unchecked("addr"),
+            block_time_last: 0u64,
+            price0_cumulative_last: Uint128::new(0),
+            price1_cumulative_last: Uint128::new(0),
+            init_amp,
+            init_amp_time,
+            next_amp,
+            next_amp_time,
+        };
+        compute_current_amp(&config, block_time)
+    }
+
+    // Property testing
+    proptest! {
+        #![proptest_config(ProptestConfig {
+            //cases: 99, 
+            max_global_rejects: 10000, 
+            .. ProptestConfig::default()
+        })]
+        #[test]
+        fn compute_current_amp_test_prop_testing(init_amp in 0..1000u64,init_amp_time in 0..1000u64, next_amp in 0..1000u64, next_amp_time in 0..1000u64, block_time in 0..1000u64) {
+            
+            // Requirements
+            prop_assume!(next_amp > init_amp);
+            prop_assume!(next_amp_time > init_amp_time);
+            prop_assume!(block_time > init_amp_time);
+
+            // Given
+            let pair_info: PairInfo = PairInfo {
+                asset_infos: [
+                    AssetInfo::Token {
+                        contract_addr: Addr::unchecked("asset0000"),
+                    },
+                    AssetInfo::NativeToken {
+                        denom: "uusd".to_string(),
+                    },
+                ],
+                contract_addr: Addr::unchecked("pair0000"),
+                liquidity_token: Addr::unchecked("liquidity0000"),
+                pair_type: PairType::Xyk {},
+            };
+
+
+            let config: Config = Config {
+                        pair_info,
+                        factory_addr: Addr::unchecked("addr"),
+                        block_time_last: 0u64,
+                        price0_cumulative_last: Uint128::new(0),
+                        price1_cumulative_last: Uint128::new(0),
+                        init_amp,
+                        init_amp_time,
+                        next_amp,
+                        next_amp_time,
+                    };
+
+            // When
+            compute_current_amp(&config, block_time)?;
+
+            // Then Should not panic
+        }
+    }
+
+    // Edge borders testing
+    #[test_case(10,8,9 => Ok(Uint128::new(100u128)); "should ok when current precision lower than new precision")]
+    #[test_case(10,9,8 => Ok(Uint128::new(1u128)); "should ok when new precision lower than current precision")]
+    #[test_case(1,255,255 => Ok(Uint128::new(1u128)); "should ok when current and new precision are equals 255")]
+    #[test_case(1,0,0 => Ok(Uint128::new(1u128)); "should ok when current and new precision are equals cero")]
+    #[test_case(1,0,255 => panics "attempt to multiply with overflow")]
+    #[test_case(1,255,0 => panics "attempt to multiply with overflow")]
+    fn adjust_precision_test(
+        value: u128,
+        current_precision: u8,
+        new_precision: u8
+    ) -> Result<Uint128, StdError> {
+        adjust_precision(Uint128::new(value), current_precision, new_precision)
+    }
+
+    // Edge borders testing
+    #[test_case(10000,10,10 => Some(20);"if a eq b then d should be the sum of both")]
+    #[test_case(10,0,0 => Some(0);"if a is zero and b is zero then d should be 0")]
+    #[test_case(1000,10,1 => Some(10); "if a is 1000 and b is 10 then d should be 10")]
+    #[test_case(1,0,1000 => None;"if a is zero and b is 1000 then d should be 1000")] // FAIL
+    #[test_case(1,1000,0 => None;"if a is 1000 and b is zero then d should be 1000")] // FAIL
+    fn compute_d_test(leverage: u64, amount_a: u128, amount_b: u128) -> Option<u128> {
+        // Computes stable swap invariant (D)
+        // `leverage` is use internally in calculate_step
+        // N_COINS=2;ITERATIONS=32
+        // given A and n
+        compute_d(leverage, amount_a, amount_b)
+    }
+
+    // Edge borders testing
+    #[test_case(0,u64::MAX,u128::MAX,u128::MAX => Some(U256::from(0u128));"should zero if initial_d is zero")]
+    #[test_case(0,u64::MAX,1,0 => None;"should be None because r_val=0")] // This return None as a failure
+    fn calculate_step_test(
+        initial_d: u128,
+        leverage: u64,
+        sum_x: u128,
+        d_product: u128
+    ) -> Option<U256> {
+        // d = (leverage * sum_x + d_product * n_coins) * initial_d / ((leverage - 1) * initial_d + (n_coins + 1) * d_product)
+        calculate_step(&U256::from(initial_d), leverage, sum_x, &U256::from(d_product))
+    }
 }

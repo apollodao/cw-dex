@@ -210,7 +210,6 @@ impl AstroportPool {
                 .checked_mul(u64::from(N_COINS))
                 .unwrap();
 
-
             let mut pool_amount_0 =
                 adjust_precision(pools[0].amount, token_precision_0, greater_precision)?;
             let mut pool_amount_1 =
