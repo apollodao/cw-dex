@@ -1,14 +1,23 @@
-use astroport_core::U256;
-use cosmwasm_std::StdResult;
+use super::msg::Config;
+use cosmwasm_std::{
+    to_binary, Addr, Env, QuerierWrapper, QueryRequest, StdResult, Uint128, WasmQuery,
+};
+use cw20::{Cw20QueryMsg, TokenInfoResponse};
+use cw_asset::astroport::AstroAssetInfo;
 use cw_storage_plus::Item;
 use std::cmp::Ordering;
 
-use cosmwasm_std::{Addr, Env, QuerierWrapper, Uint128};
+const NATIVE_TOKEN_PRECISION: u8 = 6;
+pub(crate) const MAX_ALLOWED_SLIPPAGE: &str = "0.5";
 
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-
-use astroport_core::asset::PairInfo;
+pub use uints::U256;
+#[allow(clippy::all)]
+mod uints {
+    use uint::construct_uint;
+    construct_uint! {
+        pub struct U256(4);
+    }
+}
 
 /// ## Description
 /// Returns self multiplied by b.
@@ -36,9 +45,7 @@ const ITERATIONS: u8 = 32;
 /// * **config** is an object of type [`Config`].
 ///
 /// * **env** is an object of type [`Env`].
-///
 /// Copied from the astro implementation here:
-/// https://github.com/astroport-fi/astroport-core/blob/f1caf2e4cba74d60ff0e8ae3abba9d9e1f88c06e/contracts/pair_stable/src/contract.rs#L1492-L1515
 pub(crate) fn compute_current_amp(config: &Config, env: &Env) -> StdResult<u64> {
     let block_time = env.block.time.seconds();
 
@@ -74,9 +81,7 @@ pub(crate) fn compute_current_amp(config: &Config, env: &Env) -> StdResult<u64> 
 ///   current precision
 ///
 /// * **new_precision** is an object of type [`u8`]. This is the new precision to use when returning the `value`.
-///
 /// Copied from the astro code here:
-/// https://github.com/astroport-fi/astroport-core/blob/f1caf2e4cba74d60ff0e8ae3abba9d9e1f88c06e/contracts/pair_stable/src/contract.rs#L1269
 pub(crate) fn adjust_precision(
     value: Uint128,
     current_precision: u8,
@@ -167,22 +172,26 @@ pub(crate) fn query_pair_config(querier: &QuerierWrapper, pair: Addr) -> StdResu
     Item::<Config>::new("config").query(querier, pair)
 }
 
-/// ## Description
-/// This structure describes the main control config of pair stable.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub(crate) struct Config {
-    /// the type of pair info available in [`PairInfo`]
-    pub pair_info: PairInfo,
-    /// the factory contract address
-    pub factory_addr: Addr,
-    /// The last time block
-    pub block_time_last: u64,
-    /// The last cumulative price 0 asset in pool
-    pub price0_cumulative_last: Uint128,
-    /// The last cumulative price 1 asset in pool
-    pub price1_cumulative_last: Uint128,
-    pub init_amp: u64,
-    pub init_amp_time: u64,
-    pub next_amp: u64,
-    pub next_amp_time: u64,
+pub fn query_token_precision(
+    querier: &QuerierWrapper,
+    asset_info: AstroAssetInfo,
+) -> StdResult<u8> {
+    Ok(match asset_info {
+        AstroAssetInfo::NativeToken { denom: _ } => NATIVE_TOKEN_PRECISION,
+        AstroAssetInfo::Token { contract_addr } => {
+            let res: TokenInfoResponse =
+                querier.query_wasm_smart(contract_addr, &Cw20QueryMsg::TokenInfo {})?;
+
+            res.decimals
+        }
+    })
+}
+
+pub fn query_supply(querier: &QuerierWrapper, contract_addr: Addr) -> StdResult<Uint128> {
+    let res: TokenInfoResponse = querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr: String::from(contract_addr),
+        msg: to_binary(&Cw20QueryMsg::TokenInfo {})?,
+    }))?;
+
+    Ok(res.total_supply)
 }

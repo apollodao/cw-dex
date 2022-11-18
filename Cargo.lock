@@ -30,19 +30,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "astroport"
-version = "2.0.0"
-source = "git+https://github.com/astroport-fi/astroport-core.git?rev=126d43216111df786472fe2a845c1e2fadfe4a36#126d43216111df786472fe2a845c1e2fadfe4a36"
-dependencies = [
- "cosmwasm-std",
- "cw-storage-plus 0.13.4",
- "cw20 0.13.4",
- "schemars",
- "serde",
- "uint",
-]
-
-[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -246,9 +233,9 @@ dependencies = [
 [[package]]
 name = "cw-asset"
 version = "0.3.0"
-source = "git+https://github.com/apollodao/cw-asset.git#0f4eebc2f10688958c82dc219859dc204cf4076b"
+source = "git+https://github.com/apollodao/cw-asset.git#684eb690ef6a8cce1c54e8bc815979a87539f5e8"
 dependencies = [
- "astroport",
+ "cosmwasm-schema",
  "cosmwasm-std",
  "cw-storage-plus 0.16.0",
  "cw20 0.16.0",
@@ -290,7 +277,6 @@ name = "cw-dex"
 version = "0.0.1"
 dependencies = [
  "apollo-utils",
- "astroport",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -301,7 +287,6 @@ dependencies = [
  "cw20 0.10.3",
  "cw20 0.16.0",
  "cw20-base 0.16.0",
- "delegate",
  "num-bigint",
  "num-rational",
  "num-traits",
@@ -313,6 +298,7 @@ dependencies = [
  "stake-cw20",
  "stake-cw20-external-rewards",
  "thiserror",
+ "uint",
  "wasmswap",
 ]
 
@@ -351,17 +337,6 @@ dependencies = [
 
 [[package]]
 name = "cw-storage-plus"
-version = "0.13.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "648b1507290bbc03a8d88463d7cd9b04b1fa0155e5eef366c4fa052b9caaac7a"
-dependencies = [
- "cosmwasm-std",
- "schemars",
- "serde",
-]
-
-[[package]]
-name = "cw-storage-plus"
 version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d9b6f91c0b94481a3e9ef1ceb183c37d00764f8751e39b45fc09f4d9b970d469"
@@ -376,18 +351,6 @@ name = "cw-utils"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ef842a1792e4285beff7b3b518705f760fa4111dc1e296e53f3e92d1ef7f6220"
-dependencies = [
- "cosmwasm-std",
- "schemars",
- "serde",
- "thiserror",
-]
-
-[[package]]
-name = "cw-utils"
-version = "0.13.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9dbaecb78c8e8abfd6b4258c7f4fbeb5c49a5e45ee4d910d3240ee8e1d714e1b"
 dependencies = [
  "cosmwasm-std",
  "schemars",
@@ -485,18 +448,6 @@ dependencies = [
 
 [[package]]
 name = "cw20"
-version = "0.13.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cb782b8f110819a4eb5dbbcfed25ffba49ec16bbe32b4ad8da50a5ce68fec05"
-dependencies = [
- "cosmwasm-std",
- "cw-utils 0.13.4",
- "schemars",
- "serde",
-]
-
-[[package]]
-name = "cw20"
 version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a45a8794a5dd33b66af34caee52a7beceb690856adcc1682b6e3db88b2cdee62"
@@ -574,17 +525,6 @@ dependencies = [
  "cw20 0.16.0",
  "cw20-base 0.16.0",
  "thiserror",
-]
-
-[[package]]
-name = "delegate"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "082a24a9967533dc5d743c602157637116fc1b52806d694a5a45e6f32567fcdd"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]

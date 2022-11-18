@@ -2,10 +2,6 @@
 
 use std::str::FromStr;
 
-use astroport_core::asset::PairInfo;
-use astroport_core::factory::PairType;
-use astroport_core::querier::{query_supply, query_token_precision};
-use astroport_core::U256;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_binary, wasm_execute, Addr, CosmosMsg, Decimal, Deps, Env, Event, QuerierWrapper,
@@ -14,18 +10,18 @@ use cosmwasm_std::{
 use cw20::Cw20ExecuteMsg;
 use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 
-use astroport_core::asset::AssetInfo as AstroAssetInfo;
-use astroport_core::pair::{
-    Cw20HookMsg, ExecuteMsg as PairExecMsg, PoolResponse, QueryMsg, QueryMsg as PairQueryMsg,
-    SimulationResponse, MAX_ALLOWED_SLIPPAGE,
+use super::msg::{
+    PairCw20HookMsg, PairExecuteMsg, PairInfo, PairQueryMsg, PairType, PoolResponse,
+    SimulationResponse,
 };
-
-use crate::traits::Pool;
-use crate::CwDexError;
 
 use super::helpers::{
-    adjust_precision, compute_current_amp, compute_d, query_pair_config, N_COINS,
+    adjust_precision, compute_current_amp, compute_d, query_pair_config, query_supply,
+    query_token_precision, MAX_ALLOWED_SLIPPAGE, N_COINS, U256,
 };
+use crate::traits::Pool;
+use crate::CwDexError;
+use cw_asset::astroport::AstroAssetInfo;
 
 /// Represents an AMM pool on Astroport
 #[cw_serde]
@@ -70,7 +66,7 @@ impl AstroportPool {
     pub fn query_pool_info(&self, querier: &QuerierWrapper) -> StdResult<PoolResponse> {
         querier.query::<PoolResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: self.pair_addr.to_string(),
-            msg: to_binary(&QueryMsg::Pool {})?,
+            msg: to_binary(&PairQueryMsg::Pool {})?,
         }))
     }
 
@@ -255,7 +251,7 @@ impl Pool for AstroportPool {
             });
         }
 
-        let msg = PairExecMsg::ProvideLiquidity {
+        let msg = PairExecuteMsg::ProvideLiquidity {
             assets: assets.to_owned().try_into()?,
             slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
             auto_stake: Some(false),
@@ -288,7 +284,7 @@ impl Pool for AstroportPool {
                 msg: to_binary(&Cw20ExecuteMsg::Send {
                     contract: self.pair_addr.to_string(),
                     amount: asset.amount,
-                    msg: to_binary(&Cw20HookMsg::WithdrawLiquidity {})?,
+                    msg: to_binary(&PairCw20HookMsg::WithdrawLiquidity {})?,
                 })?,
                 funds: vec![],
             });
@@ -323,7 +319,7 @@ impl Pool for AstroportPool {
                 let asset = offer_asset.clone().into();
                 wasm_execute(
                     self.pair_addr.to_string(),
-                    &PairExecMsg::Swap {
+                    &PairExecuteMsg::Swap {
                         offer_asset: asset,
                         belief_price,
                         max_spread: Some(Decimal::zero()),
@@ -337,7 +333,7 @@ impl Pool for AstroportPool {
                 &Cw20ExecuteMsg::Send {
                     contract: self.pair_addr.to_string(),
                     amount: offer_asset.amount,
-                    msg: to_binary(&Cw20HookMsg::Swap {
+                    msg: to_binary(&PairCw20HookMsg::Swap {
                         belief_price,
                         max_spread: Some(Decimal::zero()),
                         to: Some(env.contract.address.to_string()),
@@ -408,7 +404,7 @@ impl Pool for AstroportPool {
             .querier
             .query::<SimulationResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
                 contract_addr: self.pair_addr.to_string(),
-                msg: to_binary(&QueryMsg::Simulation {
+                msg: to_binary(&PairQueryMsg::Simulation {
                     offer_asset: offer_asset.into(),
                 })?,
             }))?
