@@ -42,7 +42,7 @@ impl Pool for OsmosisPool {
         &self,
         deps: Deps,
         env: &Env,
-        mut assets: AssetList,
+        assets: AssetList,
         min_out: Uint128,
     ) -> Result<Response, CwDexError> {
         let mut assets = assets;
