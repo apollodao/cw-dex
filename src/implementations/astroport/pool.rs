@@ -328,8 +328,9 @@ impl Pool for AstroportPool {
         ask_asset_info: AssetInfo,
         min_out: Uint128,
     ) -> Result<Response, CwDexError> {
-        // Setting belief price to the minimium acceptable return and max spread to zero simplifies things
-        // Astroport will make the best possible swap that returns at least `min_out`.
+        // Setting belief price to the minimium acceptable return and max spread to zero
+        // simplifies things Astroport will make the best possible swap that
+        // returns at least `min_out`.
         let belief_price = Some(Decimal::from_ratio(offer_asset.amount, min_out));
         let swap_msg = match &offer_asset.info {
             AssetInfo::Native(_) => {
