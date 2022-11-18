@@ -1,5 +1,7 @@
 //! Pool trait implementation for Astroport
 
+use std::str::FromStr;
+
 use astroport_core::asset::PairInfo;
 use astroport_core::factory::PairType;
 use astroport_core::querier::{query_supply, query_token_precision};
@@ -15,7 +17,7 @@ use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use astroport_core::asset::AssetInfo as AstroAssetInfo;
 use astroport_core::pair::{
     Cw20HookMsg, ExecuteMsg as PairExecMsg, PoolResponse, QueryMsg, QueryMsg as PairQueryMsg,
-    SimulationResponse,
+    SimulationResponse, MAX_ALLOWED_SLIPPAGE,
 };
 
 use crate::traits::Pool;
@@ -64,7 +66,8 @@ impl AstroportPool {
         query_supply(querier, self.lp_token_addr.to_owned())
     }
 
-    fn get_pool_liquidity_impl(&self, querier: &QuerierWrapper) -> StdResult<PoolResponse> {
+    /// Queries the pair contract for the current pool state
+    pub fn query_pool_info(&self, querier: &QuerierWrapper) -> StdResult<PoolResponse> {
         querier.query::<PoolResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: self.pair_addr.to_string(),
             msg: to_binary(&QueryMsg::Pool {})?,
@@ -85,7 +88,7 @@ impl AstroportPool {
         let PoolResponse {
             assets: pools,
             total_share,
-        } = self.get_pool_liquidity_impl(&deps.querier)?;
+        } = self.query_pool_info(&deps.querier)?;
 
         let deposits = [
             assets
@@ -268,7 +271,7 @@ impl Pool for AstroportPool {
 
         let msg = PairExecMsg::ProvideLiquidity {
             assets: assets.to_owned().try_into()?,
-            slippage_tolerance: None,
+            slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
             auto_stake: Some(false),
             receiver: None,
         };
@@ -365,7 +368,7 @@ impl Pool for AstroportPool {
     }
 
     fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {
-        let resp = self.get_pool_liquidity_impl(&deps.querier)?;
+        let resp = self.query_pool_info(&deps.querier)?;
         Ok(resp.assets.to_vec().into())
     }
 
@@ -396,7 +399,7 @@ impl Pool for AstroportPool {
             share_ratio = Decimal::from_ratio(amount, total_share);
         }
 
-        let pools = self.get_pool_liquidity_impl(&deps.querier)?.assets;
+        let pools = self.query_pool_info(&deps.querier)?.assets;
         Ok(pools
             .iter()
             .map(|a| Asset {

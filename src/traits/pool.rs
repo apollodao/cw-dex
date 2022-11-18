@@ -1,3 +1,5 @@
+//! Contains the `Pool` trait for abstracting the behavior of a dex pool.
+
 use cosmwasm_std::{Deps, Env, Response, StdResult, Uint128};
 use cw_asset::{Asset, AssetInfo, AssetList};
 
