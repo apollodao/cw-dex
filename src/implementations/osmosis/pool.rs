@@ -49,7 +49,7 @@ impl Pool for OsmosisPool {
 
         // Remove all zero amount Coins, merge duplicates and assert that all assets are
         // native.
-        let assets = assert_only_native_coins(merge_assets(assets.purge().deref())?)?;
+        let assets = assert_only_native_coins(&merge_assets(assets.purge().deref())?)?;
 
         let expected_shares = self
             .simulate_provide_liquidity(deps, env, assets.to_owned().into())?
@@ -176,7 +176,7 @@ impl Pool for OsmosisPool {
                 &querier
                     .calc_join_pool_shares(
                         self.pool_id,
-                        vec_into(assert_only_native_coins(assets)?),
+                        vec_into(assert_only_native_coins(&assets)?),
                     )?
                     .share_out_amount,
             )?;
@@ -185,7 +185,7 @@ impl Pool for OsmosisPool {
                 &querier
                     .calc_join_pool_no_swap_shares(
                         self.pool_id,
-                        vec_into(assert_only_native_coins(assets)?),
+                        vec_into(assert_only_native_coins(&assets)?),
                     )?
                     .shares_out,
             )?;
