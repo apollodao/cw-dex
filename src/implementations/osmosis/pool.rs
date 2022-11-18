@@ -43,12 +43,12 @@ impl OsmosisPool {
     pub fn simulate_single_sided_join(
         &self,
         querier: &QuerierWrapper,
-        assets: &AssetList,
+        asset: &Asset,
     ) -> StdResult<Uint128> {
         let querier = GammQuerier::new(querier);
         let share_out_amount = Uint128::from_str(
             &querier
-                .calc_join_pool_shares(self.pool_id, vec_into(assert_only_native_coins(assets)?))?
+                .calc_join_pool_shares(self.pool_id, vec![assert_native_coin(asset)?.into()])?
                 .share_out_amount,
         )?;
         Ok(share_out_amount)
@@ -215,7 +215,8 @@ impl Pool for OsmosisPool {
 
         let shares_out_amount: Uint128;
         if assets.len() == 1 {
-            shares_out_amount = self.simulate_single_sided_join(&deps.querier, &assets)?;
+            shares_out_amount =
+                self.simulate_single_sided_join(&deps.querier, &assets.to_vec()[0])?;
         } else {
             (shares_out_amount, _) = self.simulate_noswap_join(&deps.querier, &assets)?;
         }
