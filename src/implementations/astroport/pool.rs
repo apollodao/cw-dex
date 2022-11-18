@@ -1,5 +1,7 @@
 //! Pool trait implementation for Astroport
 
+use std::str::FromStr;
+
 use astroport_core::asset::PairInfo;
 use astroport_core::factory::PairType;
 use astroport_core::querier::{query_supply, query_token_precision};
@@ -15,7 +17,7 @@ use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use astroport_core::asset::AssetInfo as AstroAssetInfo;
 use astroport_core::pair::{
     Cw20HookMsg, ExecuteMsg as PairExecMsg, PoolResponse, QueryMsg, QueryMsg as PairQueryMsg,
-    SimulationResponse,
+    SimulationResponse, MAX_ALLOWED_SLIPPAGE,
 };
 
 use crate::traits::Pool;
@@ -269,7 +271,7 @@ impl Pool for AstroportPool {
 
         let msg = PairExecMsg::ProvideLiquidity {
             assets: assets.to_owned().try_into()?,
-            slippage_tolerance: None,
+            slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
             auto_stake: Some(false),
             receiver: None,
         };
