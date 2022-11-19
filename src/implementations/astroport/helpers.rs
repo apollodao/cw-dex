@@ -1,6 +1,6 @@
-use super::msg::Config;
+use super::msg::{Config, FactoryQueryMsg, FeeInfo, FeeInfoResponse, PairType};
 use cosmwasm_std::{
-    to_binary, Addr, Env, QuerierWrapper, QueryRequest, StdResult, Uint128, WasmQuery,
+    to_binary, Addr, Decimal, Env, QuerierWrapper, QueryRequest, StdResult, Uint128, WasmQuery,
 };
 use cw20::{Cw20QueryMsg, TokenInfoResponse};
 use cw_asset::astroport::AstroAssetInfo;
@@ -35,12 +35,12 @@ pub fn checked_u8_mul(a: &U256, b: u8) -> Option<U256> {
 // ============================================================
 //
 
-pub(crate) const N_COINS: u8 = 2;
+pub const N_COINS: u8 = 2;
 const AMP_PRECISION: u64 = 100;
 const ITERATIONS: u8 = 32;
 
 /// Compute actual amplification coefficient (A)
-pub(crate) fn compute_current_amp(config: &Config, env: &Env) -> StdResult<u64> {
+pub fn compute_current_amp(config: &Config, env: &Env) -> StdResult<u64> {
     let block_time = env.block.time.seconds();
 
     if block_time < config.next_amp_time {
@@ -64,7 +64,7 @@ pub(crate) fn compute_current_amp(config: &Config, env: &Env) -> StdResult<u64> 
         Ok(config.next_amp)
     }
 }
-pub(crate) fn adjust_precision(
+pub fn adjust_precision(
     value: Uint128,
     current_precision: u8,
     new_precision: u8,
@@ -82,7 +82,7 @@ pub(crate) fn adjust_precision(
 /// Compute stable swap invariant (D)
 /// Equation:
 /// A * sum(x_i) * n**n + D = A * D * n**n + D**(n+1) / (n**n * prod(x_i))
-pub(crate) fn compute_d(leverage: u64, amount_a: u128, amount_b: u128) -> Option<u128> {
+pub fn compute_d(leverage: u64, amount_a: u128, amount_b: u128) -> Option<u128> {
     let amount_a_times_coins =
         checked_u8_mul(&U256::from(amount_a), N_COINS)?.checked_add(U256::one())?;
     let amount_b_times_coins =
@@ -116,7 +116,12 @@ pub(crate) fn compute_d(leverage: u64, amount_a: u128, amount_b: u128) -> Option
 }
 
 /// d = (leverage * sum_x + d_product * n_coins) * initial_d / ((leverage - 1) * initial_d + (n_coins + 1) * d_product)
-fn calculate_step(initial_d: &U256, leverage: u64, sum_x: u128, d_product: &U256) -> Option<U256> {
+pub fn calculate_step(
+    initial_d: &U256,
+    leverage: u64,
+    sum_x: u128,
+    d_product: &U256,
+) -> Option<U256> {
     let leverage_mul = U256::from(leverage).checked_mul(sum_x.into())? / AMP_PRECISION;
     let d_p_mul = checked_u8_mul(d_product, N_COINS)?;
 
@@ -133,7 +138,7 @@ fn calculate_step(initial_d: &U256, leverage: u64, sum_x: u128, d_product: &U256
 
 // Astroport StableSwap pair does not return needed Config elements with smart
 // query Raw query gets all the necessary elements
-pub(crate) fn query_pair_config(querier: &QuerierWrapper, pair: Addr) -> StdResult<Config> {
+pub fn query_pair_config(querier: &QuerierWrapper, pair: Addr) -> StdResult<Config> {
     Item::<Config>::new("config").query(querier, pair)
 }
 
@@ -159,4 +164,21 @@ pub fn query_supply(querier: &QuerierWrapper, contract_addr: Addr) -> StdResult<
     }))?;
 
     Ok(res.total_supply)
+}
+
+pub fn query_fee_info(
+    querier: &QuerierWrapper,
+    factory_contract: Addr,
+    pair_type: PairType,
+) -> StdResult<FeeInfo> {
+    let res: FeeInfoResponse = querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr: factory_contract.to_string(),
+        msg: to_binary(&FactoryQueryMsg::FeeInfo { pair_type })?,
+    }))?;
+
+    Ok(FeeInfo {
+        fee_address: res.fee_address,
+        total_fee_rate: Decimal::from_ratio(Uint128::from(res.total_fee_bps), Uint128::new(10000)),
+        maker_fee_rate: Decimal::from_ratio(Uint128::from(res.maker_fee_bps), Uint128::new(10000)),
+    })
 }

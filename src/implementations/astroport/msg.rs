@@ -76,9 +76,7 @@ pub enum PairExecuteMsg {
 pub enum PairQueryMsg {
     Pair {},
     Pool {},
-    Simulation {
-        offer_asset: AstroAsset,
-    },
+    Simulation { offer_asset: AstroAsset },
 }
 
 #[cw_serde]
@@ -120,25 +118,50 @@ pub enum GeneratorCw20HookMsg {
 
 #[cw_serde]
 pub enum GeneratorExecuteMsg {
-    ClaimRewards {
-        lp_tokens: Vec<String>,
-    },
-    Withdraw {
-        lp_token: String,
-        amount: Uint128,
-    },
+    ClaimRewards { lp_tokens: Vec<String> },
+    Withdraw { lp_token: String, amount: Uint128 },
 }
 
 #[cw_serde]
 pub enum GeneratorQueryMsg {
-    PendingToken {
-        lp_token: String,
-        user: String,
-    },
+    PendingToken { lp_token: String, user: String },
 }
 
 #[cw_serde]
 pub struct PendingTokenResponse {
     pub pending: Uint128,
     pub pending_on_proxy: Option<Vec<AstroAsset>>,
+}
+
+///////////////////////////////
+// Factory Msgs
+///////////////////////////////
+
+#[cw_serde]
+pub enum FactoryQueryMsg {
+    Config {},
+    Pair {
+        asset_infos: [AstroAssetInfo; 2],
+    },
+    Pairs {
+        start_after: Option<[AstroAssetInfo; 2]>,
+        limit: Option<u32>,
+    },
+    FeeInfo {
+        pair_type: PairType,
+    },
+}
+
+#[cw_serde]
+pub struct FeeInfoResponse {
+    pub fee_address: Option<Addr>,
+    pub total_fee_bps: u16,
+    pub maker_fee_bps: u16,
+}
+
+#[cw_serde]
+pub struct FeeInfo {
+    pub fee_address: Option<Addr>,
+    pub total_fee_rate: Decimal,
+    pub maker_fee_rate: Decimal,
 }
