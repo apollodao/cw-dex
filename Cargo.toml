@@ -30,6 +30,7 @@ serde = {version = "1.0.137", default-features = false, features = ["derive"]}
 thiserror = {version = "1.0.31"}
 prost = {version = "0.11.0", default-features = false, features = ["prost-derive"]}
 apollo-utils = { git = "https://github.com/apollodao/apollo-utils.git" }
+uint = "0.9.3"
 
 # Osmosis
 osmosis-std = { git = "https://github.com/apollodao/osmosis-rust", branch = "feat/latest-build" }
@@ -39,7 +40,3 @@ wasmswap = { git = "https://github.com/Wasmswap/wasmswap-contracts.git", tag = "
 cw20-0_10_3 = { package = "cw20", version = "0.10.3" } # We must import this version separately since it is what wasmswap uses.
 stake-cw20 = "0.2"
 stake-cw20-external-rewards = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"] } # TODO: what version?
-
-# Astroport
-astroport-core = { package = "astroport", rev = "126d43216111df786472fe2a845c1e2fadfe4a36", git = "https://github.com/astroport-fi/astroport-core.git" }
-delegate = "0.8"
