@@ -1,5 +1,6 @@
 //! Contains a subset of the messages for Astroport Pair and Generator contracts
 //! used by the Astroport implementation.
+#![allow(missing_docs)]
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, QuerierWrapper, StdResult, Uint128};
@@ -94,7 +95,7 @@ pub struct SimulationResponse {
 
 /// Astroport stable pair config
 #[cw_serde]
-pub(crate) struct Config {
+pub struct Config {
     pub pair_info: PairInfo,
     pub factory_addr: Addr,
     pub block_time_last: u64,

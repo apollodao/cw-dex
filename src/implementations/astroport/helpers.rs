@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+
 use super::msg::{Config, FactoryQueryMsg, FeeInfo, FeeInfoResponse, PairType};
 use cosmwasm_std::{
     to_binary, Addr, Decimal, Env, QuerierWrapper, QueryRequest, StdResult, Uint128, WasmQuery,
@@ -7,8 +9,8 @@ use cw_asset::astroport::AstroAssetInfo;
 use cw_storage_plus::Item;
 use std::cmp::Ordering;
 
-const NATIVE_TOKEN_PRECISION: u8 = 6;
-pub(crate) const MAX_ALLOWED_SLIPPAGE: &str = "0.5";
+pub const NATIVE_TOKEN_PRECISION: u8 = 6;
+pub const MAX_ALLOWED_SLIPPAGE: &str = "0.5";
 
 pub use uints::U256;
 #[allow(clippy::all)]
@@ -36,8 +38,8 @@ pub fn checked_u8_mul(a: &U256, b: u8) -> Option<U256> {
 //
 
 pub const N_COINS: u8 = 2;
-const AMP_PRECISION: u64 = 100;
-const ITERATIONS: u8 = 32;
+pub const AMP_PRECISION: u64 = 100;
+pub const ITERATIONS: u8 = 32;
 
 /// Compute actual amplification coefficient (A)
 pub fn compute_current_amp(config: &Config, env: &Env) -> StdResult<u64> {
