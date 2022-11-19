@@ -38,5 +38,5 @@ osmosis-std = { git = "https://github.com/apollodao/osmosis-rust", branch = "fea
 # Junoswap
 wasmswap = { git = "https://github.com/Wasmswap/wasmswap-contracts.git", tag = "v1.1.0-beta", features = ["library"] }
 cw20-0_10_3 = { package = "cw20", version = "0.10.3" } # We must import this version separately since it is what wasmswap uses.
-stake-cw20 = "0.2"
-stake-cw20-external-rewards = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"] } # TODO: what version?
+stake-cw20 = { version = "0.2", features = ["library"] }
+# stake-cw20-external-rewards = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"] } # TODO: what version?

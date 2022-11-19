@@ -258,21 +258,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cw-controllers"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24bd6738c3fd59c87d2f84911c1cad1e4f2d1c58ecaa6e52549b4f78f4ed6f07"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-storage-plus 0.16.0",
- "cw-utils 0.16.0",
- "schemars",
- "serde",
- "thiserror",
-]
-
-[[package]]
 name = "cw-dex"
 version = "0.0.1"
 dependencies = [
@@ -296,21 +281,9 @@ dependencies = [
  "schemars",
  "serde",
  "stake-cw20",
- "stake-cw20-external-rewards",
  "thiserror",
  "uint",
  "wasmswap",
-]
-
-[[package]]
-name = "cw-paginate"
-version = "0.2.0"
-source = "git+https://github.com/DA0-DA0/dao-contracts#6ba594c3a6d7bb8c0862fc3ece10fa49bb600076"
-dependencies = [
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-storage-plus 0.16.0",
- "serde",
 ]
 
 [[package]]
@@ -506,24 +479,6 @@ dependencies = [
  "schemars",
  "semver",
  "serde",
- "thiserror",
-]
-
-[[package]]
-name = "cw20-stake"
-version = "0.2.6"
-source = "git+https://github.com/DA0-DA0/dao-contracts#6ba594c3a6d7bb8c0862fc3ece10fa49bb600076"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-controllers 0.16.0",
- "cw-paginate",
- "cw-storage-plus 0.16.0",
- "cw-utils 0.16.0",
- "cw2 0.16.0",
- "cw20 0.16.0",
- "cw20-base 0.16.0",
  "thiserror",
 ]
 
@@ -1072,7 +1027,7 @@ checksum = "cfbd45133276dbe4d6588899f4d4d06fdb9f16921fd1394affc0bccc9a5cb0b6"
 dependencies = [
  "cosmwasm-std",
  "cosmwasm-storage",
- "cw-controllers 0.11.1",
+ "cw-controllers",
  "cw-storage-plus 0.11.1",
  "cw-utils 0.11.1",
  "cw2 0.11.1",
@@ -1080,24 +1035,6 @@ dependencies = [
  "cw20-base 0.11.1",
  "schemars",
  "serde",
- "thiserror",
-]
-
-[[package]]
-name = "stake-cw20-external-rewards"
-version = "0.2.6"
-source = "git+https://github.com/DA0-DA0/dao-contracts#6ba594c3a6d7bb8c0862fc3ece10fa49bb600076"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-controllers 0.16.0",
- "cw-storage-plus 0.16.0",
- "cw-utils 0.16.0",
- "cw2 0.16.0",
- "cw20 0.16.0",
- "cw20-base 0.16.0",
- "cw20-stake",
  "thiserror",
 ]
 
