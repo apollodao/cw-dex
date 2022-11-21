@@ -98,7 +98,7 @@ impl Rewards for AstroportStaking {
 impl Unstake for AstroportStaking {
     fn unstake(&self, _deps: Deps, _env: &Env, amount: Uint128) -> Result<Response, CwDexError> {
         let unstake_msg = CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: self.lp_token_addr.to_string(),
+            contract_addr: self.generator_addr.to_string(),
             msg: to_binary(&GeneratorExecuteMsg::Withdraw {
                 lp_token: self.lp_token_addr.to_string(),
                 amount,
