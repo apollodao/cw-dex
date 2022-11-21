@@ -78,7 +78,6 @@ impl From<JunoAsset> for Asset {
 }
 pub struct JunoAssetList(pub(crate) Vec<JunoAsset>);
 
-// TODO: generalize this to cover Astro case also
 impl TryFrom<AssetList> for JunoAssetList {
     type Error = StdError;
     fn try_from(list: AssetList) -> StdResult<Self> {

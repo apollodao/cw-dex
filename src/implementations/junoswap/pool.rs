@@ -38,9 +38,6 @@ impl JunoswapPool {
 }
 
 impl Pool for JunoswapPool {
-    // TODO: Does not work when assets are unbalanced. We also need a function that
-    // balances the assets before providing liquidity so we can liquidate multiple
-    // rewards and provide liquidity.
     fn provide_liquidity(
         &self,
         deps: Deps,
