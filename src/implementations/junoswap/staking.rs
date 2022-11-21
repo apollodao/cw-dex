@@ -62,8 +62,9 @@ impl Stake for JunoswapStaking {
 
 impl Unstake for JunoswapStaking {
     fn unstake(&self, deps: Deps, env: &Env, amount: Uint128) -> Result<Response, CwDexError> {
-        // Verify that the vault does not have an unbonding period. Our design assumes
-        // that the vault does not have an unbonding period when unstake can be called.
+        // Verify that the staking contract does not have an unbonding period.
+        // Our design assumes that the vault does not have an unbonding period
+        // when unstake can be called.
         let cfg = deps
             .querier
             .query::<Config>(&QueryRequest::Wasm(WasmQuery::Smart {
