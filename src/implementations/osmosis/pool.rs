@@ -257,7 +257,7 @@ impl Pool for OsmosisPool {
         &self,
         deps: Deps,
         offer: Asset,
-        _ask_asset_info: AssetInfo,
+        ask_asset_info: AssetInfo,
         sender: Option<String>,
     ) -> StdResult<Uint128> {
         let offer: Coin = offer.try_into()?;
@@ -267,7 +267,7 @@ impl Pool for OsmosisPool {
             offer.denom.clone(),
             vec![SwapAmountInRoute {
                 pool_id: self.pool_id,
-                token_out_denom: offer.denom,
+                token_out_denom: assert_native_asset_info(&ask_asset_info)?,
             }],
         )?;
         Uint128::from_str(swap_response.token_out_amount.as_str())
