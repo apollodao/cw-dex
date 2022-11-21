@@ -227,10 +227,10 @@ impl Pool for OsmosisPool {
     fn simulate_withdraw_liquidity(
         &self,
         deps: Deps,
-        asset: &Asset,
+        lp_token: &Asset,
     ) -> Result<AssetList, CwDexError> {
         let querier = GammQuerier::new(&deps.querier);
-        let lp_token = assert_native_coin(asset)?;
+        let lp_token = assert_native_coin(lp_token)?;
 
         let lp_denom = query_lp_denom(&deps.querier, self.pool_id)?;
 
