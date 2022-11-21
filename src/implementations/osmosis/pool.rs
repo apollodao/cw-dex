@@ -6,6 +6,7 @@ use std::str::FromStr;
 use apollo_utils::assets::{
     assert_native_asset_info, assert_native_coin, assert_only_native_coins, merge_assets,
 };
+use apollo_utils::iterators::IntoElementwise;
 use osmosis_std::types::osmosis::gamm::v1beta1::{
     GammQuerier, MsgExitPool, MsgJoinPool, MsgJoinSwapShareAmountOut, MsgSwapExactAmountIn,
     SwapAmountInRoute,
@@ -18,7 +19,6 @@ use cosmwasm_std::{
 use cw_asset::{Asset, AssetInfo, AssetList};
 
 use crate::traits::Pool;
-use crate::utils::vec_into;
 use crate::CwDexError;
 
 use super::helpers::query_lp_denom;
@@ -65,7 +65,7 @@ impl OsmosisPool {
         let querier = GammQuerier::new(querier);
         let response = &querier.calc_join_pool_no_swap_shares(
             self.pool_id,
-            vec_into(assert_only_native_coins(assets)?),
+            assert_only_native_coins(assets)?.into_elementwise(),
         )?;
         let lp_tokens_returned = Uint128::from_str(&response.shares_out)?;
         let tokens_used: Vec<Coin> = response
@@ -124,7 +124,7 @@ impl Pool for OsmosisPool {
                 sender: env.contract.address.to_string(),
                 pool_id: self.pool_id,
                 share_out_amount: expected_shares.to_string(),
-                token_in_maxs: vec_into(assets.to_owned()),
+                token_in_maxs: assets.into_elementwise(),
             }
             .into();
         }
