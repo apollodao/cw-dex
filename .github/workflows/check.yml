@@ -1,17 +1,6 @@
 name: Check
 on:
   pull_request:
-  workflow_dispatch:
-    logLevel:
-      inputs:
-        description: 'Log level'
-        required: false
-        default: 'warning'
-        type: choice
-        options:
-          - info
-          - warning
-          - debug
 
 env:
   RUSTFLAGS: -D warnings
