@@ -41,4 +41,4 @@ jobs:
           add: 'Cargo.toml'
           tag: '${{ steps.semver.outputs.next }}'
           message: Update Cargo.toml version from ${{ steps.semver.outputs.current }} to ${{ steps.semver.outputs.next }}
-          push: ''
+          push: true
