@@ -29,7 +29,7 @@ jobs:
         id: semver
         uses: ietf-tools/semver-action@v1
         with:
-          token: ${{ secrets.APOLLO_CI_PAT }}
+          token: ${{ github.token }}
           branch: master
           majorList: feat!, feature! fix!, bugfix!, perf!, refactor!, chore!
           minorList: feat, feature
@@ -43,14 +43,9 @@ jobs:
           key: "package.version"
           value: "${{ steps.semver.outputs.nextStrict }}"
 
-      - name: Commit changes and push
-        id: push-commit
-        uses: swinton/commit@v2.0.0
-        env:
-          GH_TOKEN: ${{ secrets.APOLLO_CI_PAT }}
+      - name: Commit changes, tag and push
+        uses: EndBug/add-and-commit@v9.1.1
         with:
-          files: |
-            Cargo.toml
-          commit-message: Update Cargo.toml version from ${{ steps.semver.outputs.current }} to ${{ steps.semver.outputs.next }}
-
-
+          add: 'Cargo.toml'
+          tag: '${{ steps.semver.outputs.next }}'
+          message: Update Cargo.toml version from ${{ steps.semver.outputs.current }} to ${{ steps.semver.outputs.next }}
