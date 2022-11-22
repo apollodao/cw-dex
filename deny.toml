@@ -21,8 +21,8 @@ unknown-registry = "deny"
 unknown-git = "deny"
 
 allow-git = [
-    "https://github.com/osmosis-labs/osmosis-rust",
-    "https://github.com/apollodao/apollo-proto-rust",
+    "https://github.com/apollodao/osmosis-rust",
+    "https://github.com/apollodao/apollo-utils:w",
     "https://github.com/apollodao/cw-asset",
     "https://github.com/Wasmswap/wasmswap-contracts",
     "https://github.com/DA0-DA0/dao-contracts",
