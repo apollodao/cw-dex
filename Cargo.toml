@@ -1,21 +1,19 @@
 [package]
-authors = ["Apollo Devs"]
+authors = [ "Apollo Devs" ]
 description = "Helper library for interacting with Cosmos dexes"
 edition = "2021"
 license = "GPL-3.0-or-later"
 name = "cw-dex"
 repository = "https://github.com/apollodao/cw-dex"
-version = "0.0.1"
+version = "2.0.0"
 
 [features]
-default = ["osmosis"]
-osmosis = []
+default = [ "osmosis" ]
+osmosis = [ ]
 
 [dependencies]
 cosmwasm-schema = "1.1.0"
-cosmwasm-std = {version = "1.1.0", features = ["stargate"]}
 cosmwasm-storage = "1.1.0"
-cw-asset = { git = "https://github.com/apollodao/cw-asset.git", features = ["astroport"] }
 cw-storage-plus = "0.16"
 cw-utils = "0.11"
 cw20 = "0.16"
@@ -25,20 +23,51 @@ num-rational = "0.4"
 num-traits = "0.2.15"
 osmo-bindings = "0.5.1"
 schemars = "0.8.8"
-serde = {version = "1.0.137", default-features = false, features = ["derive"]}
-thiserror = {version = "1.0.31"}
-prost = {version = "0.11.0", default-features = false, features = ["prost-derive"]}
-apollo-utils = { git = "https://github.com/apollodao/apollo-utils.git" }
-
-# Osmosis
-osmosis-std = { git = "https://github.com/apollodao/osmosis-rust", branch = "feat/latest-build" }
-
-# Junoswap
-wasmswap = { git = "https://github.com/Wasmswap/wasmswap-contracts.git", tag = "v1.1.0-beta", features = ["library"] }
-cw20-0_10_3 = { package = "cw20", version = "0.10.3" } # We must import this version separately since it is what wasmswap uses.
 stake-cw20 = "0.2"
-stake-cw20-external-rewards = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"] } # TODO: what version?
-
-# Astroport
-astroport-core = { package = "astroport", rev = "126d43216111df786472fe2a845c1e2fadfe4a36", git = "https://github.com/astroport-fi/astroport-core.git" }
 delegate = "0.8"
+
+  [dependencies.cosmwasm-std]
+  version = "1.1.0"
+  features = [ "stargate" ]
+
+  [dependencies.cw-asset]
+  git = "https://github.com/apollodao/cw-asset.git"
+  features = [ "astroport" ]
+
+  [dependencies.serde]
+  version = "1.0.137"
+  default-features = false
+  features = [ "derive" ]
+
+  [dependencies.thiserror]
+  version = "1.0.31"
+
+  [dependencies.prost]
+  version = "0.11.0"
+  default-features = false
+  features = [ "prost-derive" ]
+
+  [dependencies.apollo-utils]
+  git = "https://github.com/apollodao/apollo-utils.git"
+
+  [dependencies.osmosis-std]
+  git = "https://github.com/apollodao/osmosis-rust"
+  branch = "feat/latest-build"
+
+  [dependencies.wasmswap]
+  git = "https://github.com/Wasmswap/wasmswap-contracts.git"
+  tag = "v1.1.0-beta"
+  features = [ "library" ]
+
+  [dependencies.cw20-0_10_3]
+  package = "cw20"
+  version = "0.10.3"
+
+  [dependencies.stake-cw20-external-rewards]
+  git = "https://github.com/DA0-DA0/dao-contracts"
+  features = [ "library" ]
+
+  [dependencies.astroport-core]
+  package = "astroport"
+  rev = "126d43216111df786472fe2a845c1e2fadfe4a36"
+  git = "https://github.com/astroport-fi/astroport-core.git"
