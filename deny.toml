@@ -1,0 +1,40 @@
+# cargo-deny is really only ever intended to run on the "normal" tier-1 targets
+targets = [
+    { triple = "x86_64-unknown-linux-gnu" },
+    { triple = "x86_64-unknown-linux-musl" },
+]
+
+[advisories]
+vulnerability = "deny"
+unmaintained = "deny"
+notice = "deny"
+unsound = "deny"
+ignore = []
+
+[bans]
+multiple-versions = "allow" # TODO:update this
+deny = []
+skip = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+
+allow-git = [
+    "https://github.com/osmosis-labs/osmosis-rust",
+    "https://github.com/apollodao/apollo-proto-rust",
+    "https://github.com/apollodao/cw-asset",
+    "https://github.com/Wasmswap/wasmswap-contracts",
+    "https://github.com/DA0-DA0/dao-contracts",
+    "https://github.com/astroport-fi/astroport-core",
+]
+
+[licenses]
+unlicensed = "allow"           # TODO: update this
+allow-osi-fsf-free = "neither"
+copyleft = "allow"             # TODO: update this
+# We want really high confidence when inferring licenses from text
+confidence-threshold = 0.93
+allow = ["Apache-2.0", "MIT", "BSD-3-Clause"]
+
+exceptions = [{ allow = ["Unicode-DFS-2016"], name = "unicode-ident" }]
