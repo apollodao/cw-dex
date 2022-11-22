@@ -5,25 +5,17 @@ on:
     branches:
       - master
       - ci/semver-concom-automation
-  workflow_dispatch:
-    logLevel:
-      inputs:
-        description: 'Log level'
-        required: false
-        default: 'warning'
-        type: choice
-        options:
-          - info
-          - warning
-          - debug
 
 jobs:
-  semver-determine:
-    name: Determine next version number
+  semver-set:
+    name: Set next version number
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - name: Checkout pull request
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
 
       - name: Determine version number
         id: semver
@@ -49,3 +41,4 @@ jobs:
           add: 'Cargo.toml'
           tag: '${{ steps.semver.outputs.next }}'
           message: Update Cargo.toml version from ${{ steps.semver.outputs.current }} to ${{ steps.semver.outputs.next }}
+          push: ''
