@@ -1,10 +1,9 @@
 
 name: Versioning
 on:
-  pull_request:
+  push:
     branches:
       - master
-      - ci/semver-concom-automation
 
 jobs:
   semver-set:
