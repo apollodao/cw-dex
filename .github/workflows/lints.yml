@@ -2,16 +2,12 @@ name: Lints
 on:
   pull_request:
   workflow_dispatch:
-    logLevel:
-      inputs:
-        description: 'Log level'
+    inputs:
+      branch:
+        description: 'Target branch'
         required: false
-        default: 'warning'
-        type: choice
-        options:
-          - info
-          - warning
-          - debug
+        default: 'develop'
+        type: string
 
 env:
   RUSTFLAGS: -D warnings
@@ -22,7 +18,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v2
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: actions/checkout@v3
+
+      - name: Checkout sources on workflow dispatch
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.branch }}
 
       - name: Install nightly toolchain
         uses: actions-rs/toolchain@v1
