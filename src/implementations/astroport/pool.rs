@@ -14,7 +14,7 @@ use super::msg::{
     PairCw20HookMsg, PairExecuteMsg, PairInfo, PairQueryMsg, PairType, PoolResponse,
     SimulationResponse,
 };
-
+use apollo_utils::assets::separate_natives_and_cw20s;
 use super::helpers::{
     adjust_precision, compute_current_amp, compute_d, query_pair_config, query_supply,
     query_token_precision, MAX_ALLOWED_SLIPPAGE, N_COINS, U256,
@@ -257,10 +257,13 @@ impl Pool for AstroportPool {
             auto_stake: Some(false),
             receiver: None,
         };
+
+        let (funds, _) = separate_natives_and_cw20s(&assets);
+
         let provide_liquidity = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.pair_addr.to_string(),
             msg: to_binary(&msg)?,
-            funds: vec![],
+            funds,
         });
 
         let event = Event::new("apollo/cw-dex/provide_liquidity")
