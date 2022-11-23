@@ -10,13 +10,16 @@ use crate::error::CwDexError;
 pub trait Rewards {
     /// Claim the pending rewards from the staking contract.
     ///
-    /// Arguments:
-    ///
     /// Returns a Response containing the messages to claim the pending rewards.
+    /// The response may contain no messages if the staking implementation
+    /// distributes rewards automatically.
     fn claim_rewards(&self, deps: Deps, env: &Env) -> Result<Response, CwDexError>;
 
     //// Query the pending rewards in the staking contract that can be claimed by
     /// `user` by calling `claim_rewards`.
+    ///
+    /// Returns an [`AssetList`] containing the pending rewards. The list may be
+    /// empty if there are no pending rewards.
     fn query_pending_rewards(
         &self,
         querier: &QuerierWrapper,
@@ -32,7 +35,10 @@ pub trait Stake: Rewards {
     /// Arguments:
     /// - `amount`: the amount of the asset to stake.
     ///
-    /// Returns a Response containing the messages to stake the given asset.
+    /// Returns a `Response` containing the messages to stake the given asset. If
+    /// the asset to be staked is a CW20 token and the staking implementation
+    /// requires a CW20 allowance, the `Response` should contain messages to
+    /// increase the allowance.
     fn stake(&self, deps: Deps, env: &Env, amount: Uint128) -> Result<Response, CwDexError>;
 }
 
@@ -53,7 +59,7 @@ pub trait Staking: Stake + Unstake + Rewards {}
 /// Defines an interface for unlocking assets
 pub trait Unlock {
     /// Start unlocking `amount` of the locked asset. Depending on the
-    /// implementation, some kind of unlocking ID will be returned in an
+    /// implementation, some kind of unlocking ID may be returned in an
     /// event and you may need to handle this in a reply.
     fn unlock(&self, deps: Deps, env: &Env, amount: Uint128) -> Result<Response, CwDexError>;
 
@@ -67,13 +73,14 @@ pub trait Unlock {
     ) -> Result<Response, CwDexError>;
 }
 
-/// Defines an interface for interacting with locked staked assets
+/// Defines an interface for interacting with a staking module with a lockup
+/// period
 pub trait LockedStaking: Stake + Unlock + Rewards {
     /// Returns the lockup duration for the staked assets.
     fn get_lockup_duration(&self, deps: Deps) -> Result<CwDuration, CwDexError>;
 }
 
-/// Defines an interface for forced unlocking of locked assets§
+/// Defines an interface for forced unlocking of locked assets
 pub trait ForceUnlock: LockedStaking {
     /// Force unlock a lockup position. This can (at least in the case of
     /// Osmosis) only be called by whitelisted addresses and is used in the

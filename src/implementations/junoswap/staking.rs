@@ -9,18 +9,20 @@ use cw20::Cw20ExecuteMsg;
 
 use cw_asset::AssetList;
 use cw_utils::Duration;
-use stake_cw20::{
-    msg::{
-        ExecuteMsg as Cw20StakeExecuteMsg, QueryMsg as Cw20StakeQueryMsg,
-        ReceiveMsg as Cw20StakeReceiveMsg,
-    },
-    state::Config,
+use stake_cw20::msg::{
+    ExecuteMsg as Cw20StakeExecuteMsg, QueryMsg as Cw20StakeQueryMsg,
+    ReceiveMsg as Cw20StakeReceiveMsg,
 };
+use stake_cw20::state::Config;
 
 use crate::{
     traits::{LockedStaking, Rewards, Stake, Unlock, Unstake},
     CwDexError,
 };
+// use stake_cw20_external_rewards::msg::{
+//     ExecuteMsg as StakeCw20ExternalRewardsExecuteMsg, PendingRewardsResponse,
+//     QueryMsg as StakeCw20ExternalRewardsQueryMsg,
+// };
 
 /// Represents staking of LP tokens on Junoswap
 #[cw_serde]
@@ -60,8 +62,9 @@ impl Stake for JunoswapStaking {
 
 impl Unstake for JunoswapStaking {
     fn unstake(&self, deps: Deps, env: &Env, amount: Uint128) -> Result<Response, CwDexError> {
-        // Verify that the vault does not have an unbonding period. Our design assumes
-        // that the vault does not have an unbonding period when unstake can be called.
+        // Verify that the staking contract does not have an unbonding period.
+        // Our design assumes that the vault does not have an unbonding period
+        // when unstake can be called.
         let cfg = deps
             .querier
             .query::<Config>(&QueryRequest::Wasm(WasmQuery::Smart {
@@ -201,8 +204,14 @@ impl LockedStaking for JunoswapStaking {
                 contract_addr: self.addr.to_string(),
                 msg: to_binary(&Cw20StakeQueryMsg::GetConfig {})?,
             }))?
-            .unstaking_duration;
+            .unstaking_duration
+            .unwrap_or(cw_utils_0_11::Duration::Time(0));
 
-        Ok(duration.unwrap_or(Duration::Time(0)))
+        let duration = match duration {
+            cw_utils_0_11::Duration::Time(x) => Duration::Time(x),
+            cw_utils_0_11::Duration::Height(x) => Duration::Height(x),
+        };
+
+        Ok(duration)
     }
 }

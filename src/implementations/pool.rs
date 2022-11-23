@@ -6,6 +6,7 @@ use cosmwasm_std::{Deps, Env, Response, StdResult, Uint128};
 use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use std::str::FromStr;
 
+use crate::astroport::AstroportPool;
 use crate::error::CwDexError;
 use crate::implementations::osmosis::OsmosisPool;
 use crate::junoswap::JunoswapPool;
@@ -22,6 +23,8 @@ pub enum Pool {
     Osmosis(OsmosisPool),
     /// Contains an Junoswap pool implementation
     Junoswap(JunoswapPool),
+    /// Contains an Astroport pool implementation
+    Astroport(AstroportPool),
 }
 
 impl Pool {
@@ -30,6 +33,7 @@ impl Pool {
         match self {
             Pool::Osmosis(x) => Box::new(*x),
             Pool::Junoswap(x) => Box::new(x.clone()),
+            Pool::Astroport(x) => Box::new(x.clone()),
         }
     }
 
@@ -53,14 +57,13 @@ impl Pool {
 
                 Ok(Pool::Osmosis(OsmosisPool { pool_id }))
             }
-            _ => Err(CwDexError::NotLpToken {}), //TODO: Support Astroport, Junoswap, etc.
+            _ => Err(CwDexError::NotLpToken {}),
         }
     }
 }
 
-// Implement the Pool trait for the Pool enum so we can use all the trait methods
-// directly on the enum type.
-// TODO: Use "enum_dispatch" macro instead? https://crates.io/crates/enum_dispatch
+// Implement the Pool trait for the Pool enum so we can use all the trait
+// methods directly on the enum type.
 impl PoolTrait for Pool {
     fn provide_liquidity(
         &self,

@@ -38,9 +38,6 @@ impl JunoswapPool {
 }
 
 impl Pool for JunoswapPool {
-    // TODO: Does not work when assets are unbalanced. We also need a function that
-    // balances the assets before providing liquidity so we can liquidate multiple
-    // rewards and provide liquidity.
     fn provide_liquidity(
         &self,
         deps: Deps,
@@ -220,16 +217,16 @@ impl Pool for JunoswapPool {
     fn simulate_withdraw_liquidity(
         &self,
         deps: Deps,
-        asset: &Asset,
+        lp_token: &Asset,
     ) -> Result<AssetList, CwDexError> {
         let pool_info = self.query_info(&deps.querier)?;
 
         // Calculate tokens out
-        let token1_amount = asset
+        let token1_amount = lp_token
             .amount
             .checked_mul(pool_info.token1_reserve)?
             .checked_div(pool_info.lp_token_supply)?;
-        let token2_amount = asset
+        let token2_amount = lp_token
             .amount
             .checked_mul(pool_info.token2_reserve)?
             .checked_div(pool_info.lp_token_supply)?;

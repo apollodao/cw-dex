@@ -7,12 +7,10 @@ use cosmwasm_std::{
 };
 use cw20::Cw20ExecuteMsg;
 
-use astroport_core::asset::Asset as AstroAsset;
-use astroport_core::generator::{
-    Cw20HookMsg as GeneratorCw20HookMsg, ExecuteMsg as GeneratorExecuteMsg, PendingTokenResponse,
-    QueryMsg as GeneratorQueryMsg,
+use super::msg::{
+    GeneratorCw20HookMsg, GeneratorExecuteMsg, GeneratorQueryMsg, PendingTokenResponse,
 };
-use cw_asset::{Asset, AssetList};
+use cw_asset::{astroport::AstroAsset, Asset, AssetList};
 
 use crate::traits::{Rewards, Stake, Staking, Unstake};
 use crate::CwDexError;
@@ -100,7 +98,7 @@ impl Rewards for AstroportStaking {
 impl Unstake for AstroportStaking {
     fn unstake(&self, _deps: Deps, _env: &Env, amount: Uint128) -> Result<Response, CwDexError> {
         let unstake_msg = CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: self.lp_token_addr.to_string(),
+            contract_addr: self.generator_addr.to_string(),
             msg: to_binary(&GeneratorExecuteMsg::Withdraw {
                 lp_token: self.lp_token_addr.to_string(),
                 amount,

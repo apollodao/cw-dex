@@ -1,3 +1,5 @@
+//! Contains the `Pool` trait for abstracting the behavior of a dex pool.
+
 use cosmwasm_std::{Deps, Env, Response, StdResult, Uint128};
 use cw_asset::{Asset, AssetInfo, AssetList};
 
@@ -11,10 +13,11 @@ pub trait Pool {
     /// the pool. `assets` must only contain the assets in the pool, but the
     /// ratio of amounts does not need to be the same as the pool's ratio.
     ///
-    /// All implementations of this trait should try to use as much of the provided
-    /// assets as possible, but it may leave some in the contracts balance if they
-    /// are not exactly in the same ratio as the pool. All implementations should
-    /// return an error if the returned amount of LP tokens is less than `min_out`.
+    /// All implementations of this trait should try to use as much of the
+    /// provided assets as possible, but it may leave some in the contracts
+    /// balance if they are not exactly in the same ratio as the pool. All
+    /// implementations should return an error if the returned amount of LP
+    /// tokens is less than `min_out`.
     ///
     /// Arguments:
     /// - `assets`: the assets to provide liquidity with
@@ -90,7 +93,8 @@ pub trait Pool {
         lp_token: &Asset,
     ) -> Result<AssetList, CwDexError>;
 
-    /// Simulates a swap and returns the estimated amount of the asset asked for, given the offered asset
+    /// Simulates a swap and returns the estimated amount of the asset asked
+    /// for, given the offered asset
     ///
     /// Arguments:
     /// - `offer_asset`: The asset offered in the swap

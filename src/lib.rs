@@ -8,16 +8,15 @@
 //! a set of traits to abstract out the common behavior of various
 //! decentralized exchanges so that the same contract code can be used to
 //! interact with any of them.
-//! 
+//!
 //! The currently supported decentralized exchanges are:
 //! - [Osmosis](cw_dex::implementations::osmosis)
 //! - [Astroport](cw_dex::implementations::astroport)
-//! - [Junoswap](cw_dex::implementations::Junoswap) 
+//! - [Junoswap](cw_dex::implementations::Junoswap)
 
 pub mod error;
 pub mod implementations;
 pub mod traits;
-mod utils;
 
 pub use error::*;
 pub use implementations::*;
