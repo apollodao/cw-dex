@@ -1,4 +1,4 @@
-name: Check
+name: Check licenses and sources
 on:
   pull_request:
 
