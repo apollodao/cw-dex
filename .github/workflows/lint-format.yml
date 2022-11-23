@@ -32,7 +32,6 @@ jobs:
         with:
           profile: minimal
           toolchain: nightly
-          override: true
           components: rustfmt, clippy
 
       - name: Install cargo-machete
@@ -44,6 +43,7 @@ jobs:
       - name: Run cargo clippy
         uses: actions-rs/cargo@v1
         with:
+          toolchain: nightly
           command: clippy
           args: --fix -- -D warnings
 
