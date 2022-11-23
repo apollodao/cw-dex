@@ -310,14 +310,12 @@ dependencies = [
 name = "cw-dex"
 version = "0.0.1"
 dependencies = [
- "anyhow",
  "apollo-utils",
  "astroport",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
  "cw-asset",
- "cw-multi-test",
  "cw-storage-plus 0.16.0",
  "cw-utils 0.11.1",
  "cw20 0.10.3",
@@ -330,7 +328,7 @@ dependencies = [
  "osmo-bindings",
  "osmosis-std",
  "proptest",
- "prost 0.11.2",
+ "prost",
  "schemars",
  "serde",
  "stake-cw20",
@@ -338,24 +336,6 @@ dependencies = [
  "test-case",
  "thiserror",
  "wasmswap",
-]
-
-[[package]]
-name = "cw-multi-test"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7192aec80d0c01a0e5941392eea7e2b7e212ee74ca7f430bfdc899420c055ef6"
-dependencies = [
- "anyhow",
- "cosmwasm-std",
- "cw-storage-plus 0.16.0",
- "cw-utils 0.16.0",
- "derivative",
- "itertools",
- "prost 0.9.0",
- "schemars",
- "serde",
- "thiserror",
 ]
 
 [[package]]
@@ -937,7 +917,7 @@ dependencies = [
  "chrono",
  "cosmwasm-std",
  "osmosis-std-derive",
- "prost 0.11.2",
+ "prost",
  "prost-types",
  "schemars",
  "serde",
@@ -1026,35 +1006,12 @@ dependencies = [
 
 [[package]]
 name = "prost"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "444879275cb4fd84958b1a1d5420d15e6fcf7c235fe47f053c9c2a80aceb6001"
-dependencies = [
- "bytes",
- "prost-derive 0.9.0",
-]
-
-[[package]]
-name = "prost"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a0841812012b2d4a6145fae9a6af1534873c32aa67fff26bd09f8fa42c83f95a"
 dependencies = [
  "bytes",
- "prost-derive 0.11.2",
-]
-
-[[package]]
-name = "prost-derive"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9cc1a3263e07e0bf68e96268f37665207b49560d98739662cdfaae215c720fe"
-dependencies = [
- "anyhow",
- "itertools",
- "proc-macro2",
- "quote",
- "syn",
+ "prost-derive",
 ]
 
 [[package]]
@@ -1077,7 +1034,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "747761bc3dc48f9a34553bf65605cf6cb6288ba219f3450b4275dbd81539551a"
 dependencies = [
  "bytes",
- "prost 0.11.2",
+ "prost",
 ]
 
 [[package]]

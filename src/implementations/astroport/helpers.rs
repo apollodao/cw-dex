@@ -100,7 +100,7 @@ pub(crate) fn adjust_precision(
 /// * **Equation**
 ///
 /// A * sum(x_i) * n**n + D = A * D * n**n + D**(n+1) / (n**n * prod(x_i))
-/// 
+///
 /// ## Params
 /// * **leverage** is the object of type [`u128`].
 ///

@@ -34,7 +34,6 @@ apollo-utils = { git = "https://github.com/apollodao/apollo-utils.git" }
 osmosis-std = { git = "https://github.com/apollodao/osmosis-rust", branch = "feat/latest-build" }
 
 # Junoswap
-# TODO: is it safe to use a beta, unaudited code?
 wasmswap = { git = "https://github.com/Wasmswap/wasmswap-contracts.git", tag = "v1.1.0-beta", features = ["library"] }
 cw20-0_10_3 = { package = "cw20", version = "0.10.3" } # We must import this version separately since it is what wasmswap uses.
 stake-cw20 = "0.2"
@@ -45,11 +44,6 @@ astroport-core = { package = "astroport", rev = "126d43216111df786472fe2a845c1e2
 delegate = "0.8"
 
 [dev-dependencies]
-cw-multi-test = "0.16.0"
-# core cosmwasm
-cosmwasm-schema = "1.1"
-# standard libs
-anyhow = "1"
 # parametrized test cases
 test-case = "2.2.1"
 # Property test cases
