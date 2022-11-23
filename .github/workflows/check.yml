@@ -13,11 +13,6 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v3
 
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-
       - name: Run cargo check
         uses: actions-rs/cargo@v1
         with:
