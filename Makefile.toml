@@ -14,9 +14,13 @@ args = ["udeps"]
 command = "cargo"
 args = ["deny", "check"]
 
+[tasks.check]
+command = "cargo"
+args = ["check"]
+
 [tasks.clippy]
 command = "cargo"
-args = ["clippy","--","-D","warnings"]
+args = ["clippy","--fix","--allow-staged","--","-D","warnings"]
 
 # This task requires the `cargo-tarpaulin` package: https://crates.io/crates/cargo-tarpaulin
 [tasks.cov]
@@ -51,7 +55,7 @@ args = [
 # This task requires the `cargo-machete` package: https://crates.io/crates/cargo-machete
 [tasks.machete]
 command = "cargo"
-args = ["machete"]
+args = ["machete", "--fix"]
 
 # Run automatically on "cargo make". This is the default task. We keep all the
 # default tasks and add our own "custom" task.
