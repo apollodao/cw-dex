@@ -1,4 +1,4 @@
-name: Lints
+name: Linting and formatting
 on:
   pull_request:
   workflow_dispatch:
@@ -13,8 +13,8 @@ env:
   RUSTFLAGS: -D warnings
 
 jobs:
-  lints:
-    name: Lints
+  lint-and-format:
+    name: Lint and format
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
