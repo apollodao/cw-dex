@@ -264,7 +264,7 @@ impl Pool for OsmosisPool {
         let swap_response = GammQuerier::new(&deps.querier).estimate_swap_exact_amount_in(
             sender.ok_or_else(|| StdError::generic_err("sender is required for osmosis"))?,
             self.pool_id,
-            offer.denom.clone(),
+            offer.denom,
             vec![SwapAmountInRoute {
                 pool_id: self.pool_id,
                 token_out_denom: assert_native_asset_info(&ask_asset_info)?,
