@@ -12,9 +12,6 @@ jobs:
     steps:
       - name: Checkout pull request
         uses: actions/checkout@v3
-        with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
 
       - name: Determine version number
         id: semver
@@ -24,7 +21,7 @@ jobs:
           branch: master
           majorList: feat!, feature! fix!, bugfix!, perf!, refactor!, chore!
           minorList: feat, feature
-          patchList: fix, bugfix, perf, refactor, test, tests, chore
+          patchList: fix, bugfix, perf
 
       - name: Update Cargo.toml
         id: update
