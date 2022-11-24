@@ -23,5 +23,8 @@ if stat .git/hooks/commit-msg 2&>/dev/null; then
     curl -o- https://raw.githubusercontent.com/craicoverflow/sailr/master/scripts/install.sh | bash
 fi
 
+# Reinitialize git repo
+git init
+
 ## Finish
 echo "---------\n| Done! |\n---------"
