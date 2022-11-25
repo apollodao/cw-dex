@@ -1,249 +1,77 @@
-use cosmwasm_std::Coin;
-use integration_tests::app::App;
-use integration_tests::application::Application;
-use integration_tests::chain::Chain;
-use integration_tests::module::osmosis::{Gamm, TokenFactory};
-use integration_tests::module::Module;
-use integration_tests::result::ExecuteResponse;
-use integration_tests::runner::Runner;
+use cw_asset::Asset;
 use integration_tests_config::account::Account;
-use integration_tests_config::config::TestConfig;
+use cw_asset::AssetInfo;
+use cosmwasm_std::Uint128;
+use cw_dex_test::msg::ExecuteMsg;
+use cw_dex_test::msg::InstantiateMsg;
+use integration_tests_core::module::Wasm;
+use integration_tests_core::contract::Contract;
+use integration_tests_core::module::Module;
+use cw_asset::AssetList;
+use integration_tests_core::module::osmosis::TokenFactory;
+use integration_tests_core::module::osmosis::Gamm;
+use integration_tests_core::test_setup;
+use cosmwasm_std::Coin;
+
 use test_case::test_case;
 
-use cosmrs::proto::cosmos::auth::v1beta1::BaseAccount;
-use osmosis_std::types::osmosis::tokenfactory::v1beta1::{
-    MsgCreateDenom, MsgCreateDenomResponse, MsgMint, QueryDenomsFromCreatorRequest,
-    QueryParamsRequest,
-};
+use osmosis_std::types::osmosis::tokenfactory::v1beta1::{ MsgCreateDenom, MsgMint };
 use testcontainers::clients::Cli;
-use testcontainers::images::generic::GenericImage;
-use testcontainers::{Container, RunnableImage};
 
-#[test_case("osmosis.yaml" ; "osmosis pool creation")]
+#[test_case("./tests/osmosis.yaml" ; "osmosis pool creation")]
 fn create_osmosis_pool(cfg_path: &str) {
     // Init
-    let mut config: TestConfig = TestConfig::from_yaml(cfg_path);
-    let osmosis = App::default();
     let docker: Cli = Cli::default();
+    let (_config, app, _container, chain, accs) = test_setup!(docker, cfg_path);
 
-    // Given a running local Chain
-    let container: Container<GenericImage> = docker.run(RunnableImage::from(
-        osmosis.get_image(&config.container.name, &config.container.tag),
-    ));
-    config.bind_chain_to_container(&container);
-    let chain = Chain::new(&config.chain_cfg);
-
-    let gamm = Gamm::new(&osmosis);
-    let token_factory = TokenFactory::new(&osmosis);
+    let gamm = Gamm::new(&app);
+    let token_factory = TokenFactory::new(&app);
+    let wasm = Wasm::new(&app);
 
     // and an admin account
-    let admin = config.import_account("validator").unwrap();
+    let admin = &accs["validator"];
 
-    // and created Token "apollo"
+    // and created Token
     let create_denom_msg = MsgCreateDenom {
         sender: admin.address(),
-        subdenom: "uapollo".to_string(),
+        subdenom: "udummy".to_string(),
     };
-    let resp = token_factory
+    let dummy_token = token_factory
         .create_denom(&chain, create_denom_msg, &admin)
-        .unwrap();
-
-    let new_token_denom = resp.data.new_token_denom;
-    // TODO: check events
+        .unwrap().data.new_token_denom;
 
     let mint_msg = MsgMint {
         sender: admin.address(),
         amount: Some(osmosis_std::types::cosmos::base::v1beta1::Coin {
             amount: "1000".to_string(),
-            denom: new_token_denom.clone(),
+            denom: dummy_token.clone(),
         }),
     };
     let _mint_response = token_factory.mint(&chain, mint_msg, &admin).unwrap().data;
 
-    let query_denom_msg = QueryDenomsFromCreatorRequest {
-        creator: admin.address(),
-    };
-    let query_denoms_response = token_factory
-        .query_denoms_from_creator(&chain, &query_denom_msg)
-        .unwrap()
-        .denoms;
-    println!("Query Denoms from creator [{:#?}]", query_denoms_response);
+    // When we create the pool udummy-uosmo
+    let pool_liquidity = vec![Coin::new(1_000, dummy_token), Coin::new(1_000, "uosmo")];
+    let pool_id = gamm.create_basic_pool(&chain, &pool_liquidity, &admin).unwrap().data.pool_id;
 
-    // When we create the pool uapollo-uosmo
-    let pool_liquidity = vec![Coin::new(1_000, new_token_denom), Coin::new(1_000, "uosmo")];
-    let pool_id = gamm
-        .create_basic_pool(&chain, &pool_liquidity, &admin)
-        .unwrap()
-        .data
-        .pool_id;
+    // TODO: Use here the smart contract that will use the Pool
+    let contract: Contract = Contract::store(&app, &chain, &admin, "cw_dex_test");
+    let contract_addr = wasm
+        .instantiate(&chain, contract.code_id, &(InstantiateMsg {}), None, None, &[], &admin)
+        .unwrap().data.address;
+    println!("Contract Initialized [{}]", contract_addr);
 
-    println!("pool_id [{:?}]", pool_id);
-    assert_eq!(1u64, pool_id);
-    let pool = gamm.query_pool(&chain, pool_id).unwrap();
-    for asset in pool.pool_assets.clone() {
-        println!("PoolAsset [{:?}]", asset);
-    }
-
-    let pool_assets: Vec<osmosis_std::types::cosmos::base::v1beta1::Coin> = pool
-        .pool_assets
-        .into_iter()
-        .map(|pool_asset| pool_asset.token.unwrap())
-        .collect();
-
-    assert_eq!(pool_liquidity[0].denom, pool_assets[0].denom);
-    assert_eq!(pool_liquidity[1].denom, pool_assets[1].denom);
-    // TODO: make a deposit to check if balance change
-}
-
-#[test_case("osmosis.yaml" ; "osmosis chain execute")]
-fn test_execute(cfg_path: &str) {
-    // Init
-    let mut config: TestConfig = TestConfig::from_yaml(cfg_path);
-    let osmosis = App::default();
-    let docker: Cli = Cli::default();
-
-    // Given a running local Chain
-    let container: Container<GenericImage> = docker.run(RunnableImage::from(
-        osmosis.get_image(&config.container.name, &config.container.tag),
-    ));
-    config.bind_chain_to_container(&container);
-    let chain = Chain::new(&config.chain_cfg);
-
-    // init modules
-    let token_factory = TokenFactory::new(&osmosis);
-
-    // init accounts
-    let acc = config.import_account("test1").unwrap();
-    let addr = acc.address();
-
-    let msg: MsgCreateDenom = MsgCreateDenom {
-        sender: addr.clone(),
-        subdenom: "Apollo".to_string(),
-    };
-    let res = token_factory.create_denom(&chain, msg, &acc).unwrap();
-    assert_eq!(
-        res.data.new_token_denom,
-        format!("factory/{}/{}", &addr, "Apollo")
-    );
-
-    let query_params_msg: QueryParamsRequest = QueryParamsRequest {};
-
-    let resp = token_factory
-        .query_params(&chain, &query_params_msg)
+    let mut assets = AssetList::new();
+    assets.add(&Asset::native("uosmo", 1u128)).unwrap();
+    assets.add(&Asset::native("udummy", 1u128)).unwrap();
+    let response = wasm
+        .execute::<ExecuteMsg>(
+            &chain,
+            &contract_addr,
+            &(ExecuteMsg::ProvideLiquidity { pool_id, assets, min_out: Uint128::zero() }),
+            &[],
+            &admin
+        )
         .unwrap();
-
-    let denom_creation_fee = resp.params.unwrap().denom_creation_fee;
-
-    assert_eq!(
-        denom_creation_fee,
-        [Coin::new(10_000_000, chain.chain_cfg().denom()).into()]
-    );
-
-    // execute on more time to excercise account sequence
-    let msg = MsgCreateDenom {
-        sender: acc.address(),
-        subdenom: "newerdenom".to_string(),
-    };
-
-    let res: ExecuteResponse<MsgCreateDenomResponse> = osmosis
-        .execute(&chain, msg, MsgCreateDenom::TYPE_URL, &acc)
-        .unwrap();
-
-    assert_eq!(
-        res.data.new_token_denom,
-        format!("factory/{}/{}", &addr, "newerdenom")
-    );
-    let account: BaseAccount = osmosis.account(&chain, acc.account_id()).unwrap();
-    assert_eq!(account.sequence, 2);
-}
-
-#[test_case("osmosis.yaml" ; "osmosis module")]
-fn test_multiple_as_module(cfg_path: &str) {
-    // Init
-    let mut config: TestConfig = TestConfig::from_yaml(cfg_path);
-    let osmosis = App::default();
-    let docker: Cli = Cli::default();
-
-    // Given a running local Chain
-    let container: Container<GenericImage> = docker.run(RunnableImage::from(
-        osmosis.get_image(&config.container.name, &config.container.tag),
-    ));
-    config.bind_chain_to_container(&container);
-    let chain = Chain::new(&config.chain_cfg);
-
-    // and Osmosis modules
-    let gamm = Gamm::new(&osmosis);
-    let token_factory = TokenFactory::new(&osmosis);
-
-    // and an admin account
-    let admin = config.import_account("test1").unwrap();
-
-    // and created Token "apollo"
-    let create_denom_msg = MsgCreateDenom {
-        sender: admin.address(),
-        subdenom: "uapollo".to_string(),
-    };
-    let new_token_denom = token_factory
-        .create_denom(&chain, create_denom_msg, &admin)
-        .unwrap()
-        .data
-        .new_token_denom;
-    // TODO: check events
-
-    let query_params_msg: QueryParamsRequest = QueryParamsRequest {};
-
-    let resp = token_factory
-        .query_params(&chain, &query_params_msg)
-        .unwrap();
-
-    // println!("Resp[{:?}]", resp);
-    let denom_creation_fee = resp.params.unwrap().denom_creation_fee;
-
-    assert_eq!(
-        denom_creation_fee,
-        [Coin::new(10_000_000, chain.chain_cfg().denom()).into()]
-    );
-
-    let mint_msg = MsgMint {
-        sender: admin.address(),
-        amount: Some(osmosis_std::types::cosmos::base::v1beta1::Coin {
-            amount: "1000".to_string(),
-            denom: new_token_denom.clone(),
-        }),
-    };
-    let _mint_response = token_factory.mint(&chain, mint_msg, &admin).unwrap().data;
-
-    let query_denom_msg = QueryDenomsFromCreatorRequest {
-        creator: admin.address(),
-    };
-    let query_denoms_response = token_factory
-        .query_denoms_from_creator(&chain, &query_denom_msg)
-        .unwrap()
-        .denoms;
-    println!("Query Denoms from creator [{:#?}]", query_denoms_response);
-
-    // When we create the pool uapollo-uosmo
-    let pool_liquidity = vec![Coin::new(1_000, new_token_denom), Coin::new(1_000, "uosmo")];
-    let pool_id = gamm
-        .create_basic_pool(&chain, &pool_liquidity, &admin)
-        .unwrap()
-        .data
-        .pool_id;
-
-    println!("pool_id [{:?}]", pool_id);
-    assert_eq!(1u64, pool_id);
-    let pool = gamm.query_pool(&chain, pool_id).unwrap();
-    for asset in pool.pool_assets.clone() {
-        println!("PoolAsset [{:?}]", asset);
-    }
-
-    let pool_assets: Vec<osmosis_std::types::cosmos::base::v1beta1::Coin> = pool
-        .pool_assets
-        .into_iter()
-        .map(|pool_asset| pool_asset.token.unwrap())
-        .collect();
-
-    assert_eq!(pool_liquidity[0].denom, pool_assets[0].denom);
-    assert_eq!(pool_liquidity[1].denom, pool_assets[1].denom);
-    // TODO: make a deposit to check if pool assets relationship change
+    println!("Resp [{:#?}]", response);
+    assert!(false);
 }
