@@ -43,7 +43,6 @@ args = [
     "--color",
     "never",
     "--no-deps",
-    "--open",
     "--workspace",
     "--exclude",
     "'cosmwasm*'",
