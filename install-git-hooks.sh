@@ -15,13 +15,21 @@ cp .pre-commit.sh .git/hooks/pre-commit
 chmod +x .git/hooks/pre-commit
 
 ## Commit-msg
-if stat .git/hooks/commit-msg 2&>/dev/null; then
-    echo "========================================"
-    echo "=== Installing sailr commit-msg hook ==="
-    echo "========================================\n"
-    # sailr requires has `jq` to be installed
-    curl -o- https://raw.githubusercontent.com/craicoverflow/sailr/master/scripts/install.sh | bash
-fi
+echo "========================================"
+echo "=== Installing sailr commit-msg hook ==="
+echo "========================================\n"
+# sailr requires has `jq` to be installed
+#!/bin/sh
+
+script_file="https://raw.githubusercontent.com/apollodao/sailr/master/sailr.sh"
+
+destination="${PWD}/.git/hooks"
+
+download_status=$(curl $script_file -o "${destination}/commit-msg")
+chmod u+x "${destination}/commit-msg"
+
+echo -e "\nInstalled Sailr as commit-msg hook in $destination."
+echo "For usage see https://github.com/craicoverflow/sailr#usage"
 
 # Reinitialize git repo
 git init

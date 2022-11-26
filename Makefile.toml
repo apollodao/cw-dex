@@ -3,6 +3,11 @@ toolchain = "nightly"
 install_crate = { crate_name = "rustfmt-nightly", rustup_component_name = "rustfmt-preview", binary = "rustfmt", test_arg = "--help" }
 command = "cargo"
 args = ["fmt", "--all", "--", "--emit=files","--verbose"]
+[tasks.format-check]
+toolchain = "nightly"
+install_crate = { crate_name = "rustfmt-nightly", rustup_component_name = "rustfmt-preview", binary = "rustfmt", test_arg = "--help" }
+command = "cargo"
+args = ["fmt", "--all", "--","--verbose", "--check"]
 
 # This task requires the `cargo-udeps` package: https://crates.io/crates/cargo-udeps
 [tasks.udeps]
@@ -18,7 +23,10 @@ args = ["deny", "check"]
 command = "cargo"
 args = ["check"]
 
-[tasks.clippy]
+[tasks.clippy-check]
+command = "cargo"
+args = ["clippy","--","-D","warnings"]
+[tasks.clippy-fix]
 command = "cargo"
 args = ["clippy","--fix","--allow-staged","--","-D","warnings"]
 
@@ -52,7 +60,10 @@ args = [
 ]
 
 # This task requires the `cargo-machete` package: https://crates.io/crates/cargo-machete
-[tasks.machete]
+[tasks.machete-check]
+command = "cargo"
+args = ["machete"]
+[tasks.machete-fix]
 command = "cargo"
 args = ["machete", "--fix"]
 
@@ -63,7 +74,7 @@ run_task = "custom-default"
 
 # Custom tasks to run on "cargo make"
 [tasks.custom-default]
-dependencies = ["deny", "clippy", "docs", "machete"]
+dependencies = ["deny", "clippy-fix", "docs", "machete-fix"]
 
 # Docs and Test coverage are not run by default. Can run all with "cargo make all".
 [tasks.all]
