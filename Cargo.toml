@@ -2,7 +2,7 @@
 authors = ["Apollo Devs"]
 description = "Helper library for interacting with Cosmos dexes"
 edition = "2021"
-license = "GPL-3.0-or-later"
+license = "MPL-2.0"
 name = "cw-dex"
 repository = "https://github.com/apollodao/cw-dex"
 version = "0.0.1"
