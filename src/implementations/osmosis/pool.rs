@@ -167,6 +167,13 @@ impl Pool for OsmosisPool {
         let offer = assert_native_coin(&offer_asset)?;
         let ask_denom = assert_native_asset_info(&ask_asset_info)?;
 
+        // Min out must be greater than 0 for osmosis.
+        let min_out = if min_out == Uint128::zero() {
+            Uint128::one()
+        } else {
+            min_out
+        };
+
         let swap_msg = MsgSwapExactAmountIn {
             sender: env.contract.address.to_string(),
             routes: vec![SwapAmountInRoute {
