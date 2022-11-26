@@ -119,7 +119,7 @@ impl Unlock for OsmosisStaking {
 
         let id = self
             .lock_id
-            .ok_or(StdError::generic_err("osmosis error: lock id not set"))?;
+            .ok_or_else(|| StdError::generic_err("osmosis error: lock id not set"))?;
 
         let unstake_msg = MsgBeginUnlocking {
             owner: env.contract.address.to_string(),
@@ -175,7 +175,7 @@ impl ForceUnlock for OsmosisStaking {
             Some(id) => Ok(id),
             None => self
                 .lock_id
-                .ok_or(StdError::generic_err("osmosis error: lock id not set")),
+                .ok_or_else(|| StdError::generic_err("osmosis error: lock id not set")),
         }?;
 
         let coin_to_unlock = Coin::new(amount.u128(), self.lp_token_denom.clone());
@@ -277,7 +277,7 @@ impl Unlock for OsmosisSuperfluidStaking {
     fn unlock(&self, _deps: Deps, env: &Env, _amount: Uint128) -> Result<Response, CwDexError> {
         let lock_id = self
             .lock_id
-            .ok_or(StdError::generic_err("osmosis error: lock id not set"))?;
+            .ok_or_else(|| StdError::generic_err("osmosis error: lock id not set"))?;
 
         let unstake_msg = MsgSuperfluidUnbondLock {
             sender: env.contract.address.to_string(),

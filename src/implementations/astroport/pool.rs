@@ -10,17 +10,17 @@ use cosmwasm_std::{
 use cw20::Cw20ExecuteMsg;
 use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 
-use super::msg::{
-    PairCw20HookMsg, PairExecuteMsg, PairInfo, PairQueryMsg, PairType, PoolResponse,
-    SimulationResponse,
-};
-use apollo_utils::assets::separate_natives_and_cw20s;
 use super::helpers::{
     adjust_precision, compute_current_amp, compute_d, query_pair_config, query_supply,
     query_token_precision, MAX_ALLOWED_SLIPPAGE, N_COINS, U256,
 };
+use super::msg::{
+    PairCw20HookMsg, PairExecuteMsg, PairInfo, PairQueryMsg, PairType, PoolResponse,
+    SimulationResponse,
+};
 use crate::traits::Pool;
 use crate::CwDexError;
+use apollo_utils::assets::separate_natives_and_cw20s;
 use cw_asset::astroport::AstroAssetInfo;
 
 /// Represents an AMM pool on Astroport

@@ -109,25 +109,24 @@ impl Pool for OsmosisPool {
             });
         }
 
-        let join_pool: CosmosMsg;
-        if assets.len() == 1 {
-            join_pool = MsgJoinSwapShareAmountOut {
+        let join_pool: CosmosMsg = if assets.len() == 1 {
+            MsgJoinSwapShareAmountOut {
                 sender: env.contract.address.to_string(),
                 pool_id: self.pool_id,
                 share_out_amount: expected_shares.to_string(),
                 token_in_denom: assets[0].denom.to_string(),
                 token_in_max_amount: assets[0].amount.to_string(),
             }
-            .into();
+            .into()
         } else {
-            join_pool = MsgJoinPool {
+            MsgJoinPool {
                 sender: env.contract.address.to_string(),
                 pool_id: self.pool_id,
                 share_out_amount: expected_shares.to_string(),
                 token_in_maxs: assets.into_elementwise(),
             }
-            .into();
-        }
+            .into()
+        };
 
         let event = Event::new("apollo/cw-dex/provide_liquidity")
             .add_attribute("pool_id", self.pool_id.to_string())
@@ -264,7 +263,7 @@ impl Pool for OsmosisPool {
         let swap_response = GammQuerier::new(&deps.querier).estimate_swap_exact_amount_in(
             sender.ok_or_else(|| StdError::generic_err("sender is required for osmosis"))?,
             self.pool_id,
-            offer.denom.clone(),
+            offer.denom,
             vec![SwapAmountInRoute {
                 pool_id: self.pool_id,
                 token_out_denom: assert_native_asset_info(&ask_asset_info)?,

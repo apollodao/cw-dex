@@ -35,10 +35,10 @@ pub trait Stake: Rewards {
     /// Arguments:
     /// - `amount`: the amount of the asset to stake.
     ///
-    /// Returns a `Response` containing the messages to stake the given asset. If
-    /// the asset to be staked is a CW20 token and the staking implementation
-    /// requires a CW20 allowance, the `Response` should contain messages to
-    /// increase the allowance.
+    /// Returns a `Response` containing the messages to stake the given asset.
+    /// If the asset to be staked is a CW20 token and the staking
+    /// implementation requires a CW20 allowance, the `Response` should
+    /// contain messages to increase the allowance.
     fn stake(&self, deps: Deps, env: &Env, amount: Uint128) -> Result<Response, CwDexError>;
 }
 
