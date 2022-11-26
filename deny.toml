@@ -26,7 +26,6 @@ allow-git = [
     "https://github.com/apollodao/cw-asset",
     "https://github.com/Wasmswap/wasmswap-contracts",
     "https://github.com/DA0-DA0/dao-contracts",
-    "https://github.com/astroport-fi/astroport-core",
 ]
 
 [licenses]

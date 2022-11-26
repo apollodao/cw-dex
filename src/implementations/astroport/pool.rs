@@ -10,17 +10,17 @@ use cosmwasm_std::{
 use cw20::Cw20ExecuteMsg;
 use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 
-use super::msg::{
-    PairCw20HookMsg, PairExecuteMsg, PairInfo, PairQueryMsg, PairType, PoolResponse,
-    SimulationResponse,
-};
-
 use super::helpers::{
     adjust_precision, compute_current_amp, compute_d, query_pair_config, query_supply,
     query_token_precision, MAX_ALLOWED_SLIPPAGE, N_COINS, U256,
 };
+use super::msg::{
+    PairCw20HookMsg, PairExecuteMsg, PairInfo, PairQueryMsg, PairType, PoolResponse,
+    SimulationResponse,
+};
 use crate::traits::Pool;
 use crate::CwDexError;
+use apollo_utils::assets::separate_natives_and_cw20s;
 use cw_asset::astroport::AstroAssetInfo;
 
 /// Represents an AMM pool on Astroport
@@ -257,10 +257,13 @@ impl Pool for AstroportPool {
             auto_stake: Some(false),
             receiver: None,
         };
+
+        let (funds, _) = separate_natives_and_cw20s(&assets);
+
         let provide_liquidity = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.pair_addr.to_string(),
             msg: to_binary(&msg)?,
-            funds: vec![],
+            funds,
         });
 
         let event = Event::new("apollo/cw-dex/provide_liquidity")
