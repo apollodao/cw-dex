@@ -21,8 +21,6 @@ use cw_asset::{Asset, AssetInfo, AssetList};
 use crate::traits::Pool;
 use crate::CwDexError;
 
-use super::helpers::query_lp_denom;
-
 /// Struct for interacting with Osmosis v1beta1 balancer pools. If `pool_id`
 /// maps to another type of pool this will fail.
 #[cw_serde]
@@ -217,8 +215,6 @@ impl Pool for OsmosisPool {
         _env: &Env,
         assets: AssetList,
     ) -> Result<Asset, CwDexError> {
-        let lp_denom = query_lp_denom(&deps.querier, self.pool_id)?;
-
         let shares_out_amount: Uint128;
         if assets.len() == 1 {
             shares_out_amount =
@@ -227,7 +223,7 @@ impl Pool for OsmosisPool {
             (shares_out_amount, _) = self.simulate_noswap_join(&deps.querier, &assets)?;
         }
 
-        Ok(Asset::new(AssetInfo::native(lp_denom), shares_out_amount))
+        Ok(Asset::new(self.lp_token(), shares_out_amount))
     }
 
     fn simulate_withdraw_liquidity(
@@ -236,11 +232,9 @@ impl Pool for OsmosisPool {
         lp_token: &Asset,
     ) -> Result<AssetList, CwDexError> {
         let querier = GammQuerier::new(&deps.querier);
-        let lp_token = assert_native_coin(lp_token)?;
+        let lp_denom = self.lp_token();
 
-        let lp_denom = query_lp_denom(&deps.querier, self.pool_id)?;
-
-        if lp_denom != lp_token.denom {
+        if lp_denom != lp_token.info {
             return Err(CwDexError::InvalidLpToken {});
         }
 
@@ -277,5 +271,9 @@ impl Pool for OsmosisPool {
             }],
         )?;
         Uint128::from_str(swap_response.token_out_amount.as_str())
+    }
+
+    fn lp_token(&self) -> AssetInfo {
+        AssetInfo::Native(format!("gamm/pool/{}", self.pool_id))
     }
 }

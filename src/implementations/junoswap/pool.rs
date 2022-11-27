@@ -25,6 +25,8 @@ use super::helpers::{
 pub struct JunoswapPool {
     /// Address of the pool contract
     pub addr: Addr,
+    /// The LP token for this pool
+    pub lp_token: Addr,
 }
 
 impl JunoswapPool {
@@ -298,5 +300,9 @@ impl Pool for JunoswapPool {
         }?;
 
         Ok(amount)
+    }
+
+    fn lp_token(&self) -> AssetInfo {
+        AssetInfo::Cw20(self.lp_token.clone())
     }
 }
