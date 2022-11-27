@@ -431,4 +431,8 @@ impl Pool for AstroportPool {
             }))?
             .return_amount)
     }
+
+    fn lp_token(&self) -> AssetInfo {
+        AssetInfoBase::Cw20(self.lp_token_addr.clone())
+    }
 }
