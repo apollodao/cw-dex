@@ -93,7 +93,7 @@ impl Pool for OsmosisPool {
 
         // Remove all zero amount Coins, merge duplicates and assert that all assets are
         // native.
-        let assets = assert_only_native_coins(&merge_assets(assets.purge().deref())?)?;
+        let mut assets = assert_only_native_coins(&merge_assets(assets.purge().deref())?)?;
 
         let expected_shares = self
             .simulate_provide_liquidity(deps, env, assets.to_owned().into())?
@@ -106,6 +106,9 @@ impl Pool for OsmosisPool {
                 received: expected_shares,
             });
         }
+
+        // sub 1 micro unit to account for rounding errors
+        assets.iter_mut().for_each(|x| x.amount -= Uint128::one());
 
         let join_pool: CosmosMsg = if assets.len() == 1 {
             MsgJoinSwapShareAmountOut {
