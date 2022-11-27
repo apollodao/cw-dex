@@ -8,26 +8,34 @@ repository = "https://github.com/apollodao/cw-dex"
 version = "0.0.1"
 
 [features]
-default = ["osmosis"]
-osmosis = []
+default = []
+osmosis = ["dep:osmosis-std"]
+astroport = ["dep:uint", "cw-asset/astroport"]
+junoswap = ["dep:wasmswap","dep:stake-cw20", "dep:cw20-0_10_3"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 cosmwasm-schema = "1.1.0"
 cosmwasm-std = {version = "1.1.0", features = ["stargate"]}
-cw-asset = { git = "https://github.com/apollodao/cw-asset.git", features = ["astroport"] }
+cw-asset = { git = "https://github.com/apollodao/cw-asset.git" }
 cw-storage-plus = "0.16"
 cw-utils-0-11 = { package = "cw-utils", version = "0.11" }
 cw-utils = "0.16"
 cw20 = "0.16"
 thiserror = {version = "1.0.31"}
 apollo-utils = { git = "https://github.com/apollodao/apollo-utils.git" }
-uint = "0.9.3"
 
 # Osmosis
-osmosis-std = { git = "https://github.com/apollodao/osmosis-rust", branch = "feat/latest-build" }
+osmosis-std = { git = "https://github.com/apollodao/osmosis-rust", branch = "feat/latest-build", optional = true }
+
+# Astroport
+uint = {version = "0.9.3", optional = true}
 
 # Junoswap
-wasmswap = { git = "https://github.com/Wasmswap/wasmswap-contracts.git", tag = "v1.1.0-beta", features = ["library"] }
-cw20-0_10_3 = { package = "cw20", version = "0.10.3" } # We must import this version separately since it is what wasmswap uses.
-stake-cw20 = { version = "0.2", features = ["library"] }
+wasmswap = { git = "https://github.com/Wasmswap/wasmswap-contracts.git", tag = "v1.1.0-beta", features = ["library"], optional = true }
+cw20-0_10_3 = { package = "cw20", version = "0.10.3", optional = true } # We must import this version separately since it is what wasmswap uses.
+stake-cw20 = { version = "0.2", features = ["library"], optional = true }
 # stake-cw20-external-rewards = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"] }
