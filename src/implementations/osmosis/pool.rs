@@ -97,7 +97,8 @@ impl Pool for OsmosisPool {
 
         let expected_shares = self
             .simulate_provide_liquidity(deps, env, assets.to_owned().into())?
-            .amount;
+            .amount
+            - Uint128::one(); // sub 1 micro unit to account for rounding errors
 
         // Assert slippage tolerance
         if min_out > expected_shares {
@@ -106,9 +107,6 @@ impl Pool for OsmosisPool {
                 received: expected_shares,
             });
         }
-
-        // sub 1 micro unit to account for rounding errors
-        assets.iter_mut().for_each(|x| x.amount -= Uint128::one());
 
         let join_pool: CosmosMsg = if assets.len() == 1 {
             MsgJoinSwapShareAmountOut {
