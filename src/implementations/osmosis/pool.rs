@@ -100,13 +100,14 @@ impl Pool for OsmosisPool {
                 deps,
                 env,
                 assets
-                    .into_iter()
-                    .map(|mut x| {
+                    .iter()
+                    .map(|c| {
                         // sub 1 micro unit to account for rounding errors
-                        x.amount -= Uint128::zero();
-                        x
+                        let mut c = c.to_owned();
+                        c.amount -= Uint128::zero();
+                        c
                     })
-                    .collect()
+                    .collect::<Vec<Coin>>()
                     .into(),
             )?
             .amount;
