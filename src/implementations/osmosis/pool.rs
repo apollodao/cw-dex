@@ -14,7 +14,8 @@ use osmosis_std::types::osmosis::gamm::v1beta1::{
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    Coin, CosmosMsg, Deps, Env, Event, QuerierWrapper, Response, StdError, StdResult, Uint128,
+    Coin, CosmosMsg, Decimal, Deps, Env, Event, QuerierWrapper, Response, StdError, StdResult,
+    Uint128,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
 
@@ -102,7 +103,7 @@ impl Pool for OsmosisPool {
         // Deduct some to account for rounding errors. This is needed or it will
         // error. This is obviously not ideal, but it's the best we can do for
         // now with the current Osmosis API.
-        let expected_shares = expected_shares.saturating_sub(Uint128::from(1000u128));
+        let expected_shares = expected_shares * Decimal::from_ratio(999999u128, 1000000u128);
 
         // Assert slippage tolerance
         if min_out > expected_shares {
