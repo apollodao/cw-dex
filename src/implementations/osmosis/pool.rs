@@ -93,12 +93,23 @@ impl Pool for OsmosisPool {
 
         // Remove all zero amount Coins, merge duplicates and assert that all assets are
         // native.
-        let mut assets = assert_only_native_coins(&merge_assets(assets.purge().deref())?)?;
+        let assets = assert_only_native_coins(&merge_assets(assets.purge().deref())?)?;
 
         let expected_shares = self
-            .simulate_provide_liquidity(deps, env, assets.to_owned().into())?
-            .amount
-            - Uint128::one(); // sub 1 micro unit to account for rounding errors
+            .simulate_provide_liquidity(
+                deps,
+                env,
+                assets
+                    .into_iter()
+                    .map(|mut x| {
+                        // sub 1 micro unit to account for rounding errors
+                        x.amount -= Uint128::zero();
+                        x
+                    })
+                    .collect()
+                    .into(),
+            )?
+            .amount;
 
         // Assert slippage tolerance
         if min_out > expected_shares {
