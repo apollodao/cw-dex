@@ -1,16 +1,20 @@
 //! Contains an enum with variants for Pool implementations.
 //! For use in serialization.
 
+use crate::error::CwDexError;
+use crate::traits::pool::Pool as PoolTrait;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Deps, Env, Response, StdResult, Uint128};
-use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
-use std::str::FromStr;
+use cw_asset::{Asset, AssetInfo, AssetList};
 
+#[cfg(feature = "astroport")]
 use crate::astroport::AstroportPool;
-use crate::error::CwDexError;
-use crate::implementations::osmosis::OsmosisPool;
+
+#[cfg(feature = "osmosis")]
+use {crate::implementations::osmosis::OsmosisPool, cw_asset::AssetInfoBase, std::str::FromStr};
+
+#[cfg(feature = "junoswap")]
 use crate::junoswap::JunoswapPool;
-use crate::traits::pool::Pool as PoolTrait;
 
 /// An enum with all known variants that implement the Pool trait.
 /// The ideal solution would of course instead be to use a trait object so that
@@ -18,22 +22,34 @@ use crate::traits::pool::Pool as PoolTrait;
 /// objects require us not to implement the Sized trait, which cw_serde
 /// requires.
 #[cw_serde]
+#[non_exhaustive]
 pub enum Pool {
     /// Contains an Osmosis pool implementation
+    #[cfg(feature = "osmosis")]
     Osmosis(OsmosisPool),
     /// Contains an Junoswap pool implementation
+    #[cfg(feature = "junoswap")]
     Junoswap(JunoswapPool),
     /// Contains an Astroport pool implementation
+    #[cfg(feature = "astroport")]
     Astroport(AstroportPool),
 }
 
 impl Pool {
     /// Returns a specific `Pool` instance as a boxed generic `Pool` trait
     pub fn as_trait(&self) -> Box<dyn PoolTrait> {
+        // This is needed to avoid a warning when compiling with all features
+        #[allow(unreachable_patterns)]
         match self {
+            #[cfg(feature = "osmosis")]
             Pool::Osmosis(x) => Box::new(*x),
+            #[cfg(feature = "junoswap")]
             Pool::Junoswap(x) => Box::new(x.clone()),
+            #[cfg(feature = "astroport")]
             Pool::Astroport(x) => Box::new(x.clone()),
+            _ => {
+                panic!("Pool variant not supported");
+            }
         }
     }
 
@@ -43,6 +59,7 @@ impl Pool {
     /// - `lp_token`: Said LP token
     pub fn get_pool_for_lp_token(_deps: Deps, lp_token: &AssetInfo) -> Result<Self, CwDexError> {
         match lp_token {
+            #[cfg(feature = "osmosis")]
             AssetInfoBase::Native(lp_token_denom) => {
                 //The only Pool implementation that uses native denoms right now is Osmosis
                 if !lp_token_denom.starts_with("gamm/pool/") {
@@ -127,5 +144,9 @@ impl PoolTrait for Pool {
     ) -> StdResult<Uint128> {
         self.as_trait()
             .simulate_swap(deps, offer_asset, ask_asset_info, sender)
+    }
+
+    fn lp_token(&self) -> AssetInfo {
+        self.as_trait().lp_token()
     }
 }

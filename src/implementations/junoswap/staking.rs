@@ -15,10 +15,8 @@ use stake_cw20::msg::{
 };
 use stake_cw20::state::Config;
 
-use crate::{
-    traits::{LockedStaking, Rewards, Stake, Unlock, Unstake},
-    CwDexError,
-};
+use crate::traits::{LockedStaking, Rewards, Stake, Unlock, Unstake};
+use crate::CwDexError;
 // use stake_cw20_external_rewards::msg::{
 //     ExecuteMsg as StakeCw20ExternalRewardsExecuteMsg, PendingRewardsResponse,
 //     QueryMsg as StakeCw20ExternalRewardsQueryMsg,

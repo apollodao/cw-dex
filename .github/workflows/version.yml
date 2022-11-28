@@ -1,0 +1,41 @@
+
+name: Versioning
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  semver-set:
+    name: Set next version number
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout pull request
+        uses: actions/checkout@v3
+
+      - name: Determine version number
+        id: semver
+        uses: ietf-tools/semver-action@v1
+        with:
+          token: ${{ github.token }}
+          branch: master
+          majorList: feat!, feature! fix!, bugfix!, perf!, refactor!, chore!
+          minorList: feat, feature
+          patchList: fix, bugfix, perf
+
+      - name: Update Cargo.toml
+        id: update
+        uses: ciiiii/toml-editor@1.0.0
+        with:
+          file: "Cargo.toml"
+          key: "package.version"
+          value: "${{ steps.semver.outputs.nextStrict }}"
+
+      - name: Commit changes, tag and push
+        uses: EndBug/add-and-commit@v9.1.1
+        with:
+          add: 'Cargo.toml'
+          tag: '${{ steps.semver.outputs.next }}'
+          message: Update Cargo.toml version from ${{ steps.semver.outputs.current }} to ${{ steps.semver.outputs.next }}
+          default_author: github_actions
+          push: true

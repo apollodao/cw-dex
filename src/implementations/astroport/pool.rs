@@ -9,18 +9,19 @@ use cosmwasm_std::{
 };
 use cw20::Cw20ExecuteMsg;
 use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
+use cw_utils::Expiration;
 
-use super::msg::{
-    PairCw20HookMsg, PairExecuteMsg, PairInfo, PairQueryMsg, PairType, PoolResponse,
-    SimulationResponse,
-};
-use apollo_utils::assets::separate_natives_and_cw20s;
 use super::helpers::{
     adjust_precision, compute_current_amp, compute_d, query_pair_config, query_supply,
     query_token_precision, MAX_ALLOWED_SLIPPAGE, N_COINS, U256,
 };
+use super::msg::{
+    PairCw20HookMsg, PairExecuteMsg, PairInfo, PairQueryMsg, PairType, PoolResponse,
+    SimulationResponse,
+};
 use crate::traits::Pool;
 use crate::CwDexError;
+use apollo_utils::assets::separate_natives_and_cw20s;
 use cw_asset::astroport::AstroAssetInfo;
 
 /// Represents an AMM pool on Astroport
@@ -258,7 +259,23 @@ impl Pool for AstroportPool {
             receiver: None,
         };
 
-        let (funds, _) = separate_natives_and_cw20s(&assets);
+        let (funds, cw20s) = separate_natives_and_cw20s(&assets);
+
+        // Increase allowance on all Cw20s
+        let allowance_msgs: Vec<CosmosMsg> = cw20s
+            .into_iter()
+            .map(|asset| {
+                Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+                    contract_addr: asset.address,
+                    msg: to_binary(&Cw20ExecuteMsg::IncreaseAllowance {
+                        spender: self.pair_addr.to_string(),
+                        amount: asset.amount,
+                        expires: Some(Expiration::AtHeight(env.block.height + 1)),
+                    })?,
+                    funds: vec![],
+                }))
+            })
+            .collect::<StdResult<Vec<_>>>()?;
 
         let provide_liquidity = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.pair_addr.to_string(),
@@ -271,6 +288,7 @@ impl Pool for AstroportPool {
             .add_attribute("assets", format!("{:?}", assets));
 
         Ok(Response::new()
+            .add_messages(allowance_msgs)
             .add_message(provide_liquidity)
             .add_event(event))
     }
@@ -412,5 +430,9 @@ impl Pool for AstroportPool {
                 })?,
             }))?
             .return_amount)
+    }
+
+    fn lp_token(&self) -> AssetInfo {
+        AssetInfoBase::Cw20(self.lp_token_addr.clone())
     }
 }

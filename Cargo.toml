@@ -2,49 +2,43 @@
 authors = ["Apollo Devs"]
 description = "Helper library for interacting with Cosmos dexes"
 edition = "2021"
-license = "GPL-3.0-or-later"
+license = "MPL-2.0"
 name = "cw-dex"
 repository = "https://github.com/apollodao/cw-dex"
 version = "0.0.1"
 
 [features]
-default = ["osmosis"]
-osmosis = []
+default = []
+osmosis = ["dep:osmosis-std"]
+astroport = ["dep:uint", "cw-asset/astroport"]
+junoswap = ["dep:wasmswap","dep:stake-cw20", "dep:cw20-0_10_3"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 cosmwasm-schema = "1.1.0"
-cosmwasm-std = { version = "1.1.0", features = ["stargate"] }
-#cosmwasm-storage = "1.1.0"
-cw-asset = { git = "https://github.com/apollodao/cw-asset.git", features = [
-    "astroport",
-] }
+cosmwasm-std = {version = "1.1.0", features = ["stargate"]}
+cw-asset = { git = "https://github.com/apollodao/cw-asset.git", rev = "5e51773da42ef82faa67576454e8c4b0971097f2" }
 cw-storage-plus = "0.16"
 cw-utils-0-11 = { package = "cw-utils", version = "0.11" }
 cw-utils = "0.16"
 cw20 = "0.16"
-#cw20-base = "0.16"
-#num-bigint = "0.4"
-#num-rational = "0.4"
-#num-traits = "0.2.15"
-#osmo-bindings = "0.5.1"
-#schemars = "0.8.8"
-#serde = { version = "1.0.137", default-features = false, features = ["derive"] }
-thiserror = { version = "1.0.31" }
-# prost = { version = "0.11.0", default-features = false, features = [
-#     "prost-derive",
-# ] }
-apollo-utils = { git = "https://github.com/apollodao/apollo-utils.git" }
-uint = "0.9.3"
+thiserror = {version = "1.0.31"}
+apollo-utils = { git = "https://github.com/apollodao/apollo-utils.git", rev = "dd3da52653d3dc350b20b46f363ebcfdcd64aa27" }
+
 
 # Osmosis
-osmosis-std = { git = "https://github.com/apollodao/osmosis-rust", branch = "feat/latest-build" }
+osmosis-std = { git = "https://github.com/apollodao/osmosis-rust", rev = "52ca8eaa4b2926fea01a68f4d7e7253ad29d88b3", optional = true }
+
+# Astroport
+uint = {version = "0.9.3", optional = true}
 
 # Junoswap
-wasmswap = { git = "https://github.com/Wasmswap/wasmswap-contracts.git", tag = "v1.1.0-beta", features = [
-    "library",
-] }
-cw20-0_10_3 = { package = "cw20", version = "0.10.3" } # We must import this version separately since it is what wasmswap uses.
-stake-cw20 = { version = "0.2", features = ["library"] }
+wasmswap = { git = "https://github.com/Wasmswap/wasmswap-contracts.git", tag = "v1.1.0-beta", features = ["library"], optional = true }
+cw20-0_10_3 = { package = "cw20", version = "0.10.3", optional = true } # We must import this version separately since it is what wasmswap uses.
+stake-cw20 = { version = "0.2", features = ["library"], optional = true }
 # stake-cw20-external-rewards = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"] }
 
 # [build-dependencies]

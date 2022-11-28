@@ -1,19 +1,12 @@
 name: Changelog
 on:
-  push:
+  pull_request:
     branches:
       - master
   workflow_dispatch:
-    logLevel:
-      inputs:
-        description: 'Log level'
-        required: false
-        default: 'warning'
-        type: choice
-        options:
-          - info
-          - warning
-          - debug
+
+env:
+  file_name: CHANGELOG.md
 
 jobs:
   changelog:
@@ -30,4 +23,12 @@ jobs:
           config: cliff.toml
           args: --verbose
         env:
-          OUTPUT: CHANGELOG.md
+          OUTPUT: ${{ env.file_name }}
+
+      - name: Commit changelog
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: EndBug/add-and-commit@v9.1.1
+        with:
+          add: '${{ env.file_name }}'
+          message: 'Generate ${{ env.file_name }}'
+          push: 'HEAD:master'

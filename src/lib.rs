@@ -10,9 +10,9 @@
 //! interact with any of them.
 //!
 //! The currently supported decentralized exchanges are:
-//! - [Osmosis](cw_dex::implementations::osmosis)
-//! - [Astroport](cw_dex::implementations::astroport)
-//! - [Junoswap](cw_dex::implementations::Junoswap)
+//! - [Osmosis](crate::implementations::osmosis)
+//! - [Astroport](crate::implementations::astroport)
+//! - [Junoswap](crate::implementations::junoswap)
 
 pub mod error;
 pub mod implementations;

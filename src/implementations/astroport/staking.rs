@@ -10,7 +10,8 @@ use cw20::Cw20ExecuteMsg;
 use super::msg::{
     GeneratorCw20HookMsg, GeneratorExecuteMsg, GeneratorQueryMsg, PendingTokenResponse,
 };
-use cw_asset::{astroport::AstroAsset, Asset, AssetList};
+use cw_asset::astroport::AstroAsset;
+use cw_asset::{Asset, AssetList};
 
 use crate::traits::{Rewards, Stake, Staking, Unstake};
 use crate::CwDexError;
@@ -88,8 +89,7 @@ impl Rewards for AstroportStaking {
             .chain(vec![
                 Asset::cw20(self.astro_addr.clone(), pending_astro).into()
             ])
-            .collect::<Vec<_>>()
-            .into();
+            .collect::<Vec<_>>();
 
         Ok(pending_rewards.into())
     }

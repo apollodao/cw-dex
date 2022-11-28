@@ -14,14 +14,13 @@ use osmosis_std::types::osmosis::gamm::v1beta1::{
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    Coin, CosmosMsg, Deps, Env, Event, QuerierWrapper, Response, StdError, StdResult, Uint128,
+    Coin, CosmosMsg, Decimal, Deps, Env, Event, QuerierWrapper, Response, StdError, StdResult,
+    Uint128,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
 
 use crate::traits::Pool;
 use crate::CwDexError;
-
-use super::helpers::query_lp_denom;
 
 /// Struct for interacting with Osmosis v1beta1 balancer pools. If `pool_id`
 /// maps to another type of pool this will fail.
@@ -101,6 +100,11 @@ impl Pool for OsmosisPool {
             .simulate_provide_liquidity(deps, env, assets.to_owned().into())?
             .amount;
 
+        // Deduct some to account for rounding errors. This is needed or it will
+        // error. This is obviously not ideal, but it's the best we can do for
+        // now with the current Osmosis API.
+        let expected_shares = expected_shares * Decimal::from_ratio(999999u128, 1000000u128);
+
         // Assert slippage tolerance
         if min_out > expected_shares {
             return Err(CwDexError::MinOutNotReceived {
@@ -109,25 +113,24 @@ impl Pool for OsmosisPool {
             });
         }
 
-        let join_pool: CosmosMsg;
-        if assets.len() == 1 {
-            join_pool = MsgJoinSwapShareAmountOut {
+        let join_pool: CosmosMsg = if assets.len() == 1 {
+            MsgJoinSwapShareAmountOut {
                 sender: env.contract.address.to_string(),
                 pool_id: self.pool_id,
                 share_out_amount: expected_shares.to_string(),
                 token_in_denom: assets[0].denom.to_string(),
                 token_in_max_amount: assets[0].amount.to_string(),
             }
-            .into();
+            .into()
         } else {
-            join_pool = MsgJoinPool {
+            MsgJoinPool {
                 sender: env.contract.address.to_string(),
                 pool_id: self.pool_id,
                 share_out_amount: expected_shares.to_string(),
                 token_in_maxs: assets.into_elementwise(),
             }
-            .into();
-        }
+            .into()
+        };
 
         let event = Event::new("apollo/cw-dex/provide_liquidity")
             .add_attribute("pool_id", self.pool_id.to_string())
@@ -167,6 +170,13 @@ impl Pool for OsmosisPool {
     ) -> Result<Response, CwDexError> {
         let offer = assert_native_coin(&offer_asset)?;
         let ask_denom = assert_native_asset_info(&ask_asset_info)?;
+
+        // Min out must be greater than 0 for osmosis.
+        let min_out = if min_out == Uint128::zero() {
+            Uint128::one()
+        } else {
+            min_out
+        };
 
         let swap_msg = MsgSwapExactAmountIn {
             sender: env.contract.address.to_string(),
@@ -211,8 +221,6 @@ impl Pool for OsmosisPool {
         _env: &Env,
         assets: AssetList,
     ) -> Result<Asset, CwDexError> {
-        let lp_denom = query_lp_denom(&deps.querier, self.pool_id)?;
-
         let shares_out_amount: Uint128;
         if assets.len() == 1 {
             shares_out_amount =
@@ -221,7 +229,7 @@ impl Pool for OsmosisPool {
             (shares_out_amount, _) = self.simulate_noswap_join(&deps.querier, &assets)?;
         }
 
-        Ok(Asset::new(AssetInfo::native(lp_denom), shares_out_amount))
+        Ok(Asset::new(self.lp_token(), shares_out_amount))
     }
 
     fn simulate_withdraw_liquidity(
@@ -230,11 +238,9 @@ impl Pool for OsmosisPool {
         lp_token: &Asset,
     ) -> Result<AssetList, CwDexError> {
         let querier = GammQuerier::new(&deps.querier);
-        let lp_token = assert_native_coin(lp_token)?;
+        let lp_denom = self.lp_token();
 
-        let lp_denom = query_lp_denom(&deps.querier, self.pool_id)?;
-
-        if lp_denom != lp_token.denom {
+        if lp_denom != lp_token.info {
             return Err(CwDexError::InvalidLpToken {});
         }
 
@@ -264,12 +270,16 @@ impl Pool for OsmosisPool {
         let swap_response = GammQuerier::new(&deps.querier).estimate_swap_exact_amount_in(
             sender.ok_or_else(|| StdError::generic_err("sender is required for osmosis"))?,
             self.pool_id,
-            offer.denom.clone(),
+            format!("{}{}", offer.amount, offer.denom),
             vec![SwapAmountInRoute {
                 pool_id: self.pool_id,
                 token_out_denom: assert_native_asset_info(&ask_asset_info)?,
             }],
         )?;
         Uint128::from_str(swap_response.token_out_amount.as_str())
+    }
+
+    fn lp_token(&self) -> AssetInfo {
+        AssetInfo::Native(format!("gamm/pool/{}", self.pool_id))
     }
 }

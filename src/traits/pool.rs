@@ -30,6 +30,9 @@ pub trait Pool {
         min_out: Uint128,
     ) -> Result<Response, CwDexError>;
 
+    /// Get the LP token for this pool
+    fn lp_token(&self) -> AssetInfo;
+
     /// Withdraw liquidity from the pool.
     ///
     /// Arguments:
