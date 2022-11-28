@@ -99,6 +99,11 @@ impl Pool for OsmosisPool {
             .simulate_provide_liquidity(deps, env, assets.to_owned().into())?
             .amount;
 
+        // Deduct some to account for rounding errors. This is needed or it will
+        // error. This is obviously not ideal, but it's the best we can do for
+        // now with the current Osmosis API.
+        let expected_shares = expected_shares.saturating_sub(Uint128::from(1000u128));
+
         // Assert slippage tolerance
         if min_out > expected_shares {
             return Err(CwDexError::MinOutNotReceived {
