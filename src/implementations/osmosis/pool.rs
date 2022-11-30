@@ -100,10 +100,10 @@ impl Pool for OsmosisPool {
             .simulate_provide_liquidity(deps, env, assets.to_owned().into())?
             .amount;
 
-        // Deduct some to account for rounding errors. This is needed or it will
-        // error. This is obviously not ideal, but it's the best we can do for
-        // now with the current Osmosis API.
-        let expected_shares = expected_shares * Decimal::from_ratio(999999u128, 1000000u128);
+        // Truncate result by 12 decimal places to account for rounding inconsistencies in Osmosis API.
+        // This is obviously not ideal, but it's the best we can do for now with the latest release.
+        let trunc_amount = Uint128::new(1000000000000);
+        let expected_shares = expected_shares / trunc_amount * trunc_amount;
 
         // Assert slippage tolerance
         if min_out > expected_shares {
