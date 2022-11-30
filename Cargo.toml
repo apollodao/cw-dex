@@ -1,41 +1,38 @@
-[package]
-authors = ["Apollo Devs"]
-description = "Helper library for interacting with Cosmos dexes"
-edition = "2021"
-license = "MPL-2.0"
-name = "cw-dex"
-repository = "https://github.com/apollodao/cw-dex"
-version = "0.0.1"
+[workspace]
+members = ["cw-dex", "test-contract", "test-helpers"]
+resolver = "2"
 
-[features]
-default = []
-osmosis = ["dep:osmosis-std"]
-astroport = ["dep:uint", "cw-asset/astroport"]
-junoswap = ["dep:wasmswap","dep:stake-cw20", "dep:cw20-0_10_3"]
+[workspace.package]
+authors       = ["Apollo Devs <shared@apollo.farm>"]
+edition       = "2021"
+license       = "MPL-2.0"
+homepage      = "https://apollo.farm"
+repository    = "https://github.com/apollodao/cw-dex"
+documentation = "https://docs.rs/cw-dex"
+keywords      = ["blockchain", "cosmos", "cosmwasm"]
+rust-version  = "1.64.0"
 
-[package.metadata.docs.rs]
-all-features = true
-rustdoc-args = ["--cfg", "docsrs"]
-
-[dependencies]
-cosmwasm-schema = "1.1.0"
-cosmwasm-std = {version = "1.1.0", features = ["stargate"]}
+[workspace.dependencies]
+cosmwasm-schema = "1.1.3"
+cosmwasm-std = "1.1.3"
+cosmwasm-storage = "1.1.3"
+cw-storage-plus = "0.15.1"
+cw2 = "0.15.1"
+schemars = "0.8.10"
+serde = { version = "1.0.145", default-features = false, features = ["derive"] }
+thiserror = { version = "1.0.31" }
 cw-asset = { git = "https://github.com/apollodao/cw-asset.git", rev = "057fb193013ad4adfc25063b99960972d1d208bc" }
-cw-storage-plus = "0.16"
-cw-utils-0-11 = { package = "cw-utils", version = "0.11" }
-cw-utils = "0.16"
-cw20 = "0.16"
-thiserror = {version = "1.0.31"}
-apollo-utils = { git = "https://github.com/apollodao/apollo-utils.git", rev = "bfd1abd8cd9716dccad3e74aeb3704cad9f1f41a" }
+# cw-asset = { path = "../cw-asset" }
+osmosis-testing = { path = "../osmosis-rust/packages/osmosis-testing/" }
+osmosis-std = { path = "../osmosis-rust/packages/osmosis-std/" }
+cw-it = { path = "../cw-it" }
 
-# Osmosis
-osmosis-std = { git = "https://github.com/apollodao/osmosis-rust", rev = "52ca8eaa4b2926fea01a68f4d7e7253ad29d88b3", optional = true }
-
-# Astroport
-uint = {version = "0.9.3", optional = true}
-
-# Junoswap
-wasmswap = { git = "https://github.com/Wasmswap/wasmswap-contracts.git", tag = "v1.1.0-beta", features = ["library"], optional = true }
-cw20-0_10_3 = { package = "cw20", version = "0.10.3", optional = true } # We must import this version separately since it is what wasmswap uses.
-stake-cw20 = { version = "0.2", features = ["library"], optional = true }
-# stake-cw20-external-rewards = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"] }
+[profile.release]
+codegen-units    = 1
+debug            = false
+debug-assertions = false
+incremental      = false
+lto              = true
+opt-level        = 3
+overflow-checks  = true
+rpath            = false
