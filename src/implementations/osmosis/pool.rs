@@ -8,14 +8,13 @@ use apollo_utils::assets::{
 };
 use apollo_utils::iterators::IntoElementwise;
 use osmosis_std::types::osmosis::gamm::v1beta1::{
-    GammQuerier, MsgExitPool, MsgJoinPool, MsgJoinSwapShareAmountOut, MsgSwapExactAmountIn,
+    GammQuerier, MsgExitPool, MsgJoinPool, MsgJoinSwapExternAmountIn, MsgSwapExactAmountIn,
     SwapAmountInRoute,
 };
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    Coin, CosmosMsg, Decimal, Deps, Env, Event, QuerierWrapper, Response, StdError, StdResult,
-    Uint128,
+    Coin, CosmosMsg, Deps, Env, Event, QuerierWrapper, Response, StdError, StdResult, Uint128,
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
 
@@ -100,11 +99,6 @@ impl Pool for OsmosisPool {
             .simulate_provide_liquidity(deps, env, assets.to_owned().into())?
             .amount;
 
-        // Deduct some to account for rounding errors. This is needed or it will
-        // error. This is obviously not ideal, but it's the best we can do for
-        // now with the current Osmosis API.
-        let expected_shares = expected_shares * Decimal::from_ratio(999999u128, 1000000u128);
-
         // Assert slippage tolerance
         if min_out > expected_shares {
             return Err(CwDexError::MinOutNotReceived {
@@ -114,12 +108,11 @@ impl Pool for OsmosisPool {
         }
 
         let join_pool: CosmosMsg = if assets.len() == 1 {
-            MsgJoinSwapShareAmountOut {
+            MsgJoinSwapExternAmountIn {
                 sender: env.contract.address.to_string(),
                 pool_id: self.pool_id,
-                share_out_amount: expected_shares.to_string(),
-                token_in_denom: assets[0].denom.to_string(),
-                token_in_max_amount: assets[0].amount.to_string(),
+                share_out_min_amount: expected_shares.to_string(),
+                token_in: Some(assets[0].clone().into()),
             }
             .into()
         } else {
