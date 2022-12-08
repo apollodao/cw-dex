@@ -16,8 +16,17 @@ fi
 echo "============================"
 echo "=== Copy pre-commit hook ==="
 echo "============================\n"
-cp .pre-commit.sh "${hooks}/pre-commit"
+steps="clippy-check format-check machete-check"
+printf "Do you want the pre-commit script to automatically correct errors (y/N)? "
+read ans
+if [ $ans = "y" ] || [ $ans = "Y" ] || [ $ans = "yes" ] || [$ans = "YES"]; then
+    steps="clippy-fix format-fix machete-fix"
+fi
+
+sed -e "s/%steps%/${steps}/" .pre-commit.sh > "${hooks}/pre-commit"
 chmod u+x "${hooks}/pre-commit"
+echo
+
 
 ## Commit-msg
 echo "========================================"

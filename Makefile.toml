@@ -1,4 +1,4 @@
-[tasks.format]
+[tasks.format-fix]
 toolchain = "nightly"
 install_crate = { crate_name = "rustfmt-nightly", rustup_component_name = "rustfmt-preview", binary = "rustfmt", test_arg = "--help" }
 command = "cargo"
