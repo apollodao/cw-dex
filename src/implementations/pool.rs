@@ -89,10 +89,6 @@ impl PoolTrait for Pool {
         assets: AssetList,
         min_out: Uint128,
     ) -> Result<Response, CwDexError> {
-        self.check(
-            deps,
-            &assets.to_vec().iter().map(|x| x.info.clone()).collect(),
-        )?;
         self.as_trait()
             .provide_liquidity(deps, env, assets, min_out)
     }
@@ -114,10 +110,6 @@ impl PoolTrait for Pool {
         ask_asset_info: AssetInfo,
         min_out: Uint128,
     ) -> Result<Response, CwDexError> {
-        self.check(
-            deps,
-            &vec![offer_asset.info.clone(), ask_asset_info.clone()],
-        )?;
         self.as_trait()
             .swap(deps, env, offer_asset, ask_asset_info, min_out)
     }
