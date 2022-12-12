@@ -121,7 +121,12 @@ pub trait Pool {
             || !assets.iter().all(|a| pool_assets.find(a).is_some())
         {
             Err(CwDexError::InvalidInAssets {
-                assets: assets.to_vec(),
+                got: assets.to_vec(),
+                expected: pool_assets
+                    .to_vec()
+                    .iter()
+                    .map(|a| a.info.clone())
+                    .collect(),
             })
         } else {
             Ok(())

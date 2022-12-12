@@ -33,10 +33,12 @@ pub enum CwDexError {
     InvalidOutAsset {},
 
     /// Invalid input assets
-    #[error("Invalid input asset: {assets:?}")]
+    #[error("Invalid input assets: {got:?}. Expected: {expected:?}")]
     InvalidInAssets {
-        /// The assets in question
-        assets: Vec<AssetInfo>,
+        /// The assets received as input
+        got: Vec<AssetInfo>,
+        /// The assets expected as input
+        expected: Vec<AssetInfo>,
     },
 
     /// Invalid LP token

@@ -320,7 +320,8 @@ impl Pool for AstroportPool {
                 .add_event(event))
         } else {
             Err(CwDexError::InvalidInAssets {
-                assets: vec![asset.info.clone()],
+                got: vec![asset.info.clone()],
+                expected: vec![AssetInfo::Cw20(Addr::unchecked(asset.info.to_string()))],
             })
         }
     }
