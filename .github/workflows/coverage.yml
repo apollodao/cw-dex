@@ -10,6 +10,7 @@ env:
 
 jobs:
   coverage:
+    name: Check test coverage
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources

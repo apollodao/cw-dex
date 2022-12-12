@@ -51,7 +51,17 @@ impl Stake for AstroportStaking {
 }
 
 impl Rewards for AstroportStaking {
-    fn claim_rewards(&self, _deps: Deps, _env: &Env) -> Result<Response, CwDexError> {
+    fn claim_rewards(&self, deps: Deps, env: &Env) -> Result<Response, CwDexError> {
+        let claimable_rewards: AssetList =
+            self.query_pending_rewards(&deps.querier, &env.contract.address)?;
+
+        let event =
+            Event::new("apollo/cw-dex/claim_rewards").add_attribute("type", "astroport_staking");
+
+        if claimable_rewards.len() == 0 {
+            return Ok(Response::new().add_event(event));
+        }
+
         let claim_rewards_msg = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.generator_addr.to_string(),
             msg: to_binary(&GeneratorExecuteMsg::ClaimRewards {
@@ -60,8 +70,6 @@ impl Rewards for AstroportStaking {
             funds: vec![],
         });
 
-        let event =
-            Event::new("apollo/cw-dex/claim_rewards").add_attribute("type", "astroport_staking");
         Ok(Response::new()
             .add_message(claim_rewards_msg)
             .add_event(event))
@@ -89,6 +97,7 @@ impl Rewards for AstroportStaking {
             .chain(vec![
                 Asset::cw20(self.astro_addr.clone(), pending_astro).into()
             ])
+            .filter(|asset| !asset.amount.is_zero())
             .collect::<Vec<_>>();
 
         Ok(pending_rewards.into())
