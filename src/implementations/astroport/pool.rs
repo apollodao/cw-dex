@@ -319,7 +319,9 @@ impl Pool for AstroportPool {
                 .add_message(withdraw_liquidity)
                 .add_event(event))
         } else {
-            Err(CwDexError::InvalidInAsset { a: asset })
+            Err(CwDexError::InvalidInAssets {
+                assets: vec![asset.info.clone()],
+            })
         }
     }
 

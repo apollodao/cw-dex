@@ -113,4 +113,18 @@ pub trait Pool {
         //Osmosis to fix this, or perhaps copy their math and perform the calculation here...
         sender: Option<String>,
     ) -> StdResult<Uint128>;
+
+    /// Verifies that provided assets exist in pool
+    fn check(&self, deps: Deps, assets: &Vec<AssetInfo>) -> Result<(), CwDexError> {
+        let pool_assets = self.get_pool_liquidity(deps)?;
+        if pool_assets.len() != assets.len()
+            || !assets.iter().all(|a| pool_assets.find(a).is_some())
+        {
+            Err(CwDexError::InvalidInAssets {
+                assets: assets.to_vec(),
+            })
+        } else {
+            Ok(())
+        }
+    }
 }

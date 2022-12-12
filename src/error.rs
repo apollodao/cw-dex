@@ -4,7 +4,7 @@
 use std::num::TryFromIntError;
 
 use cosmwasm_std::{DivideByZeroError, OverflowError, StdError, Uint128};
-use cw_asset::Asset;
+use cw_asset::AssetInfo;
 use thiserror::Error;
 
 /// ## Description
@@ -28,15 +28,15 @@ pub enum CwDexError {
     #[error("{0}")]
     DivideByZero(#[from] DivideByZeroError),
 
-    /// Invalid Reply ID Error
+    /// Invalid output asset
     #[error("Invalid output asset")]
     InvalidOutAsset {},
 
-    /// Invalid input asset
-    #[error("Invalid input asset: {a}")]
-    InvalidInAsset {
-        /// The asset in question
-        a: Asset,
+    /// Invalid input assets
+    #[error("Invalid input asset: {assets:?}")]
+    InvalidInAssets {
+        /// The assets in question
+        assets: Vec<AssetInfo>,
     },
 
     /// Invalid LP token
