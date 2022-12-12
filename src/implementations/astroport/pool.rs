@@ -99,7 +99,7 @@ impl AstroportPool {
         ];
 
         if deposits[0].is_zero() || deposits[1].is_zero() {
-            return Err(StdError::generic_err("Either asset cannot be zero").into());
+            return Err(CwDexError::InvalidZeroAmount {});
         };
 
         let share = if total_share.is_zero() {
