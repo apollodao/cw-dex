@@ -57,7 +57,7 @@ impl Pool {
     ///
     /// Arguments:
     /// - `lp_token`: Said LP token
-    pub fn get_pool_for_lp_token(_deps: Deps, lp_token: &AssetInfo) -> Result<Self, CwDexError> {
+    pub fn get_pool_for_lp_token(deps: Deps, lp_token: &AssetInfo) -> Result<Self, CwDexError> {
         match lp_token {
             #[cfg(feature = "osmosis")]
             AssetInfoBase::Native(lp_token_denom) => {
@@ -72,7 +72,7 @@ impl Pool {
 
                 let pool_id = u64::from_str(pool_id_str).map_err(|_| CwDexError::NotLpToken {})?;
 
-                Ok(Pool::Osmosis(OsmosisPool { pool_id }))
+                Ok(Pool::Osmosis(OsmosisPool::new(pool_id, deps)?))
             }
             _ => Err(CwDexError::NotLpToken {}),
         }
