@@ -149,4 +149,8 @@ impl PoolTrait for Pool {
     fn lp_token(&self) -> AssetInfo {
         self.as_trait().lp_token()
     }
+
+    fn pool_assets(&self, deps: Deps) -> StdResult<Vec<AssetInfo>> {
+        self.as_trait().pool_assets(deps)
+    }
 }
