@@ -27,12 +27,21 @@ use crate::CwDexError;
 #[derive(Copy)]
 pub struct OsmosisPool {
     /// The pool id of the pool to interact with
-    pub pool_id: u64,
+    pool_id: u64,
 }
 
 impl OsmosisPool {
-    /// Creates a new `OsmosisPool` instance with the given `pool_id`.
-    pub fn new(pool_id: u64) -> Self {
+    /// Creates a new `OsmosisPool` instance with the given `pool_id` and validates
+    /// that the pool exists.
+    pub fn new(pool_id: u64, deps: Deps) -> StdResult<Self> {
+        let pool = Self { pool_id };
+        pool.get_pool_liquidity(deps)?;
+        Ok(pool)
+    }
+
+    /// Creates an unchecked pool for use in testing.
+    #[cfg(test)]
+    pub fn unchecked(pool_id: u64) -> Self {
         Self { pool_id }
     }
 
