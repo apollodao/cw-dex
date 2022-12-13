@@ -113,4 +113,13 @@ pub trait Pool {
         //Osmosis to fix this, or perhaps copy their math and perform the calculation here...
         sender: Option<String>,
     ) -> StdResult<Uint128>;
+
+    /// Returns the assets in the pool as a [`Vec<AssetInfo>`]
+    fn pool_assets(&self, deps: Deps) -> StdResult<Vec<AssetInfo>> {
+        Ok(self
+            .get_pool_liquidity(deps)?
+            .into_iter()
+            .map(|asset| asset.info.clone())
+            .collect())
+    }
 }
