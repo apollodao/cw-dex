@@ -41,7 +41,6 @@ impl OsmosisPool {
     }
 
     /// Creates an unchecked pool for use in testing.
-    #[cfg(test)]
     pub fn unchecked(pool_id: u64) -> Self {
         Self { pool_id }
     }
