@@ -31,6 +31,8 @@ pub struct AstroportPool {
     pub pair_addr: Addr,
     /// The address of the associated LP token contract
     pub lp_token_addr: Addr,
+    /// The assets of the pool
+    pub pool_assets: Vec<AssetInfo>,
     /// The type of pool represented: Constant product (*Xyk*) or *Stableswap*
     pub pair_type: PairType,
 }
@@ -51,9 +53,17 @@ impl AstroportPool {
             _ => Ok(()),
         }?;
 
+        // Convert the astro asset infos to AssetInfos
+        let pool_assets = pair_info
+            .asset_infos
+            .iter()
+            .map(|a| a.clone().into())
+            .collect();
+
         Ok(Self {
             pair_addr,
             lp_token_addr: pair_info.liquidity_token,
+            pool_assets,
             pair_type: pair_info.pair_type,
         })
     }
@@ -434,5 +444,9 @@ impl Pool for AstroportPool {
 
     fn lp_token(&self) -> AssetInfo {
         AssetInfoBase::Cw20(self.lp_token_addr.clone())
+    }
+
+    fn pool_assets(&self, _deps: Deps) -> StdResult<Vec<AssetInfo>> {
+        Ok(self.pool_assets.clone())
     }
 }
