@@ -2,6 +2,7 @@
 
 use std::str::FromStr;
 
+use apollo_utils::iterators::IntoElementwise;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_binary, wasm_execute, Addr, CosmosMsg, Decimal, Deps, Env, Event, QuerierWrapper,
@@ -53,17 +54,10 @@ impl AstroportPool {
             _ => Ok(()),
         }?;
 
-        // Convert the astro asset infos to AssetInfos
-        let pool_assets = pair_info
-            .asset_infos
-            .iter()
-            .map(|a| a.clone().into())
-            .collect();
-
         Ok(Self {
             pair_addr,
             lp_token_addr: pair_info.liquidity_token,
-            pool_assets,
+            pool_assets: pair_info.asset_infos.into_elementwise(),
             pair_type: pair_info.pair_type,
         })
     }
