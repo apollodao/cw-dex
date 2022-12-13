@@ -35,6 +35,7 @@ impl OsmosisPool {
     /// validates that the pool exists.
     pub fn new(pool_id: u64, deps: Deps) -> StdResult<Self> {
         let pool = Self { pool_id };
+        // If this query succeeds then the pool exists
         pool.get_pool_liquidity(deps)?;
         Ok(pool)
     }
