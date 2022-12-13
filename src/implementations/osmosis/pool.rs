@@ -31,8 +31,8 @@ pub struct OsmosisPool {
 }
 
 impl OsmosisPool {
-    /// Creates a new `OsmosisPool` instance with the given `pool_id` and validates
-    /// that the pool exists.
+    /// Creates a new `OsmosisPool` instance with the given `pool_id` and
+    /// validates that the pool exists.
     pub fn new(pool_id: u64, deps: Deps) -> StdResult<Self> {
         let pool = Self { pool_id };
         pool.get_pool_liquidity(deps)?;
