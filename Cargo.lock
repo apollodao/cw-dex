@@ -25,7 +25,7 @@ version = "0.1.0"
 source = "git+https://github.com/apollodao/apollo-utils.git?rev=dd3da52653d3dc350b20b46f363ebcfdcd64aa27#dd3da52653d3dc350b20b46f363ebcfdcd64aa27"
 dependencies = [
  "cosmwasm-std",
- "cw-asset",
+ "cw-asset 0.3.0 (git+https://github.com/apollodao/cw-asset.git?rev=5e51773da42ef82faa67576454e8c4b0971097f2)",
  "cw20 0.16.0",
 ]
 
@@ -233,6 +233,19 @@ dependencies = [
 [[package]]
 name = "cw-asset"
 version = "0.3.0"
+source = "git+https://github.com/apollodao/cw-asset.git?rev=057fb193013ad4adfc25063b99960972d1d208bc#057fb193013ad4adfc25063b99960972d1d208bc"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 0.16.0",
+ "cw20 0.16.0",
+ "schemars",
+ "serde",
+]
+
+[[package]]
+name = "cw-asset"
+version = "0.3.0"
 source = "git+https://github.com/apollodao/cw-asset.git?rev=5e51773da42ef82faa67576454e8c4b0971097f2#5e51773da42ef82faa67576454e8c4b0971097f2"
 dependencies = [
  "cosmwasm-schema",
@@ -264,7 +277,7 @@ dependencies = [
  "apollo-utils",
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-asset",
+ "cw-asset 0.3.0 (git+https://github.com/apollodao/cw-asset.git?rev=057fb193013ad4adfc25063b99960972d1d208bc)",
  "cw-storage-plus 0.16.0",
  "cw-utils 0.11.1",
  "cw-utils 0.16.0",
