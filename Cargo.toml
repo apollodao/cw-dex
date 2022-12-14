@@ -26,7 +26,7 @@ cw-utils-0-11 = { package = "cw-utils", version = "0.11" }
 cw-utils = "0.16"
 cw20 = "0.16"
 thiserror = {version = "1.0.31"}
-apollo-utils = { git = "https://github.com/apollodao/apollo-utils.git", rev = "dd3da52653d3dc350b20b46f363ebcfdcd64aa27" }
+apollo-utils = { git = "https://github.com/apollodao/apollo-utils.git", rev = "bfd1abd8cd9716dccad3e74aeb3704cad9f1f41a" }
 
 # Osmosis
 osmosis-std = { git = "https://github.com/apollodao/osmosis-rust", rev = "52ca8eaa4b2926fea01a68f4d7e7253ad29d88b3", optional = true }

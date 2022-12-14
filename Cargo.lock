@@ -22,10 +22,11 @@ checksum = "216261ddc8289130e551ddcd5ce8a064710c0d064a4d2895c67151c92b5443f6"
 [[package]]
 name = "apollo-utils"
 version = "0.1.0"
-source = "git+https://github.com/apollodao/apollo-utils.git?rev=dd3da52653d3dc350b20b46f363ebcfdcd64aa27#dd3da52653d3dc350b20b46f363ebcfdcd64aa27"
+source = "git+https://github.com/apollodao/apollo-utils.git?rev=bfd1abd8cd9716dccad3e74aeb3704cad9f1f41a#bfd1abd8cd9716dccad3e74aeb3704cad9f1f41a"
 dependencies = [
+ "cosmwasm-schema",
  "cosmwasm-std",
- "cw-asset 0.3.0 (git+https://github.com/apollodao/cw-asset.git?rev=5e51773da42ef82faa67576454e8c4b0971097f2)",
+ "cw-asset",
  "cw20 0.16.0",
 ]
 
@@ -244,19 +245,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cw-asset"
-version = "0.3.0"
-source = "git+https://github.com/apollodao/cw-asset.git?rev=5e51773da42ef82faa67576454e8c4b0971097f2#5e51773da42ef82faa67576454e8c4b0971097f2"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-storage-plus 0.16.0",
- "cw20 0.16.0",
- "schemars",
- "serde",
-]
-
-[[package]]
 name = "cw-controllers"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -277,7 +265,7 @@ dependencies = [
  "apollo-utils",
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-asset 0.3.0 (git+https://github.com/apollodao/cw-asset.git?rev=057fb193013ad4adfc25063b99960972d1d208bc)",
+ "cw-asset",
  "cw-storage-plus 0.16.0",
  "cw-utils 0.11.1",
  "cw-utils 0.16.0",
