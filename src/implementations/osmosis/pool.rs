@@ -45,6 +45,11 @@ impl OsmosisPool {
         Self { pool_id }
     }
 
+    /// Returns the pool id of the pool
+    pub fn pool_id(&self) -> u64 {
+        self.pool_id
+    }
+
     /// Simulates a single sided join and returns `Uint128` amount of LP tokens
     /// returned. A single sided join will use all of the provided asset.
     pub fn simulate_single_sided_join(
