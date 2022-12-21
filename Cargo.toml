@@ -22,10 +22,12 @@ schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
 cw-asset = { git = "https://github.com/apollodao/cw-asset.git", rev = "057fb193013ad4adfc25063b99960972d1d208bc" }
-# cw-asset = { path = "../cw-asset" }
-osmosis-testing = { path = "../osmosis-rust/packages/osmosis-testing/" }
-osmosis-std = { path = "../osmosis-rust/packages/osmosis-std/" }
-cw-it = { path = "../cw-it" }
+osmosis-testing = { git = "https://github.com/apollodao/osmosis-rust.git", branch = "osmosis-v13" }
+osmosis-std = { git = "https://github.com/apollodao/osmosis-rust.git", branch = "osmosis-v13" }
+cw-it = { git = "https://github.com/apollodao/cw-it.git", branch = "master" }
+cw-dex = { path = "cw-dex" }
+cw-dex-test-contract = { path = "test-contract" }
+cw-dex-test-helpers = { path = "test-helpers" }
 
 [profile.release]
 codegen-units    = 1

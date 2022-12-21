@@ -39,6 +39,6 @@ schemars = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 cw-asset = { workspace = true }
-cw-dex = { path = "../cw-dex", features = ["osmosis"] }
+cw-dex = { workspace = true, features = ["osmosis"] }
 osmosis-std = { workspace = true }
 apollo-utils = { git = "https://github.com/apollodao/apollo-utils.git", rev = "bfd1abd8cd9716dccad3e74aeb3704cad9f1f41a" }

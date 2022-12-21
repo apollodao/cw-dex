@@ -48,8 +48,8 @@ cw-utils-0-11 = { package = "cw-utils", version = "0.11" }
 
 [dev-dependencies]
 osmosis-testing = { workspace = true }
-cw-it = { path = "../../cw-it" }
+cw-it = { workspace = true }
 test-case = "2.2.2"
-cw-dex-test-contract = { path = "../test-contract" }
-cw-dex-test-helpers = { path = "../test-helpers" }
+cw-dex-test-contract = { workspace = true }
+cw-dex-test-helpers = { workspace = true }
 proptest = "1.0.0"
