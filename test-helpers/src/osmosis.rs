@@ -128,7 +128,8 @@ pub fn setup_pool_and_test_contract(
     (runner, accs, pool_id, contract_addr)
 }
 
-/// Create an [`AssetList`] from a slice of tuples of asset denominations and amounts.
+/// Create an [`AssetList`] from a slice of tuples of asset denominations and
+/// amounts.
 pub fn native_assetlist_from_slice(assets: &[(&str, Uint128)]) -> AssetList {
     assets
         .iter()

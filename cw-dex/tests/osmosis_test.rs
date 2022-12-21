@@ -1,22 +1,19 @@
 mod tests {
     use apollo_utils::coins::coin_from_str;
     use apollo_utils::submessages::{find_event, parse_attribute_value};
-    use cosmwasm_std::{Coin,  SubMsgResponse, Uint128};
+    use cosmwasm_std::{Coin, SubMsgResponse, Uint128};
     use cw_asset::{Asset, AssetInfo};
     use cw_dex_test_contract::msg::{ExecuteMsg, QueryMsg};
-    use cw_dex_test_helpers::osmosis::{ setup_pool_and_test_contract, };
-    use cw_dex_test_helpers::{
-         osmosis::OsmosisPoolType, provide_liquidity,
-    };
+    use cw_dex_test_helpers::osmosis::{setup_pool_and_test_contract, OsmosisPoolType};
+    use cw_dex_test_helpers::provide_liquidity;
     use cw_it::helpers::{bank_balance_query, bank_send};
     use osmosis_testing::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
     use osmosis_testing::{
-        Account, ExecuteResponse,  Module, OsmosisTestApp, Runner, RunnerResult,
-        SigningAccount, Wasm,
+        Account, ExecuteResponse, Module, OsmosisTestApp, Runner, RunnerResult, SigningAccount,
+        Wasm,
     };
 
     use test_case::test_case;
-    
 
     const DENOM0: &str = "denom0";
     const DENOM1: &str = "denom1";
@@ -38,7 +35,13 @@ mod tests {
         lock_duration: u64,
         lock_id: u64,
     ) -> (OsmosisTestApp, Vec<SigningAccount>, u64, String) {
-        setup_pool_and_test_contract(pool_type, initial_liquidity, lock_duration, lock_id, TEST_CONTRACT_WASM_FILE_PATH)
+        setup_pool_and_test_contract(
+            pool_type,
+            initial_liquidity,
+            lock_duration,
+            lock_id,
+            TEST_CONTRACT_WASM_FILE_PATH,
+        )
     }
 
     #[test_case(OsmosisPoolType::Basic, vec![1_000_000, 1_000_000], false, Uint128::new(1_000_000) * HUNDRED_TRILLION ; "basic pool")]
@@ -49,7 +52,7 @@ mod tests {
                 vec![1_000_000, 1_000_000], false, INITIAL_LIQUIDITY * HUNDRED_TRILLION ; "stable swap pool")]
     #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1] },
                 vec![1_000_000, 1_000_000], true, INITIAL_LIQUIDITY * HUNDRED_TRILLION ; "stable swap pool simulate min_out")]
-    #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1] }, vec![1_000_000, 500_000], true, 
+    #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1] }, vec![1_000_000, 500_000], true,
                 Uint128::new(500_000) * HUNDRED_TRILLION; "stable swap pool uneven assets simulate min_out")]
     #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1] },
                 vec![1, 1], false, HUNDRED_TRILLION ; "stable swap pool adding small liquidity")]

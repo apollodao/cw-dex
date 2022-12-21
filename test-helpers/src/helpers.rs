@@ -1,10 +1,8 @@
 use apollo_utils::assets::separate_natives_and_cw20s;
 use cosmwasm_std::Uint128;
 use cw_asset::AssetList;
-use osmosis_testing::{
-    cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse, Module, Runner, SigningAccount,
-    Wasm,
-};
+use osmosis_testing::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
+use osmosis_testing::{Module, Runner, SigningAccount, Wasm};
 
 use cw_dex_test_contract::msg::{ExecuteMsg, InstantiateMsg};
 
