@@ -42,7 +42,7 @@ pub fn provide_liquidity<'a, R: Runner<'a>>(
     let provide_msg = ExecuteMsg::ProvideLiquidity { assets, min_out };
     runner
         .execute_cosmos_msgs::<MsgExecuteContractResponse>(
-            &[provide_msg.into_cosmos_msg(contract_addr.clone(), funds)],
+            &[provide_msg.into_cosmos_msg(contract_addr, funds)],
             signer,
         )
         .unwrap();

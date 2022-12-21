@@ -96,7 +96,7 @@ pub fn setup_pool_and_test_contract(
         .enumerate()
         .map(|(i, amount)| Coin {
             denom: format!("denom{}", i),
-            amount: amount.clone().into(),
+            amount: (*amount).into(),
         })
         .collect::<Vec<_>>();
 
@@ -119,7 +119,7 @@ pub fn setup_pool_and_test_contract(
     let pool_id = create_osmosis_pool(&runner, pool_type, initial_liquidity, &accs[0]);
 
     // Upload test contract wasm file
-    let code_id = upload_wasm_file(&runner, &accs[0], &wasm_file_path).unwrap();
+    let code_id = upload_wasm_file(&runner, &accs[0], wasm_file_path).unwrap();
 
     // Instantiate the test contract
     let contract_addr =
