@@ -25,9 +25,6 @@ optimize = """docker run --rm -v "$(pwd)":/code \
 
 [dependencies]
 cosmwasm-std = { workspace = true }
-schemars = { workspace = true }
-serde = { workspace = true }
-thiserror = { workspace = true }
 cw-asset = { workspace = true }
 osmosis-testing = { workspace = true }
 osmosis-std = { workspace = true }
