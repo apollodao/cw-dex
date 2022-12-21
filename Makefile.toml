@@ -25,7 +25,7 @@ args = ["check"]
 
 [tasks.clippy-check]
 command = "cargo"
-args = ["clippy","--","-D","warnings"]
+args = ["clippy","--all-features","--","-D","warnings"]
 [tasks.clippy-fix]
 command = "cargo"
 args = ["clippy","--fix","--allow-staged","--","-D","warnings"]
