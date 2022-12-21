@@ -9,8 +9,8 @@ use cw_dex::traits::{ForceUnlock, Pool, Stake, Unlock};
 // use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{POOL, STAKING};
+use cw_dex_test_contract::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 
 /*
 // version info for migration info

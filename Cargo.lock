@@ -702,8 +702,6 @@ dependencies = [
  "cosmwasm-std",
  "cw-asset",
  "cw-dex",
- "cw-storage-plus 0.15.1",
- "thiserror",
 ]
 
 [[package]]
@@ -2134,6 +2132,19 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "osmosis-test-contract"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-asset",
+ "cw-dex",
+ "cw-dex-test-contract",
+ "cw-storage-plus 0.15.1",
+ "thiserror",
 ]
 
 [[package]]
