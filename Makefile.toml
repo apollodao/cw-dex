@@ -89,7 +89,8 @@ args = [
     "--lib",
     "--release",
     "--package",
-    "cw-dex-test-contract"
+    "osmosis-test-contract"
+
 ]
 
 # Docs and Test coverage are not run by default. Can run all with "cargo make all".
