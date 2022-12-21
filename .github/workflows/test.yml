@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: 'Target branch'
+        description: "Target branch"
         required: false
-        default: 'develop'
+        default: "develop"
         type: string
 
 env:
@@ -39,6 +39,6 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --locked
+          args: --locked --all-features
         env:
           RUST_BACKTRACE: 1
