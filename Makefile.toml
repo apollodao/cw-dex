@@ -79,6 +79,19 @@ run_task = "custom-default"
 [tasks.custom-default]
 dependencies = ["deny", "clippy-fix", "docs", "machete-fix"]
 
+# Wasm build of test contract
+[tasks.wasm]
+command = "cargo"
+args = [
+    "build",
+    "--target",
+    "wasm32-unknown-unknown",
+    "--lib",
+    "--release",
+    "--package",
+    "cw-dex-test-contract"
+]
+
 # Docs and Test coverage are not run by default. Can run all with "cargo make all".
 [tasks.all]
 dependencies = ["dev-test-flow", "custom-default", "cov"]
