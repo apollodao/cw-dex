@@ -6,7 +6,9 @@ use osmosis_std::types::osmosis::gamm::poolmodels::stableswap::v1beta1::{
     MsgCreateStableswapPool, PoolParams as StableSwapPoolParams,
 };
 use osmosis_std::types::osmosis::gamm::v1beta1::{PoolAsset, PoolParams};
-use osmosis_testing::{Account, Gamm, Module, OsmosisTestApp, Runner, SigningAccount};
+use osmosis_testing::{
+    Account, Gamm, Module, OsmosisTestApp, Runner, RunnerResult, SigningAccount,
+};
 
 use crate::instantiate_test_contract;
 
@@ -88,7 +90,7 @@ pub fn setup_pool_and_test_contract(
     lock_duration: u64,
     lock_id: u64,
     wasm_file_path: &str,
-) -> (OsmosisTestApp, Vec<SigningAccount>, u64, String) {
+) -> RunnerResult<(OsmosisTestApp, Vec<SigningAccount>, u64, String)> {
     let runner = OsmosisTestApp::new();
 
     let initial_liquidity = initial_liquidity
@@ -123,9 +125,9 @@ pub fn setup_pool_and_test_contract(
 
     // Instantiate the test contract
     let contract_addr =
-        instantiate_test_contract(&runner, code_id, pool_id, lock_id, lock_duration, &accs[0]);
+        instantiate_test_contract(&runner, code_id, pool_id, lock_id, lock_duration, &accs[0])?;
 
-    (runner, accs, pool_id, contract_addr)
+    Ok((runner, accs, pool_id, contract_addr))
 }
 
 /// Create an [`AssetList`] from a slice of tuples of asset denominations and

@@ -4,20 +4,20 @@ use cw_dex_test_contract::msg::ExecuteMsg;
 use cw_dex_test_helpers::osmosis::{setup_pool_and_test_contract, OsmosisPoolType};
 use cw_it::helpers::bank_balance_query;
 
-use osmosis_testing::{Module, OsmosisTestApp, SigningAccount, Wasm};
+use osmosis_testing::{Module, OsmosisTestApp, RunnerResult, SigningAccount, Wasm};
 use proptest::prelude::*;
 
 const TEST_CONTRACT_WASM_FILE_PATH: &str =
-    "../target/wasm32-unknown-unknown/release/cw_dex_test_contract.wasm";
+    "../target/wasm32-unknown-unknown/release/osmosis_test_contract.wasm";
 
 pub fn setup_pool_and_contract(
     pool_type: OsmosisPoolType,
     initial_liquidity: Vec<u64>,
-) -> (OsmosisTestApp, Vec<SigningAccount>, u64, String) {
+) -> RunnerResult<(OsmosisTestApp, Vec<SigningAccount>, u64, String)> {
     setup_pool_and_test_contract(
         pool_type,
         initial_liquidity,
-        1,
+        1_209_600, // Two weeks in seconds
         1,
         TEST_CONTRACT_WASM_FILE_PATH,
     )
@@ -29,7 +29,7 @@ fn test_multi_pool_provide_liquidity(
     added_liquidity: Vec<u64>,
 ) {
     let (runner, accs, pool_id, contract_addr) =
-        setup_pool_and_contract(pool_type, initial_liquidity.clone());
+        setup_pool_and_contract(pool_type, initial_liquidity.clone()).unwrap();
 
     // We cannot provide more liquidity than the pool has on Osmosis
     let added_liquidity: Vec<u64> = added_liquidity
@@ -69,12 +69,11 @@ fn test_multi_pool_swap(
     ask: AssetInfo,
 ) {
     let (runner, accs, _pool_id, contract_addr) =
-        setup_pool_and_contract(pool_type, pool_liquidity.clone());
+        setup_pool_and_contract(pool_type, pool_liquidity.clone()).unwrap();
 
     let wasm = Wasm::new(&runner);
     let funds = vec![offer.clone().try_into().unwrap()];
 
-    println!(";o");
     let swap_msg = ExecuteMsg::Swap {
         offer: offer.clone(),
         ask: ask.clone(),
@@ -82,14 +81,11 @@ fn test_multi_pool_swap(
     };
     wasm.execute(&contract_addr, &swap_msg, &funds, &accs[0])
         .unwrap();
-    println!("2..");
 
     // Query LP token balance
     let offer_balance =
         bank_balance_query(&runner, contract_addr.clone(), offer.info.to_string()).unwrap();
     let ask_balance = bank_balance_query(&runner, contract_addr, ask.to_string()).unwrap();
-
-    println!("3..");
 
     assert_eq!(offer_balance, Uint128::zero());
     assert_ne!(ask_balance, Uint128::zero());
@@ -133,6 +129,13 @@ fn setup_swap_test_params(
 }
 
 proptest! {
+    #![proptest_config(ProptestConfig {
+        // Setting both fork and timeout is redundant since timeout implies
+        // fork, but both are shown for clarity.
+        cases: 16,
+        .. ProptestConfig::default()
+    })]
+
     #[test]
     fn test_basic_pool_provide_liquidity(initial_liquidity: [u64; 8], added_liquidity: [u64; 8], n in 2usize..8) {
         let initial_liquidity = initial_liquidity.into_iter().take(n).collect();
@@ -159,7 +162,6 @@ proptest! {
     // Works for swap_amount as u64. Fails for u128. Should be fine
     #[test]
     fn test_basic_pool_swap(pool_liquidity: [u64; 8], offer_idx in 0usize..7, offer_amount: u64, ask_idx in 0usize..7, n in 2usize..8) {
-        println!("tessst");
         let (pool_liquidity, offer, ask) = setup_swap_test_params(pool_liquidity.into_iter().take(n).collect(), offer_idx, offer_amount, ask_idx, n);
 
         test_multi_pool_swap(OsmosisPoolType::Basic, pool_liquidity, offer, ask);

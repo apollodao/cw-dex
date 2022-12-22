@@ -90,7 +90,6 @@ args = [
     "--release",
     "--package",
     "osmosis-test-contract"
-
 ]
 
 # Docs and Test coverage are not run by default. Can run all with "cargo make all".

@@ -20,6 +20,8 @@ mod tests {
 
     const INITIAL_TWO_POOL_LIQUIDITY: &[u64] = &[1_000_000_000, 1_000_000_000];
 
+    const TWO_WEEKS_IN_SECS: u64 = 1_209_600;
+
     const ONE_MILLION: Uint128 = Uint128::new(1_000_000);
 
     // One hundred trillion is the LP token factor on osmosis.
@@ -27,19 +29,18 @@ mod tests {
     const INITIAL_LIQUIDITY: Uint128 = ONE_MILLION;
 
     const TEST_CONTRACT_WASM_FILE_PATH: &str =
-        "../target/wasm32-unknown-unknown/release/cw_dex_test_contract.wasm";
+        "../target/wasm32-unknown-unknown/release/osmosis_test_contract.wasm";
 
     fn setup_pool_and_contract(
         pool_type: OsmosisPoolType,
         initial_liquidity: Vec<u64>,
-        lock_duration: u64,
-        lock_id: u64,
-    ) -> (OsmosisTestApp, Vec<SigningAccount>, u64, String) {
+        lock_duration: Option<u64>,
+    ) -> RunnerResult<(OsmosisTestApp, Vec<SigningAccount>, u64, String)> {
         setup_pool_and_test_contract(
             pool_type,
             initial_liquidity,
-            lock_duration,
-            lock_id,
+            lock_duration.unwrap_or(TWO_WEEKS_IN_SECS),
+            1, // Lock ID. Since it is the first lock it will be 1.
             TEST_CONTRACT_WASM_FILE_PATH,
         )
     }
@@ -68,7 +69,7 @@ mod tests {
     ) {
         let initial_liquidity = added_liquidity.iter().map(|_| 1_000_000).collect();
         let (runner, accs, pool_id, contract_addr) =
-            setup_pool_and_contract(pool_type, initial_liquidity, 1, 1);
+            setup_pool_and_contract(pool_type, initial_liquidity, None).unwrap();
         let admin = &accs[0];
 
         let coins = added_liquidity
@@ -111,7 +112,7 @@ mod tests {
     #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1] }, vec![1_000_000, 1_000_000] ; "stable swap pool")]
     fn test_withdraw_liquidity(pool_type: OsmosisPoolType, initial_liquidity: Vec<u64>) {
         let (runner, accs, pool_id, contract_addr) =
-            setup_pool_and_contract(pool_type, initial_liquidity, 100_000, 1u64);
+            setup_pool_and_contract(pool_type, initial_liquidity, None).unwrap();
         let admin = &accs[0];
         let lp_token_denom = format!("gamm/pool/{}", pool_id);
 
@@ -176,15 +177,16 @@ mod tests {
             .unwrap()
     }
 
-    #[test_case(1 ; "one sec lock")]
-    #[test_case(1000000 ; "one million sec lock")]
-    fn test_stake_and_unlock(lock_duration: u64) {
+    #[test_case(86_400 ; "one day lock")]
+    #[test_case(604_800 ; "one week lock")]
+    #[test_case(1_209_600 ; "two week lock")]
+    #[test_case(1 => matches Err(_) ; "invalid lock duration")]
+    fn test_stake_and_unlock(lock_duration: u64) -> RunnerResult<()> {
         let (runner, accs, pool_id, contract_addr) = setup_pool_and_contract(
             OsmosisPoolType::Basic,
             vec![1_000_000, 1_000_000],
-            lock_duration,
-            1,
-        );
+            Some(lock_duration),
+        )?;
         let admin = &accs[0];
 
         // Query LP token balance
@@ -247,6 +249,8 @@ mod tests {
 
         // Assert that LP tokens have been unlocked
         assert_eq!(lp_token_balance_after_unlock, lp_token_balance);
+
+        Ok(())
     }
 
     #[test_case(false => matches Err(_) ; "not whitelisted")]
@@ -255,9 +259,9 @@ mod tests {
         let (runner, accs, pool_id, contract_addr) = setup_pool_and_contract(
             OsmosisPoolType::Basic,
             INITIAL_TWO_POOL_LIQUIDITY.to_vec(),
-            100_000,
-            1,
-        );
+            None,
+        )
+        .unwrap();
         let admin = &accs[0];
 
         // Temp variables. Fix as args
@@ -327,7 +331,7 @@ mod tests {
     #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1] }, Uint128::new(1000000), true ; "stable swap pool with min out")]
     fn test_swap_and_simulate_swap(pool_type: OsmosisPoolType, amount: Uint128, min_out: bool) {
         let (runner, accs, _, contract_addr) =
-            setup_pool_and_contract(pool_type, INITIAL_TWO_POOL_LIQUIDITY.to_vec(), 1u64, 1u64);
+            setup_pool_and_contract(pool_type, INITIAL_TWO_POOL_LIQUIDITY.to_vec(), None).unwrap();
 
         let admin = &accs[0];
 

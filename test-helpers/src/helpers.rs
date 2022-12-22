@@ -2,7 +2,7 @@ use apollo_utils::assets::separate_natives_and_cw20s;
 use cosmwasm_std::Uint128;
 use cw_asset::AssetList;
 use osmosis_testing::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
-use osmosis_testing::{Module, Runner, SigningAccount, Wasm};
+use osmosis_testing::{Module, Runner, RunnerResult, SigningAccount, Wasm};
 
 use cw_dex_test_contract::msg::{ExecuteMsg, InstantiateMsg};
 
@@ -13,7 +13,7 @@ pub fn instantiate_test_contract<'a, R: Runner<'a>>(
     lock_id: u64,
     lock_duration: u64,
     signer: &SigningAccount,
-) -> String {
+) -> RunnerResult<String> {
     let init_msg = InstantiateMsg {
         pool_id,
         lock_duration,
@@ -21,10 +21,10 @@ pub fn instantiate_test_contract<'a, R: Runner<'a>>(
     };
 
     let wasm = Wasm::new(runner);
-    wasm.instantiate(code_id, &init_msg, None, None, &[], signer)
-        .unwrap()
+    Ok(wasm
+        .instantiate(code_id, &init_msg, None, None, &[], signer)?
         .data
-        .address
+        .address)
 }
 
 pub fn provide_liquidity<'a, R: Runner<'a>>(
