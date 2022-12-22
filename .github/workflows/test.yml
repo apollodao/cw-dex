@@ -39,6 +39,30 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --locked --all-features
+          args: [--locked, --lib]
+        env:
+          RUST_BACKTRACE: 1
+
+      - name: Build test contract wasm binaries
+        uses: actions-rs/cargo@v1
+        with:
+          command: make
+          args: wasm
+        env:
+          RUST_BACKTRACE: 1
+
+      - name: Run osmosis integration tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: [--locked, --test, osmosis_tests]
+        env:
+          RUST_BACKTRACE: 1
+
+      - name: Run osmosis property tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: [--locked, --test, osmosis_proptests]
         env:
           RUST_BACKTRACE: 1
