@@ -171,7 +171,7 @@ mod tests {
         };
         runner
             .execute_cosmos_msgs::<MsgExecuteContractResponse>(
-                &[stake_msg.into_cosmos_msg(contract_addr.clone(), vec![])],
+                &[stake_msg.into_cosmos_msg(contract_addr, vec![])],
                 signer,
             )
             .unwrap()
@@ -245,7 +245,7 @@ mod tests {
 
         // Query LP token balance
         let lp_token_balance_after_unlock =
-            bank_balance_query(&runner, contract_addr.to_string(), lp_token_denom).unwrap();
+            bank_balance_query(&runner, contract_addr, lp_token_denom).unwrap();
 
         // Assert that LP tokens have been unlocked
         assert_eq!(lp_token_balance_after_unlock, lp_token_balance);
@@ -308,7 +308,7 @@ mod tests {
         // Query LP token balance
         let lp_token_balance = bank_balance_query(
             &runner,
-            contract_addr.to_string(),
+            contract_addr,
             format!("gamm/pool/{}", pool_id),
         )
         .unwrap();
@@ -374,7 +374,7 @@ mod tests {
         let offer_balance =
             bank_balance_query(&runner, contract_addr.to_string(), offer.info.to_string()).unwrap();
         let ask_balance =
-            bank_balance_query(&runner, contract_addr.to_string(), ask.to_string()).unwrap();
+            bank_balance_query(&runner, contract_addr, ask.to_string()).unwrap();
 
         // Assert that OSMO and ATOM balances are correct
         assert_eq!(ask_balance, expected_out);

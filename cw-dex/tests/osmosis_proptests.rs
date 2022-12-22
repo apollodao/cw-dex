@@ -44,7 +44,7 @@ fn test_multi_pool_provide_liquidity(
         .enumerate()
         .map(|(i, amount)| Coin {
             denom: format!("denom{}", i),
-            amount: amount.clone().into(),
+            amount: amount.into(),
         })
         .collect();
 
@@ -69,7 +69,7 @@ fn test_multi_pool_swap(
     ask: AssetInfo,
 ) {
     let (runner, accs, _pool_id, contract_addr) =
-        setup_pool_and_contract(pool_type, pool_liquidity.clone()).unwrap();
+        setup_pool_and_contract(pool_type, pool_liquidity).unwrap();
 
     let wasm = Wasm::new(&runner);
     let funds = vec![offer.clone().try_into().unwrap()];
