@@ -306,12 +306,8 @@ mod tests {
         )?;
 
         // Query LP token balance
-        let lp_token_balance = bank_balance_query(
-            &runner,
-            contract_addr,
-            format!("gamm/pool/{}", pool_id),
-        )
-        .unwrap();
+        let lp_token_balance =
+            bank_balance_query(&runner, contract_addr, format!("gamm/pool/{}", pool_id)).unwrap();
 
         // Assert that LP tokens have been unlocked
         assert_eq!(lp_token_balance, unlock_amount);
@@ -373,8 +369,7 @@ mod tests {
         // Query OSMO and ATOM balances
         let offer_balance =
             bank_balance_query(&runner, contract_addr.to_string(), offer.info.to_string()).unwrap();
-        let ask_balance =
-            bank_balance_query(&runner, contract_addr, ask.to_string()).unwrap();
+        let ask_balance = bank_balance_query(&runner, contract_addr, ask.to_string()).unwrap();
 
         // Assert that OSMO and ATOM balances are correct
         assert_eq!(ask_balance, expected_out);
