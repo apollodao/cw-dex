@@ -2,12 +2,6 @@ name: Linting and formatting
 on:
   pull_request:
   workflow_dispatch:
-    inputs:
-      branch:
-        description: 'Target branch'
-        required: false
-        default: 'develop'
-        type: string
 
 env:
   RUSTFLAGS: -D warnings
@@ -18,14 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        if: ${{ github.event_name != 'workflow_dispatch' }}
         uses: actions/checkout@v3
-
-      - name: Checkout sources on workflow dispatch
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.branch }}
 
       - name: Install nightly toolchain
         uses: actions-rs/toolchain@v1
