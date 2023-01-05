@@ -1,6 +1,7 @@
 name: Check for errors
 on:
   pull_request:
+  workflow_dispatch:
 
 env:
   RUSTFLAGS: -D warnings

@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - master
+  workflow_dispatch:
 
 # This workflow denies a push to master if all pushed commits are not following
 # the conventional commits standard.
