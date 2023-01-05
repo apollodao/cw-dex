@@ -10,9 +10,12 @@ unmaintained = "deny"
 notice = "deny"
 unsound = "deny"
 ignore = [
-    # potential unaligned pointer read on windows. Doesn't happen in practice, don't
-    # care
+    # Potential unaligned pointer read on windows. Doesn't happen in practice.
     "RUSTSEC-2021-0145",
+    # Not valid regarding the `chrono` dependency on `time`. May be valid for
+    # other crates. See
+    # https://github.com/chronotope/chrono/issues/602#issuecomment-1075915577
+    "RUSTSEC-2020-0071", # Alias: RUSTSEC-2020-26235
 ]
 
 [bans]
