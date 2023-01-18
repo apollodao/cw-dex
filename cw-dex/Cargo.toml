@@ -8,7 +8,7 @@ repository = "https://github.com/apollodao/cw-dex"
 version = "0.0.1"
 
 [features]
-default = []
+default = ["astroport"]
 osmosis = ["dep:osmosis-std"]
 astroport = ["dep:uint", "cw-asset/astroport"]
 junoswap = ["dep:wasmswap","dep:stake-cw20", "dep:cw20-0_10_3"]
@@ -26,12 +26,14 @@ cw-asset = { workspace = true }
 cw-utils = { workspace = true }
 cw20 = { workspace = true }
 apollo-utils = { workspace = true }
+
 # Osmosis
 # osmosis-std = { git = "https://github.com/apollodao/osmosis-rust", rev = "52ca8eaa4b2926fea01a68f4d7e7253ad29d88b3", optional = true }
 osmosis-std = { workspace = true, optional = true }
 
 # Astroport
 uint = {version = "0.9.3", optional = true}
+astroport = { git = "https://github.com/apollodao/astroport/", rev = "afbf5e70c3d7bf986bebba65609b5e60016f5919" }
 
 # Junoswap
 wasmswap = { git = "https://github.com/Wasmswap/wasmswap-contracts.git", tag = "v1.1.0-beta", features = ["library"], optional = true }
@@ -48,3 +50,4 @@ test-case = "2.2.2"
 cw-dex-test-contract = { workspace = true }
 cw-dex-test-helpers = { workspace = true }
 proptest = "1.0.0"
+cw20-base = "0.16.0"
