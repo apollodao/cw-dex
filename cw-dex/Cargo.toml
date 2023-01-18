@@ -8,7 +8,7 @@ repository = "https://github.com/apollodao/cw-dex"
 version = "0.0.1"
 
 [features]
-default = ["astroport"]
+default = []
 osmosis = ["dep:osmosis-std"]
 astroport = ["dep:uint", "cw-asset/astroport"]
 junoswap = ["dep:wasmswap","dep:stake-cw20", "dep:cw20-0_10_3"]
