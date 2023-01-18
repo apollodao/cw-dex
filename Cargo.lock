@@ -60,6 +60,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "astroport"
+version = "0.2.0"
+source = "git+https://github.com/apollodao/astroport/?rev=afbf5e70c3d7bf986bebba65609b5e60016f5919#afbf5e70c3d7bf986bebba65609b5e60016f5919"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 0.16.0",
+ "cw20 0.16.0",
+ "schemars",
+ "serde",
+ "uint",
+]
+
+[[package]]
+name = "astroport-test-contract"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-asset",
+ "cw-dex",
+ "cw-dex-test-contract",
+ "cw-storage-plus 0.15.1",
+ "thiserror",
+]
+
+[[package]]
 name = "async-stream"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -672,6 +699,7 @@ name = "cw-dex"
 version = "0.0.1"
 dependencies = [
  "apollo-utils 0.1.0 (git+https://github.com/apollodao/apollo-utils.git?branch=master)",
+ "astroport",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-asset",
@@ -683,6 +711,7 @@ dependencies = [
  "cw-utils 0.16.0",
  "cw20 0.10.3",
  "cw20 0.16.0",
+ "cw20-base 0.16.0",
  "osmosis-std",
  "osmosis-testing",
  "proptest",
@@ -707,10 +736,13 @@ name = "cw-dex-test-helpers"
 version = "0.1.0"
 dependencies = [
  "apollo-utils 0.1.0 (git+https://github.com/apollodao/apollo-utils.git?rev=bfd1abd8cd9716dccad3e74aeb3704cad9f1f41a)",
+ "astroport",
  "cosmwasm-std",
  "cw-asset",
  "cw-dex-test-contract",
  "cw-it",
+ "cw20 0.16.0",
+ "cw20-base 0.16.0",
  "osmosis-std",
  "osmosis-testing",
 ]
@@ -721,11 +753,13 @@ version = "0.1.0"
 source = "git+https://github.com/apollodao/cw-it.git?branch=master#02b01a767ef6a7c6d3c3ca866c78ec14b1850166"
 dependencies = [
  "anyhow",
+ "astroport",
  "config",
  "cosmos-sdk-proto 0.15.0",
  "cosmrs",
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw20 0.16.0",
  "git2",
  "git2_credentials",
  "osmosis-testing",
@@ -923,6 +957,24 @@ dependencies = [
  "cw2 0.11.1",
  "cw20 0.11.1",
  "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "cw20-base"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "61d826fa1084d026d0abdb54faa5956972efa3a9053473bfcefb5388960aab69"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 0.16.0",
+ "cw-utils 0.16.0",
+ "cw2 0.16.0",
+ "cw20 0.16.0",
+ "schemars",
+ "semver",
  "serde",
  "thiserror",
 ]
