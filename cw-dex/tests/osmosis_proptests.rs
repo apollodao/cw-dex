@@ -109,7 +109,8 @@ fn setup_swap_test_params(
         ask_idx
     };
 
-    // Offer amount cannot be larger than the pool liquidity. This causes the swap to fail on osmosis.
+    // Offer amount cannot be larger than the pool liquidity. This causes the swap
+    // to fail on osmosis.
     let offer_amount = offer_amount.min(pool_liquidity[offer_idx]);
 
     // Increment any 0s in the pool liquidity
