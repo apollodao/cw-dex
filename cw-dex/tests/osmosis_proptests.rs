@@ -23,7 +23,7 @@ pub fn setup_pool_and_contract(
     )
 }
 
-fn test_multi_pool_provide_liquidity(
+fn test_pool_provide_liquidity(
     pool_type: OsmosisPoolType,
     initial_liquidity: Vec<u64>,
     added_liquidity: Vec<u64>,
@@ -62,7 +62,7 @@ fn test_multi_pool_provide_liquidity(
     assert_ne!(lp_token_balance, Uint128::zero());
 }
 
-fn test_multi_pool_swap(
+fn test_pool_swap(
     pool_type: OsmosisPoolType,
     pool_liquidity: Vec<u64>,
     offer: Asset,
@@ -109,7 +109,7 @@ fn setup_swap_test_params(
         ask_idx
     };
 
-    // Offer amount cannot be larger than the pool liquidity
+    // Offer amount cannot be larger than the pool liquidity. This causes the swap to fail on osmosis.
     let offer_amount = offer_amount.min(pool_liquidity[offer_idx]);
 
     // Increment any 0s in the pool liquidity
@@ -130,8 +130,6 @@ fn setup_swap_test_params(
 
 proptest! {
     #![proptest_config(ProptestConfig {
-        // Setting both fork and timeout is redundant since timeout implies
-        // fork, but both are shown for clarity.
         cases: 16,
         .. ProptestConfig::default()
     })]
@@ -140,7 +138,7 @@ proptest! {
     fn test_basic_pool_provide_liquidity(initial_liquidity: [u64; 8], added_liquidity: [u64; 8], n in 2usize..8) {
         let initial_liquidity = initial_liquidity.into_iter().take(n).collect();
         let added_liquidity = added_liquidity.into_iter().take(n).collect();
-        test_multi_pool_provide_liquidity(OsmosisPoolType::Basic, initial_liquidity, added_liquidity);
+        test_pool_provide_liquidity(OsmosisPoolType::Basic, initial_liquidity, added_liquidity);
     }
 
     #[test]
@@ -148,7 +146,7 @@ proptest! {
         let initial_liquidity = initial_liquidity.into_iter().take(n).collect();
         let added_liquidity = added_liquidity.into_iter().take(n).collect();
         let scaling_factors = scaling_factors.into_iter().take(n).map(|f| f as u64).collect();
-        test_multi_pool_provide_liquidity(OsmosisPoolType::StableSwap { scaling_factors }, initial_liquidity, added_liquidity);
+        test_pool_provide_liquidity(OsmosisPoolType::StableSwap { scaling_factors }, initial_liquidity, added_liquidity);
     }
 
     #[test]
@@ -156,7 +154,7 @@ proptest! {
         let initial_liquidity = initial_liquidity.into_iter().take(n).collect();
         let added_liquidity = added_liquidity.into_iter().take(n).collect();
         let pool_weights = pool_weights.into_iter().take(n).map(|f| f as u64).collect();
-        test_multi_pool_provide_liquidity(OsmosisPoolType::Balancer { pool_weights }, initial_liquidity, added_liquidity);
+        test_pool_provide_liquidity(OsmosisPoolType::Balancer { pool_weights }, initial_liquidity, added_liquidity);
     }
 
     // Works for swap_amount as u64. Fails for u128. Should be fine
@@ -164,7 +162,7 @@ proptest! {
     fn test_basic_pool_swap(pool_liquidity: [u64; 8], offer_idx in 0usize..7, offer_amount: u64, ask_idx in 0usize..7, n in 2usize..8) {
         let (pool_liquidity, offer, ask) = setup_swap_test_params(pool_liquidity.into_iter().take(n).collect(), offer_idx, offer_amount, ask_idx, n);
 
-        test_multi_pool_swap(OsmosisPoolType::Basic, pool_liquidity, offer, ask);
+        test_pool_swap(OsmosisPoolType::Basic, pool_liquidity, offer, ask);
     }
 
     #[test]
@@ -172,6 +170,6 @@ proptest! {
         let (pool_liquidity, offer, ask) = setup_swap_test_params(pool_liquidity.into_iter().take(n).collect(), offer_idx, offer_amount, ask_idx, n);
 
         let scaling_factors = scaling_factors.into_iter().take(n).map(|f| f as u64).collect();
-        test_multi_pool_swap(OsmosisPoolType::StableSwap { scaling_factors }, pool_liquidity, offer, ask);
+        test_pool_swap(OsmosisPoolType::StableSwap { scaling_factors }, pool_liquidity, offer, ask);
     }
 }

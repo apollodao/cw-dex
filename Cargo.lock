@@ -40,18 +40,7 @@ checksum = "2cb2f989d18dd141ab8ae82f64d1a8cdd37e0840f73a406896cf5e99502fab61"
 [[package]]
 name = "apollo-utils"
 version = "0.1.0"
-source = "git+https://github.com/apollodao/apollo-utils.git?branch=master#e12b38158778f6279525c4be96789a5f488d2659"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-asset",
- "cw20 0.16.0",
-]
-
-[[package]]
-name = "apollo-utils"
-version = "0.1.0"
-source = "git+https://github.com/apollodao/apollo-utils.git?rev=bfd1abd8cd9716dccad3e74aeb3704cad9f1f41a#bfd1abd8cd9716dccad3e74aeb3704cad9f1f41a"
+source = "git+https://github.com/apollodao/apollo-utils.git?rev=e12b38158778f6279525c4be96789a5f488d2659#e12b38158778f6279525c4be96789a5f488d2659"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -671,14 +660,14 @@ dependencies = [
 name = "cw-dex"
 version = "0.0.1"
 dependencies = [
- "apollo-utils 0.1.0 (git+https://github.com/apollodao/apollo-utils.git?branch=master)",
+ "apollo-utils",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-asset",
  "cw-dex-test-contract",
  "cw-dex-test-helpers",
  "cw-it",
- "cw-storage-plus 0.15.1",
+ "cw-storage-plus 1.0.1",
  "cw-utils 0.11.1",
  "cw-utils 0.16.0",
  "cw20 0.10.3",
@@ -706,7 +695,7 @@ dependencies = [
 name = "cw-dex-test-helpers"
 version = "0.1.0"
 dependencies = [
- "apollo-utils 0.1.0 (git+https://github.com/apollodao/apollo-utils.git?rev=bfd1abd8cd9716dccad3e74aeb3704cad9f1f41a)",
+ "apollo-utils",
  "cosmwasm-std",
  "cw-asset",
  "cw-dex-test-contract",
@@ -762,9 +751,9 @@ dependencies = [
 
 [[package]]
 name = "cw-storage-plus"
-version = "0.15.1"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc6cf70ef7686e2da9ad7b067c5942cd3e88dd9453f7af42f54557f8af300fb0"
+checksum = "d9b6f91c0b94481a3e9ef1ceb183c37d00764f8751e39b45fc09f4d9b970d469"
 dependencies = [
  "cosmwasm-std",
  "schemars",
@@ -773,9 +762,9 @@ dependencies = [
 
 [[package]]
 name = "cw-storage-plus"
-version = "0.16.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9b6f91c0b94481a3e9ef1ceb183c37d00764f8751e39b45fc09f4d9b970d469"
+checksum = "053a5083c258acd68386734f428a5a171b29f7d733151ae83090c6fcc9417ffa"
 dependencies = [
  "cosmwasm-std",
  "schemars",
@@ -2040,7 +2029,7 @@ dependencies = [
  "cw-asset",
  "cw-dex",
  "cw-dex-test-contract",
- "cw-storage-plus 0.15.1",
+ "cw-storage-plus 1.0.1",
  "thiserror",
 ]
 

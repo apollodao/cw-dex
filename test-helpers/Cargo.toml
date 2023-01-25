@@ -29,6 +29,6 @@ cosmwasm-std = { workspace = true }
 cw-asset = { workspace = true }
 osmosis-testing = { workspace = true }
 osmosis-std = { workspace = true }
-apollo-utils = { git = "https://github.com/apollodao/apollo-utils.git", rev = "bfd1abd8cd9716dccad3e74aeb3704cad9f1f41a" }
+apollo-utils = { workspace = true }
 cw-dex-test-contract = { workspace = true }
 cw-it = { workspace = true }

@@ -36,8 +36,6 @@ pub fn provide_liquidity<'a, R: Runner<'a>>(
 ) {
     let (funds, _) = separate_natives_and_cw20s(&assets);
 
-    // TODO: Increase allowance for cw20 assets
-
     // Provide liquidity
     let provide_msg = ExecuteMsg::ProvideLiquidity { assets, min_out };
     runner

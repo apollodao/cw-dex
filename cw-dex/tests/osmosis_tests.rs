@@ -315,7 +315,6 @@ mod tests {
         Ok(())
     }
 
-    // TODO: For some reason it fails when swap amount is 1. Need to investigate
     #[test_case(OsmosisPoolType::Basic, Uint128::new(1_000_000), false ; "basic pool")]
     #[test_case(OsmosisPoolType::Basic, Uint128::new(2), false ; "basic pool small amount")]
     #[test_case(OsmosisPoolType::Basic, Uint128::new(1000000), true ; "basic pool with min out")]
