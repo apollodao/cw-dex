@@ -1,3 +1,6 @@
+[env]
+CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
+
 [tasks.format]
 toolchain = "nightly"
 install_crate = { crate_name = "rustfmt-nightly", rustup_component_name = "rustfmt-preview", binary = "rustfmt", test_arg = "--help" }
@@ -75,6 +78,19 @@ run_task = "custom-default"
 # Custom tasks to run on "cargo make"
 [tasks.custom-default]
 dependencies = ["deny", "clippy-fix", "docs", "machete-fix"]
+
+# Wasm build of test contract
+[tasks.wasm]
+command = "cargo"
+args = [
+    "build",
+    "--target",
+    "wasm32-unknown-unknown",
+    "--lib",
+    "--release",
+    "--package",
+    "osmosis-test-contract"
+]
 
 # Docs and Test coverage are not run by default. Can run all with "cargo make all".
 [tasks.all]

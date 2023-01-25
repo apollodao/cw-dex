@@ -168,16 +168,9 @@ impl ForceUnlock for OsmosisStaking {
         &self,
         _deps: Deps,
         env: &Env,
-        lockup_id: Option<u64>,
+        lockup_id: u64,
         amount: Uint128,
     ) -> Result<Response, CwDexError> {
-        let lockup_id = match lockup_id {
-            Some(id) => Ok(id),
-            None => self
-                .lock_id
-                .ok_or_else(|| StdError::generic_err("osmosis error: lock id not set")),
-        }?;
-
         let coin_to_unlock = Coin::new(amount.u128(), self.lp_token_denom.clone());
 
         let force_unlock_msg = MsgForceUnlock {

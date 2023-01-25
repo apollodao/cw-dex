@@ -1,0 +1,23 @@
+[package]
+name = "cw-dex-test-contract"
+description = "Contract to test the cw-dex library"
+version = "0.1.0"
+authors = ["Pacman <pacman@apollo.farm>"]
+edition = "2021"
+license.workspace = true
+
+exclude = [
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "contract.wasm",
+  "hash.txt",
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+cosmwasm-schema = { workspace = true }
+cosmwasm-std = { workspace = true }
+cw-asset = { workspace = true }

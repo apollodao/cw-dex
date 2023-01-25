@@ -1,0 +1,50 @@
+[package]
+authors = ["Apollo Devs"]
+description = "Helper library for interacting with Cosmos dexes"
+edition = "2021"
+license = "MPL-2.0"
+name = "cw-dex"
+repository = "https://github.com/apollodao/cw-dex"
+version = "0.0.1"
+
+[features]
+default = []
+osmosis = ["dep:osmosis-std"]
+astroport = ["dep:uint", "cw-asset/astroport"]
+junoswap = ["dep:wasmswap","dep:stake-cw20", "dep:cw20-0_10_3"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[dependencies]
+cosmwasm-schema = { workspace = true }
+cosmwasm-std = { workspace = true }
+cw-storage-plus = { workspace = true }
+thiserror = { workspace = true }
+cw-asset = { workspace = true }
+cw-utils = { workspace = true }
+cw20 = { workspace = true }
+apollo-utils = { workspace = true }
+# Osmosis
+# osmosis-std = { git = "https://github.com/apollodao/osmosis-rust", rev = "52ca8eaa4b2926fea01a68f4d7e7253ad29d88b3", optional = true }
+osmosis-std = { workspace = true, optional = true }
+
+# Astroport
+uint = {version = "0.9.3", optional = true}
+
+# Junoswap
+wasmswap = { git = "https://github.com/Wasmswap/wasmswap-contracts.git", tag = "v1.1.0-beta", features = ["library"], optional = true }
+cw20-0_10_3 = { package = "cw20", version = "0.10.3", optional = true } # We must import this version separately since it is what wasmswap uses.
+stake-cw20 = { version = "0.2", features = ["library"], optional = true }
+cw-utils-0-11 = { package = "cw-utils", version = "0.11" }
+# stake-cw20-external-rewards = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"] }
+
+
+[dev-dependencies]
+osmosis-testing = { workspace = true }
+cw-it = { workspace = true }
+test-case = "2.2.2"
+cw-dex-test-contract = { workspace = true }
+cw-dex-test-helpers = { workspace = true }
+proptest = "1.0.0"

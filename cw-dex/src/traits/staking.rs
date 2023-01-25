@@ -93,7 +93,7 @@ pub trait ForceUnlock: LockedStaking {
         &self,
         deps: Deps,
         env: &Env,
-        lockup_id: Option<u64>,
+        lockup_id: u64,
         amount: Uint128,
     ) -> Result<Response, CwDexError>;
 }

@@ -154,18 +154,18 @@ impl Pool for OsmosisPool {
         &self,
         _deps: Deps,
         env: &Env,
-        asset: Asset,
+        lp_token: Asset,
     ) -> Result<Response, CwDexError> {
         let exit_msg = MsgExitPool {
             sender: env.contract.address.to_string(),
             pool_id: self.pool_id,
-            share_in_amount: asset.amount.to_string(),
+            share_in_amount: lp_token.amount.to_string(),
             token_out_mins: vec![],
         };
 
         let event = Event::new("apollo/cw-dex/withdraw_liquidity")
             .add_attribute("pool_id", self.pool_id.to_string())
-            .add_attribute("shares_in", asset.to_string());
+            .add_attribute("shares_in", lp_token.to_string());
 
         Ok(Response::new().add_message(exit_msg).add_event(event))
     }
@@ -280,7 +280,7 @@ impl Pool for OsmosisPool {
         let swap_response = GammQuerier::new(&deps.querier).estimate_swap_exact_amount_in(
             sender.ok_or_else(|| StdError::generic_err("sender is required for osmosis"))?,
             self.pool_id,
-            format!("{}{}", offer.amount, offer.denom),
+            offer.to_string(),
             vec![SwapAmountInRoute {
                 pool_id: self.pool_id,
                 token_out_denom: assert_native_asset_info(&ask_asset_info)?,
@@ -291,5 +291,26 @@ impl Pool for OsmosisPool {
 
     fn lp_token(&self) -> AssetInfo {
         AssetInfo::Native(format!("gamm/pool/{}", self.pool_id))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use cw_asset::AssetInfo;
+
+    use crate::traits::Pool;
+
+    use super::OsmosisPool;
+
+    #[test]
+    fn test_lp_token() {
+        let pool = OsmosisPool::unchecked(1337u64);
+
+        let lp_token = pool.lp_token();
+
+        match lp_token {
+            AssetInfo::Native(denom) => assert_eq!(denom, format!("gamm/pool/{}", 1337u64)),
+            AssetInfo::Cw20(_) => panic!("Unexpected cw20 token"),
+        }
     }
 }
