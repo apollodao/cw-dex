@@ -153,7 +153,9 @@ impl Unlock for OsmosisStaking {
         _amount: Uint128,
     ) -> Result<Response, CwDexError> {
         // Osmosis automatically sends the unlocked tokens after the lockup duration
-        Ok(Response::new())
+        let event =
+            Event::new("apollo/cw-dex/withdraw_unlocked").add_attribute("type", "osmosis_staking");
+        Ok(Response::new().add_event(event))
     }
 }
 
@@ -292,7 +294,9 @@ impl Unlock for OsmosisSuperfluidStaking {
         _amount: Uint128,
     ) -> Result<Response, CwDexError> {
         // Osmosis automatically sends the unlocked tokens after the lockup duration
-        Ok(Response::new())
+        let event = Event::new("apollo/cw-dex/withdraw_unlocked")
+            .add_attribute("type", "osmosis_superfluid_staking");
+        Ok(Response::new().add_event(event))
     }
 }
 
