@@ -1,136 +1,115 @@
 use apollo_utils::coins::coin_from_str;
 use apollo_utils::submessages::{find_event, parse_attribute_value};
-use astroport::asset::AssetInfo as AstroAssetInfo;
-use astroport::pair::SimulationResponse;
-use cosmwasm_std::{coins, Addr, SubMsgResponse, Uint128};
-use cw20::{Cw20Coin, MinterResponse};
-use cw20_base::msg::InstantiateMsg as Cw20InstantiateMsg;
-use cw_asset::astroport::AstroAsset;
-use cw_asset::{AssetBase, AssetInfo, AssetList};
+use astroport::factory::PairType;
+use cosmwasm_std::{Coin, Decimal, SubMsgResponse, Uint128};
+use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
+use cw_dex::astroport::msg::PoolResponse;
 use cw_dex::implementations::astroport::msg::PairQueryMsg;
 use cw_dex_test_contract::msg::{AstroportExecuteMsg, ExecuteMsg, QueryMsg};
-use cw_dex_test_helpers::astroport::{setup_pool_and_test_contract, AstroportPoolType};
+use cw_dex_test_helpers::astroport::setup_pool_and_test_contract;
 use cw_dex_test_helpers::{
-    cw20_balance_query, cw20_mint, cw20_transfer, instantiate_cw20, provide_liquidity,
+    cw20_balance_query, cw20_transfer, provide_liquidity, query_asset_balance,
 };
-use cw_it::astroport::AstroportContracts;
-use cw_it::config::TestConfig;
-use cw_it::helpers::bank_send;
 use osmosis_testing::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
 use osmosis_testing::{
     Account, ExecuteResponse, Module, OsmosisTestApp, Runner, RunnerResult, SigningAccount, Wasm,
 };
 use test_case::test_case;
 
-const HUNDRED_TRILLION: Uint128 = Uint128::new(100_000_000_000_000);
-const INITIAL_TWO_POOL_LIQUIDITY: &[u64] = &[1_000_000_000, 1_000_000_000];
-
 const TEST_CONTRACT_WASM_FILE_PATH: &str =
     "../target/wasm32-unknown-unknown/release/astroport_test_contract.wasm";
 
 fn setup_pool_and_contract(
-    added_liquidity: Vec<(&str, u64)>,
-    initial_liquidity: Vec<u64>,
+    pool_type: PairType,
+    initial_liquidity: Vec<(&str, u64)>,
 ) -> RunnerResult<(
     OsmosisTestApp,
     Vec<SigningAccount>,
-    AstroportContracts,
     String,
     String,
     String,
     AssetList,
 )> {
     setup_pool_and_test_contract(
-        added_liquidity,
+        pool_type,
         initial_liquidity,
+        2,
         TEST_CONTRACT_WASM_FILE_PATH,
     )
 }
 
-#[test_case(AstroportPoolType::Basic { }, vec![("uluna",1_000_000), ("astro", 1_000_000)], Uint128::new(999000) ; "provide_liquidity: native-cw20")]
-#[test_case(AstroportPoolType::Basic { }, vec![("apollo",1_000_000), ("astro", 1_000_000)], Uint128::new(999000); "provide_liquidity: cw20-cw20")]
-//#[test_case(AstroportPoolType::Basic { }, vec![("uluna",1_000_000),
-//#[test_case(AstroportPoolType::Basic ("uusd",1_000_000)], false,
-//#[test_case(AstroportPoolType::Basic Uint128::new(999000)  ; "basic pool:
-//#[test_case(AstroportPoolType::Basic native-native")]
-// "basic pool adding small liquidity")] #[test_case(AstroportPoolType::Basic,
-// vec![1_000_000, 1_000_000], true, INITIAL_LIQUIDITY * HUNDRED_TRILLION ;
-// "basic pool simulate min_out")] #[test_case(AstroportPoolType::Basic,
-// vec![1_000_000, 500_000], true, Uint128::new(500_000) * HUNDRED_TRILLION ;
-// "basic pool uneven assets simulate min_out")]
-pub fn test_provide_liquidity(
-    pool_type: AstroportPoolType,
-    added_liquidity: Vec<(&str, u64)>,
-    expected_lps: Uint128,
-) {
-    let initial_liquidity = added_liquidity.iter().map(|_| 1_000_000).collect();
-    let (runner, accs, astroport_contracts, lp_token_addr, pair_addr, contract_addr, asset_list) =
-        setup_pool_and_contract(added_liquidity, initial_liquidity).unwrap();
+#[test_case(PairType::Xyk { }, vec![("uluna",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: native-cw20")]
+#[test_case(PairType::Xyk { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: cw20-cw20")]
+#[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: stableswap native-cw20")]
+#[test_case(PairType::Stable { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: stableswap cw20-cw20")]
+pub fn test_provide_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str, u64)>) {
+    let (runner, accs, lp_token_addr, _pair_addr, contract_addr, asset_list) =
+        setup_pool_and_contract(pool_type, initial_liquidity).unwrap();
     let admin = &accs[0];
 
+    // Check contract's LP token balance before providing liquidity
     let lp_token_before =
         cw20_balance_query(&runner, lp_token_addr.clone(), contract_addr.clone()).unwrap();
-
     assert_eq!(lp_token_before, Uint128::zero());
 
     // Provide liquidity
     provide_liquidity(
         &runner,
         contract_addr.clone(),
-        asset_list,
+        asset_list.clone(),
         Uint128::one(),
         admin,
     );
 
     // Query LP token balance after
-    let lp_token_after = cw20_balance_query(&runner, lp_token_addr, contract_addr).unwrap();
+    let lp_token_after = cw20_balance_query(&runner, lp_token_addr, contract_addr.clone()).unwrap();
+    assert_ne!(lp_token_after, Uint128::zero());
 
-    assert_eq!(lp_token_after, expected_lps);
+    // Query asset balances in contract, assert that all were used
+    for asset in asset_list.into_iter() {
+        let asset_balance = query_asset_balance(&runner, &asset.info, &contract_addr);
+        assert_eq!(asset_balance, Uint128::zero());
+    }
 }
 
-#[test_case(AstroportPoolType::Basic { }, vec![("uluna",1_000_000), ("astro", 1_000_000)] ; "withdraw_liquidity: native-cw20")]
-#[test_case(AstroportPoolType::Basic { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: cw20-cw20")]
-fn test_withdraw_liquidity(pool_type: AstroportPoolType, added_liquidity: Vec<(&str, u64)>) {
-    let initial_liquidity = added_liquidity.iter().map(|_| 1_000_000).collect();
-
-    let (runner, accs, astroport_contracts, lp_token_addr, pair_addr, contract_addr, asset_list) =
-        setup_pool_and_contract(added_liquidity.clone(), initial_liquidity).unwrap();
+#[test_case(PairType::Xyk { }, vec![("uluna",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: xyk native-cw20")]
+#[test_case(PairType::Xyk { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: xyk cw20-cw20")]
+#[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: stableswap native-cw20")]
+#[test_case(PairType::Stable { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: stableswap cw20-cw20")]
+fn test_withdraw_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str, u64)>) {
+    let (runner, accs, lp_token_addr, pair_addr, contract_addr, asset_list) =
+        setup_pool_and_contract(pool_type, initial_liquidity).unwrap();
     let admin = &accs[0];
-
-    // Send LP tokens to the test contract
-    provide_liquidity(
-        &runner,
-        contract_addr.clone(),
-        asset_list,
-        Uint128::one(),
-        admin,
-    );
+    let wasm = Wasm::new(&runner);
 
     //Query admin LP token balance
     let admin_lp_token_balance =
-        cw20_balance_query(&runner, lp_token_addr.clone(), admin.address().clone()).unwrap();
+        cw20_balance_query(&runner, lp_token_addr.clone(), admin.address()).unwrap();
+    let amount_to_send = admin_lp_token_balance / Uint128::from(2u128);
 
-    println!("admin_lp_token_balance: {}", admin_lp_token_balance);
-
+    // Send LP tokens to contract
+    cw20_transfer(
+        &runner,
+        lp_token_addr.clone(),
+        contract_addr.clone(),
+        amount_to_send,
+        admin,
+    )
+    .unwrap();
     let contract_lp_token_balance =
         cw20_balance_query(&runner, lp_token_addr.clone(), contract_addr.clone()).unwrap();
+    assert_eq!(contract_lp_token_balance, amount_to_send);
 
-    println!("contract_lp_token_balance: {}", contract_lp_token_balance);
+    // Query pool info
+    let pool_res = wasm
+        .query::<_, PoolResponse>(&pair_addr, &PairQueryMsg::Pool {})
+        .unwrap();
+    let lp_token_ratio = Decimal::from_ratio(amount_to_send, pool_res.total_share);
 
-    // cw20_transfer(
-    //     &runner,
-    //     lp_token_addr.clone(),
-    //     contract_addr.clone(),
-    //     admin_lp_token_balance,
-    //     admin,
-    // )
-    // .unwrap();
-
-    // Withdraw liquidity. We are not allowed to withdraw all liquidity on osmosis.
+    // Withdraw liquidity
     let withdraw_msg = ExecuteMsg::WithdrawLiquidity {
         amount: contract_lp_token_balance,
     };
-
     runner
         .execute_cosmos_msgs::<MsgExecuteContractResponse>(
             &[withdraw_msg.into_cosmos_msg(contract_addr.clone(), vec![])],
@@ -139,10 +118,24 @@ fn test_withdraw_liquidity(pool_type: AstroportPoolType, added_liquidity: Vec<(&
         .unwrap();
 
     // Query LP token balance after
-    let lp_token_balance_after = cw20_balance_query(&runner, lp_token_addr, contract_addr).unwrap();
+    let lp_token_balance_after =
+        cw20_balance_query(&runner, lp_token_addr, contract_addr.clone()).unwrap();
 
-    // Assert that LP token balance is 1
+    // Assert that LP token balance is zero after withdrawing all liquidity
     assert_eq!(lp_token_balance_after, Uint128::zero());
+
+    // Query contract asset balances, assert that all were returned
+    for asset in asset_list.into_iter() {
+        let asset_balance = query_asset_balance(&runner, &asset.info, &contract_addr);
+        let expected_balance = pool_res
+            .assets
+            .iter()
+            .find(|a| AssetInfo::from(a.info.clone()) == asset.info)
+            .unwrap()
+            .amount
+            * lp_token_ratio;
+        assert_eq!(asset_balance, expected_balance);
+    }
 }
 
 fn stake_all_lp_tokens<'a, R: Runner<'a>>(
@@ -168,27 +161,32 @@ fn stake_all_lp_tokens<'a, R: Runner<'a>>(
         .unwrap()
 }
 
-#[test_case(vec![("uluna",1_000_000), ("astro", 1_000_000)] ; "stake_and_unlock: native-cw20")]
-#[test_case(vec![("apollo",1_000_000), ("astro", 1_000_000)]; "stake_and_unlock: cw20-cw20")]
-fn test_stake_and_unlock(added_liquidity: Vec<(&str, u64)>) -> RunnerResult<()> {
-    let initial_liquidity = added_liquidity.iter().map(|_| 1_000_000).collect();
-    let (runner, accs, astroport_contracts, lp_token_addr, pair_addr, contract_addr, asset_list) =
-        setup_pool_and_contract(added_liquidity.clone(), initial_liquidity).unwrap();
+#[test_case(PairType::Xyk {}, vec![("uluna",1_000_000), ("astro", 1_000_000)]; "stake_and_unstake: xyk native-cw20")]
+#[test_case(PairType::Xyk {}, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "stake_and_unstake: xyk cw20-cw20")]
+#[test_case(PairType::Stable {}, vec![("uluna",1_000_000), ("astro", 1_000_000)]; "stake_and_unstake: stableswap native-cw20")]
+#[test_case(PairType::Stable {}, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "stake_and_unstake: stableswap cw20-cw20")]
+fn test_stake_and_unstake(
+    pool_type: PairType,
+    initial_liquidity: Vec<(&str, u64)>,
+) -> RunnerResult<()> {
+    let (runner, accs, lp_token_addr, _pair_addr, contract_addr, _asset_list) =
+        setup_pool_and_contract(pool_type, initial_liquidity).unwrap();
 
     let admin = &accs[0];
 
-    provide_liquidity(
-        &runner,
-        contract_addr.clone(),
-        asset_list,
-        Uint128::one(),
-        admin,
-    );
     // Query LP token balance
     let lp_token_balance =
-        cw20_balance_query(&runner, lp_token_addr.clone(), contract_addr.clone()).unwrap();
+        cw20_balance_query(&runner, lp_token_addr.clone(), admin.address()).unwrap();
 
     // Send LP tokens to the test contract
+    cw20_transfer(
+        &runner,
+        lp_token_addr.clone(),
+        contract_addr.clone(),
+        lp_token_balance,
+        admin,
+    )
+    .unwrap();
 
     // Stake LP tokens
     let events =
@@ -210,50 +208,56 @@ fn test_stake_and_unlock(added_liquidity: Vec<(&str, u64)>) -> RunnerResult<()> 
     // Assert that LP token balance is 0
     assert_eq!(lp_token_balance_after, Uint128::zero());
 
-    // Unlock LP tokens
-    let unlock_msg = AstroportExecuteMsg::Unstake {
+    // unstake LP tokens
+    let unstake_msg = AstroportExecuteMsg::Unstake {
         amount: lp_token_balance,
     };
     runner
         .execute_cosmos_msgs::<MsgExecuteContractResponse>(
-            &[unlock_msg.into_cosmos_msg(contract_addr.clone(), vec![])],
+            &[unstake_msg.into_cosmos_msg(contract_addr.clone(), vec![])],
             admin,
         )
         .unwrap();
 
     // Query LP token balance
-    let lp_token_balance_after_unlock =
-        cw20_balance_query(&runner, lp_token_addr, contract_addr.to_string()).unwrap();
+    let lp_token_balance_after_unstake =
+        cw20_balance_query(&runner, lp_token_addr, contract_addr).unwrap();
 
-    // Assert that LP tokens have been unlocked
-    assert_eq!(lp_token_balance_after_unlock, lp_token_balance);
+    // Assert that LP tokens have been unstakeed
+    assert_eq!(lp_token_balance_after_unstake, lp_token_balance);
 
     Ok(())
 }
 
-#[test_case(AstroportPoolType::Basic{},vec![("uluna",1_000_000), ("astro", 1_000_000)], Uint128::new(1_000_000) ; "swap_and_simulate_swap: basic pool")]
-#[test_case(AstroportPoolType::Basic{},vec![("uluna",1_000_000), ("astro", 1_000_000)], Uint128::new(2) ; "swap_and_simulate_swap: basic pool small amount")]
-#[test_case(AstroportPoolType::Basic{},vec![("uluna",1_000_000), ("astro", 1_000_000)], Uint128::new(1000000) ; "swap_and_simulate_swap: basic pool with min out")]
+#[test_case(PairType::Xyk{},vec![("astro",1_000_000), ("uluna", 1_000_000)], Uint128::new(1_000_000); "swap_and_simulate_swap: basic pool")]
+#[test_case(PairType::Xyk{},vec![("uluna",1_000_000), ("astro", 1_000_000)], Uint128::new(2); "swap_and_simulate_swap: basic pool small amount")]
+#[test_case(PairType::Xyk{},vec![("uluna",1_000_000), ("astro", 1_000_000)], Uint128::new(100_000_000); "swap_and_simulate_swap: basic pool, high slippage")]
+#[test_case(PairType::Xyk{},vec![("uluna",68_582_147), ("astro", 3_467_256)], Uint128::new(1_000_000); "swap_and_simulate_swap: basic pool, random prices")]
+#[test_case(PairType::Stable { },vec![("uluna",1_000_000), ("astro", 1_000_000)], Uint128::new(1_000_000); "swap_and_simulate_swap: stable swap pool")]
+#[test_case(PairType::Stable { },vec![("uluna",1_000_000), ("astro", 1_000_000)], Uint128::new(100_000_000); "swap_and_simulate_swap: stable swap pool, high slippage")]
+#[test_case(PairType::Stable { },vec![("uluna",68_582_147), ("astro", 3_467_256)], Uint128::new(1_000_000); "swap_and_simulate_swap: stable swap pool, random prices")]
 fn test_swap_and_simulate_swap(
-    pool_type: AstroportPoolType,
-    added_liquidity: Vec<(&str, u64)>,
+    pool_type: PairType,
+    initial_liquidity: Vec<(&str, u64)>,
     amount: Uint128,
 ) {
-    let initial_liquidity = added_liquidity.iter().map(|_| 1_000_000).collect();
-
-    let (runner, accs, astroport_contracts, lp_token_addr, pair_addr, contract_addr, asset_list) =
-        setup_pool_and_contract(added_liquidity, initial_liquidity).unwrap();
+    let (runner, accs, _lp_token_addr, _pair_addr, contract_addr, asset_list) =
+        setup_pool_and_contract(pool_type, initial_liquidity).unwrap();
 
     let admin = &accs[0];
-
-    println!("lp_token_addr {}", lp_token_addr);
-    // Simulate swap
-    let offer = &asset_list.clone().to_vec()[0];
-    let ask = &asset_list.clone().to_vec()[1];
     let wasm = Wasm::new(&runner);
+
+    let offer_info = &asset_list.to_vec()[0].info;
+    let ask_info = &asset_list.to_vec()[1].info;
+
+    // Simulate swap
+    let offer = Asset {
+        info: offer_info.clone(),
+        amount,
+    };
     let simulate_query = QueryMsg::SimulateSwap {
         offer: offer.clone(),
-        ask: ask.info.clone(),
+        ask: ask_info.clone(),
         sender: None,
     };
 
@@ -262,25 +266,41 @@ fn test_swap_and_simulate_swap(
     // Swap
     let swap_msg = ExecuteMsg::Swap {
         offer: offer.clone(),
-        ask: ask.info.clone(),
+        ask: ask_info.clone(),
         min_out: expected_out,
+    };
+    let native_coins = match offer.info {
+        AssetInfoBase::Native(denom) => {
+            vec![Coin {
+                denom,
+                amount: offer.amount,
+            }]
+        }
+        AssetInfoBase::Cw20(cw20_addr) => {
+            // Transfer cw20 tokens to the contract
+            cw20_transfer(
+                &runner,
+                cw20_addr.to_string(),
+                contract_addr.clone(),
+                offer.amount,
+                admin,
+            )
+            .unwrap();
+            vec![]
+        }
     };
     runner
         .execute_cosmos_msgs::<MsgExecuteContractResponse>(
-            &[swap_msg.into_cosmos_msg(
-                contract_addr.clone(),
-                vec![offer.clone().try_into().unwrap()],
-            )],
+            &[swap_msg.into_cosmos_msg(contract_addr.clone(), native_coins)],
             admin,
         )
         .unwrap();
 
-    // Query OSMO and ATOM balances
-    let offer_balance =
-        cw20_balance_query(&runner, contract_addr.to_string(), offer.info.to_string()).unwrap();
-    let ask_balance = cw20_balance_query(&runner, contract_addr, ask.info.to_string()).unwrap();
+    // Query offer and ask balances
+    let offer_balance = query_asset_balance(&runner, offer_info, &contract_addr);
+    let ask_balance = query_asset_balance(&runner, ask_info, &contract_addr);
 
-    // Assert that OSMO and ATOM balances are correct
+    // Assert that offer and ask balances are correct
     assert_eq!(ask_balance, expected_out);
     assert_eq!(offer_balance, Uint128::zero());
 }

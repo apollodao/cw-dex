@@ -1,3 +1,5 @@
+use crate::error::ContractError;
+use crate::state::{POOL, STAKING};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -5,20 +7,10 @@ use cosmwasm_std::{
 };
 use cw_asset::{Asset, AssetInfo, AssetList};
 use cw_dex::astroport::{AstroportPool, AstroportStaking};
-use cw_dex::traits::{ForceUnlock, Pool, Stake, Unlock, Unstake};
-// use cw2::set_contract_version;
-
-use crate::error::ContractError;
-use crate::state::{POOL, STAKING};
+use cw_dex::traits::{Pool, Stake, Unstake};
 use cw_dex_test_contract::msg::{
     AstroportContractInstantiateMsg as InstantiateMsg, AstroportExecuteMsg as ExecuteMsg, QueryMsg,
 };
-
-/*
-// version info for migration info
-const CONTRACT_NAME: &str = "crates.io:cw-dex-test-contract";
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-*/
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(

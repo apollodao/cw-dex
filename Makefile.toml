@@ -31,7 +31,7 @@ command = "cargo"
 args = ["clippy","--all-features","--","-D","warnings"]
 [tasks.clippy-fix]
 command = "cargo"
-args = ["clippy","--fix","--allow-staged","--","-D","warnings"]
+args = ["clippy","--all-features","--fix","--allow-staged","--","-D","warnings"]
 
 # This task requires the `cargo-tarpaulin` package: https://crates.io/crates/cargo-tarpaulin
 [tasks.cov]
