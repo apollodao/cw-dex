@@ -39,7 +39,7 @@ jobs:
         with:
           toolchain: nightly
           command: fmt
-          args: --all -- --check
+          args: --all -- --check --verbose
 
       - name: Run cargo machete
         uses: actions-rs/cargo@v1
@@ -48,4 +48,3 @@ jobs:
 
       - name: Lint todo comments
         run: ./scripts/todo-lint.sh
-
