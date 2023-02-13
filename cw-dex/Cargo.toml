@@ -50,4 +50,4 @@ test-case = "2.2.2"
 cw-dex-test-contract = { workspace = true }
 cw-dex-test-helpers = { workspace = true }
 proptest = "1.0.0"
-cw20-base = "0.16.0"
+cw20-base = { workspace = true }
