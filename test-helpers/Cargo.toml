@@ -31,4 +31,7 @@ osmosis-testing = { workspace = true }
 osmosis-std = { workspace = true }
 apollo-utils = { workspace = true }
 cw-dex-test-contract = { workspace = true }
-cw-it = { workspace = true }
+cw-it = { workspace = true, features = ["astroport"] }
+astroport = { git = "https://github.com/apollodao/astroport/", rev = "afbf5e70c3d7bf986bebba65609b5e60016f5919" }
+cw20 = "0.16.0"
+cw20-base = "0.16.0"

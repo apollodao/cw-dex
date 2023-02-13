@@ -3,10 +3,18 @@ use cosmwasm_std::{to_binary, Coin, CosmosMsg, Uint128, WasmMsg};
 use cw_asset::{Asset, AssetInfo, AssetList};
 
 #[cw_serde]
-pub struct InstantiateMsg {
+pub struct OsmosisTestContractInstantiateMsg {
     pub pool_id: u64,
     pub lock_duration: u64,
     pub lock_id: u64,
+}
+
+#[cw_serde]
+pub struct AstroportContractInstantiateMsg {
+    pub pair_addr: String,
+    pub lp_token_addr: String,
+    pub generator_addr: String,
+    pub astro_addr: String,
 }
 
 #[cw_serde]
@@ -61,4 +69,36 @@ pub enum QueryMsg {
         ask: AssetInfo,
         sender: Option<String>,
     },
+}
+
+#[cw_serde]
+pub enum AstroportExecuteMsg {
+    ProvideLiquidity {
+        assets: AssetList,
+        min_out: Uint128,
+    },
+    WithdrawLiquidity {
+        amount: Uint128,
+    },
+    Stake {
+        amount: Uint128,
+    },
+    Unstake {
+        amount: Uint128,
+    },
+    Swap {
+        offer: Asset,
+        ask: AssetInfo,
+        min_out: Uint128,
+    },
+}
+
+impl AstroportExecuteMsg {
+    pub fn into_cosmos_msg(&self, contract_addr: String, funds: Vec<Coin>) -> CosmosMsg {
+        CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr,
+            msg: to_binary(self).unwrap(),
+            funds,
+        })
+    }
 }

@@ -1,5 +1,5 @@
 [package]
-name = "osmosis-test-contract"
+name = "astroport-test-contract"
 description = "Contract to test the cw-dex library"
 version = "0.1.0"
 authors = ["Pacman <pacman@apollo.farm>"]
@@ -36,5 +36,5 @@ cosmwasm-std = { workspace = true }
 cw-storage-plus = { workspace = true }
 thiserror = { workspace = true }
 cw-asset = { workspace = true }
-cw-dex = { workspace = true, features = ["osmosis"] }
+cw-dex = { workspace = true, features = ["astroport"] }
 cw-dex-test-contract = { workspace = true }

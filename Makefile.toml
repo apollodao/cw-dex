@@ -33,7 +33,7 @@ args = ["clippy","--all-features","--","-D","warnings"]
 [tasks.clippy-fix]
 toolchain = "nightly"
 command = "cargo"
-args = ["clippy","--fix","--allow-staged","--","-D","warnings"]
+args = ["clippy","--all-features","--fix","--allow-staged","--","-D","warnings"]
 
 [tasks.todo-check]
 script = { file = "${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/scripts/todo-lint.sh", absolute_path = true }
