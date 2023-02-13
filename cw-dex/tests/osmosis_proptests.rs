@@ -1,5 +1,5 @@
+use apollo_cw_asset::{Asset, AssetInfo};
 use cosmwasm_std::{Coin, Uint128};
-use cw_asset::{Asset, AssetInfo};
 use cw_dex_test_contract::msg::ExecuteMsg;
 use cw_dex_test_helpers::osmosis::{setup_pool_and_test_contract, test_pool, OsmosisTestPool};
 use cw_it::helpers::bank_balance_query;

@@ -3,15 +3,17 @@
 
 use crate::error::CwDexError;
 use crate::traits::pool::Pool as PoolTrait;
+use apollo_cw_asset::{Asset, AssetInfo, AssetList};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Deps, Env, Response, StdResult, Uint128};
-use cw_asset::{Asset, AssetInfo, AssetList};
 
 #[cfg(feature = "astroport")]
 use crate::astroport::AstroportPool;
 
 #[cfg(feature = "osmosis")]
-use {crate::implementations::osmosis::OsmosisPool, cw_asset::AssetInfoBase, std::str::FromStr};
+use {
+    crate::implementations::osmosis::OsmosisPool, apollo_cw_asset::AssetInfoBase, std::str::FromStr,
+};
 
 #[cfg(feature = "junoswap")]
 use crate::junoswap::JunoswapPool;

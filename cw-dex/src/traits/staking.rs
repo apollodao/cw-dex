@@ -1,7 +1,7 @@
 //! Contains traits related to various forms of staking
 
+use apollo_cw_asset::AssetList;
 use cosmwasm_std::{Addr, Deps, Env, QuerierWrapper, Response, Uint128};
-use cw_asset::AssetList;
 use cw_utils::Duration as CwDuration;
 
 use crate::error::CwDexError;

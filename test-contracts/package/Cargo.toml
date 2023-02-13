@@ -20,4 +20,4 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true }
-cw-asset = { workspace = true }
+apollo-cw-asset = { workspace = true }

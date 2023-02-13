@@ -1,9 +1,9 @@
+use apollo_cw_asset::{Asset, AssetInfo, AssetList};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, Uint128,
 };
-use cw_asset::{Asset, AssetInfo, AssetList};
 use cw_dex::osmosis::{OsmosisPool, OsmosisStaking};
 use cw_dex::traits::{ForceUnlock, Pool, Stake, Unlock};
 // use cw2::set_contract_version;

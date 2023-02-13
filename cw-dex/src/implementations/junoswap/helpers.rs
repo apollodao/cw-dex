@@ -1,10 +1,10 @@
+use apollo_cw_asset::{Asset, AssetInfo, AssetList};
 use apollo_utils::assets::separate_natives_and_cw20s;
 use cosmwasm_std::{
     to_binary, Addr, Coin, CosmosMsg, Decimal, Env, StdError, StdResult, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
 use cw20_0_10_3::Denom;
-use cw_asset::{Asset, AssetInfo, AssetList};
 use wasmswap::msg::InfoResponse;
 
 use crate::CwDexError;

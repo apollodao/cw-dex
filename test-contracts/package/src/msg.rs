@@ -1,6 +1,6 @@
+use apollo_cw_asset::{Asset, AssetInfo, AssetList};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{to_binary, Coin, CosmosMsg, Uint128, WasmMsg};
-use cw_asset::{Asset, AssetInfo, AssetList};
 
 #[cw_serde]
 pub struct OsmosisTestContractInstantiateMsg {

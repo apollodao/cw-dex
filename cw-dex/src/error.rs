@@ -3,8 +3,8 @@
 
 use std::num::TryFromIntError;
 
+use apollo_cw_asset::Asset;
 use cosmwasm_std::{DivideByZeroError, OverflowError, StdError, Uint128};
-use cw_asset::Asset;
 use thiserror::Error;
 
 /// ## Description

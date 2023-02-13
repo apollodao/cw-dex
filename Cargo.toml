@@ -23,14 +23,14 @@ cw20 = "0.16"
 schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
-cw-asset = { git = "https://github.com/apollodao/cw-asset.git", rev = "057fb193013ad4adfc25063b99960972d1d208bc" }
+apollo-cw-asset = "0.1.0"
 osmosis-testing = { git = "https://github.com/apollodao/osmosis-rust.git", branch = "osmosis-v13" }
 osmosis-std = { git = "https://github.com/apollodao/osmosis-rust.git", branch = "osmosis-v13" }
-cw-it = { git = "https://github.com/apollodao/cw-it.git", branch = "master" }
+cw-it = { git = "https://github.com/apollodao/cw-it.git", ref = "4de4f23f257ccf694a4d5cabb3db0051292a5ab6" }
 cw-dex = { path = "cw-dex" }
 cw-dex-test-contract = { path = "test-contracts/package" }
 cw-dex-test-helpers = { path = "test-helpers" }
-apollo-utils = { git = "https://github.com/apollodao/apollo-utils.git", rev = "e12b38158778f6279525c4be96789a5f488d2659" }
+apollo-utils = "0.1.0"
 
 
 [profile.release]

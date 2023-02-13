@@ -1,11 +1,11 @@
 //! Staking/rewards traits implementations for Osmosis
 
+use apollo_cw_asset::AssetList;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     Addr, Coin, Deps, Env, Event, QuerierWrapper, ReplyOn, Response, StdError, StdResult, SubMsg,
     Uint128,
 };
-use cw_asset::AssetList;
 use cw_utils::Duration as CwDuration;
 use osmosis_std::types::osmosis::lockup::{MsgBeginUnlocking, MsgForceUnlock, MsgLockTokens};
 use osmosis_std::types::osmosis::superfluid::{
