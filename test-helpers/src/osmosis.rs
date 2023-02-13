@@ -1,5 +1,6 @@
 use cosmwasm_std::{Coin, Uint128};
 use cw_asset::AssetList;
+use cw_dex_test_contract::msg::OsmosisTestContractInstantiateMsg;
 use cw_it::helpers::upload_wasm_file;
 use osmosis_std::types::osmosis::gamm::poolmodels::balancer::v1beta1::MsgCreateBalancerPool;
 use osmosis_std::types::osmosis::gamm::poolmodels::stableswap::v1beta1::{
@@ -7,10 +8,8 @@ use osmosis_std::types::osmosis::gamm::poolmodels::stableswap::v1beta1::{
 };
 use osmosis_std::types::osmosis::gamm::v1beta1::{PoolAsset, PoolParams};
 use osmosis_testing::{
-    Account, Gamm, Module, OsmosisTestApp, Runner, RunnerResult, SigningAccount,
+    Account, Gamm, Module, OsmosisTestApp, Runner, RunnerResult, SigningAccount, Wasm,
 };
-
-use crate::instantiate_test_contract;
 
 pub enum OsmosisPoolType {
     Basic,
@@ -141,4 +140,25 @@ pub fn native_assetlist_from_slice(assets: &[(&str, Uint128)]) -> AssetList {
         })
         .collect::<Vec<_>>()
         .into()
+}
+
+pub fn instantiate_test_contract<'a, R: Runner<'a>>(
+    runner: &'a R,
+    code_id: u64,
+    pool_id: u64,
+    lock_id: u64,
+    lock_duration: u64,
+    signer: &SigningAccount,
+) -> RunnerResult<String> {
+    let init_msg = OsmosisTestContractInstantiateMsg {
+        pool_id,
+        lock_duration,
+        lock_id,
+    };
+
+    let wasm = Wasm::new(runner);
+    Ok(wasm
+        .instantiate(code_id, &init_msg, None, None, &[], signer)?
+        .data
+        .address)
 }

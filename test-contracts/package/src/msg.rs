@@ -3,7 +3,7 @@ use cosmwasm_std::{to_binary, Coin, CosmosMsg, Uint128, WasmMsg};
 use cw_asset::{Asset, AssetInfo, AssetList};
 
 #[cw_serde]
-pub struct InstantiateMsg {
+pub struct OsmosisTestContractInstantiateMsg {
     pub pool_id: u64,
     pub lock_duration: u64,
     pub lock_id: u64,

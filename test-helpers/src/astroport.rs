@@ -6,13 +6,16 @@ use cosmwasm_std::{to_binary, Addr, Coin, Decimal, Uint128};
 use cw20::{Cw20ExecuteMsg, MinterResponse};
 use cw20_base::msg::InstantiateMsg as Cw20InstantiateMsg;
 use cw_asset::{AssetBase, AssetInfo, AssetInfoBase, AssetList};
+use cw_dex_test_contract::msg::AstroportContractInstantiateMsg;
 use cw_it::astroport::{create_astroport_pair, instantiate_astroport, upload_astroport_contracts};
 use cw_it::config::TestConfig;
 use cw_it::helpers::upload_wasm_file;
-use osmosis_testing::{Account, Module, OsmosisTestApp, RunnerResult, SigningAccount, Wasm};
+use osmosis_testing::{
+    Account, Module, OsmosisTestApp, Runner, RunnerResult, SigningAccount, Wasm,
+};
 use std::str::FromStr;
 
-use crate::{cw20_mint, instantiate_cw20, instantiate_test_astroport_contract};
+use crate::{cw20_mint, instantiate_cw20};
 
 const TEST_CONFIG_PATH: &str = "tests/configs/terra.yaml";
 
@@ -214,4 +217,27 @@ pub fn setup_pool_and_test_contract(
         contract_addr,
         asset_list,
     ))
+}
+
+pub fn instantiate_test_astroport_contract<'a, R: Runner<'a>>(
+    runner: &'a R,
+    code_id: u64,
+    pair_addr: String,
+    generator_addr: String,
+    astro_addr: String,
+    lp_token_addr: String,
+    signer: &SigningAccount,
+) -> RunnerResult<String> {
+    let init_msg = AstroportContractInstantiateMsg {
+        pair_addr,
+        lp_token_addr,
+        generator_addr,
+        astro_addr,
+    };
+
+    let wasm = Wasm::new(runner);
+    Ok(wasm
+        .instantiate(code_id, &init_msg, None, None, &[], signer)?
+        .data
+        .address)
 }

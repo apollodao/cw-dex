@@ -1,60 +1,12 @@
-use std::str::FromStr;
-
 use apollo_utils::assets::separate_natives_and_cw20s;
 use cosmwasm_std::{StdResult, Uint128};
 use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 use cw20_base::msg::InstantiateMsg as Cw20InstantiateMsg;
 use cw_asset::{AssetInfo, AssetList};
-use cw_dex_test_contract::msg::{AstroportContractInstantiateMsg, ExecuteMsg, InstantiateMsg};
-use osmosis_testing::cosmrs::proto::cosmos::bank::v1beta1::QueryBalanceRequest;
+use cw_dex_test_contract::msg::ExecuteMsg;
+use cw_it::helpers::bank_balance_query;
 use osmosis_testing::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
-use osmosis_testing::{
-    Account, Bank, Module, Runner, RunnerExecuteResult, RunnerResult, SigningAccount, Wasm,
-};
-
-pub fn instantiate_test_contract<'a, R: Runner<'a>>(
-    runner: &'a R,
-    code_id: u64,
-    pool_id: u64,
-    lock_id: u64,
-    lock_duration: u64,
-    signer: &SigningAccount,
-) -> RunnerResult<String> {
-    let init_msg = InstantiateMsg {
-        pool_id,
-        lock_duration,
-        lock_id,
-    };
-
-    let wasm = Wasm::new(runner);
-    Ok(wasm
-        .instantiate(code_id, &init_msg, None, None, &[], signer)?
-        .data
-        .address)
-}
-
-pub fn instantiate_test_astroport_contract<'a, R: Runner<'a>>(
-    runner: &'a R,
-    code_id: u64,
-    pair_addr: String,
-    generator_addr: String,
-    astro_addr: String,
-    lp_token_addr: String,
-    signer: &SigningAccount,
-) -> RunnerResult<String> {
-    let init_msg = AstroportContractInstantiateMsg {
-        pair_addr,
-        lp_token_addr,
-        generator_addr,
-        astro_addr,
-    };
-
-    let wasm = Wasm::new(runner);
-    Ok(wasm
-        .instantiate(code_id, &init_msg, None, None, &[], signer)?
-        .data
-        .address)
-}
+use osmosis_testing::{Account, Module, Runner, RunnerExecuteResult, SigningAccount, Wasm};
 
 pub fn provide_liquidity<'a, R: Runner<'a>>(
     runner: &'a R,
@@ -132,31 +84,15 @@ pub fn cw20_balance_query<'a>(
     Ok(res.balance)
 }
 
-/// Query the balance of a native token
-pub fn query_token_balance<'a, R>(runner: &'a R, denom: &str, address: &str) -> Uint128
-where
-    R: Runner<'a>,
-{
-    let bank = Bank::new(runner);
-    let balance = bank
-        .query_balance(&QueryBalanceRequest {
-            address: address.to_string(),
-            denom: denom.to_string(),
-        })
-        .unwrap()
-        .balance
-        .unwrap_or_default()
-        .amount;
-    Uint128::from_str(&balance).unwrap()
-}
-
 /// Query the balance of a cw_asset AssetInfo
 pub fn query_asset_balance<'a, R>(runner: &'a R, asset_info: &AssetInfo, address: &str) -> Uint128
 where
     R: Runner<'a>,
 {
     match asset_info {
-        AssetInfo::Native(denom) => query_token_balance(runner, denom, address),
+        AssetInfo::Native(denom) => {
+            bank_balance_query(runner, address.to_string(), denom.clone()).unwrap()
+        }
         AssetInfo::Cw20(contract_addr) => {
             cw20_balance_query(runner, contract_addr.to_string(), address.to_string()).unwrap()
         }

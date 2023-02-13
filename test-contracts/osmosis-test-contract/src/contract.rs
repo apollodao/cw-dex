@@ -10,7 +10,7 @@ use cw_dex::traits::{ForceUnlock, Pool, Stake, Unlock};
 
 use crate::error::ContractError;
 use crate::state::{POOL, STAKING};
-use cw_dex_test_contract::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use cw_dex_test_contract::msg::{ExecuteMsg, OsmosisTestContractInstantiateMsg, QueryMsg};
 
 /*
 // version info for migration info
@@ -23,7 +23,7 @@ pub fn instantiate(
     deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    msg: InstantiateMsg,
+    msg: OsmosisTestContractInstantiateMsg,
 ) -> Result<Response, ContractError> {
     let pool = OsmosisPool::new(msg.pool_id, deps.as_ref())?;
     POOL.save(deps.storage, &pool)?;
