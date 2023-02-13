@@ -30,11 +30,19 @@ jobs:
         env:
           RUST_BACKTRACE: 1
 
-      - name: Build test contract wasm binaries
+      - name: Build osmosis test contract wasm binary
         uses: actions-rs/cargo@v1
         with:
           command: build
           args: --target wasm32-unknown-unknown --lib --release -p osmosis-test-contract
+        env:
+          RUST_BACKTRACE: 1
+
+      - name: Build astroport test contract wasm binary
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --target wasm32-unknown-unknown --lib --release -p astroport-test-contract
         env:
           RUST_BACKTRACE: 1
 
@@ -43,6 +51,14 @@ jobs:
         with:
           command: test
           args: --locked --test osmosis_tests
+        env:
+          RUST_BACKTRACE: 1
+
+      - name: Run astroport integration tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --locked --test astroport_tests
         env:
           RUST_BACKTRACE: 1
 
