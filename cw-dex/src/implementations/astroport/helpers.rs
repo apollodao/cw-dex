@@ -1,7 +1,9 @@
 #![allow(missing_docs)]
 
-use super::msg::{Config, FactoryQueryMsg, FeeInfo, FeeInfoResponse, PairType};
-use astroport_types::asset::AssetInfo as AstroAssetInfo;
+use astroport_types::asset::{AssetInfo as AstroAssetInfo, PairInfo};
+use astroport_types::factory::{FeeInfoResponse, PairType, QueryMsg as FactoryQueryMsg};
+use astroport_types::querier::FeeInfo;
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_binary, Addr, Decimal, Env, QuerierWrapper, QueryRequest, StdResult, Uint128, WasmQuery,
 };
@@ -41,8 +43,22 @@ pub const N_COINS: u8 = 2;
 pub const AMP_PRECISION: u64 = 100;
 pub const ITERATIONS: u8 = 32;
 
+/// Astroport stable pair config
+#[cw_serde]
+pub struct StablePairConfig {
+    pub pair_info: PairInfo,
+    pub factory_addr: Addr,
+    pub block_time_last: u64,
+    pub price0_cumulative_last: Uint128,
+    pub price1_cumulative_last: Uint128,
+    pub init_amp: u64,
+    pub init_amp_time: u64,
+    pub next_amp: u64,
+    pub next_amp_time: u64,
+}
+
 /// Compute actual amplification coefficient (A)
-pub fn compute_current_amp(config: &Config, env: &Env) -> StdResult<u64> {
+pub fn compute_current_amp(config: &StablePairConfig, env: &Env) -> StdResult<u64> {
     let block_time = env.block.time.seconds();
 
     if block_time < config.next_amp_time {
@@ -142,8 +158,8 @@ pub fn calculate_step(
 
 // Astroport StableSwap pair does not return needed Config elements with smart
 // query Raw query gets all the necessary elements
-pub fn query_pair_config(querier: &QuerierWrapper, pair: Addr) -> StdResult<Config> {
-    Item::<Config>::new("config").query(querier, pair)
+pub fn query_pair_config(querier: &QuerierWrapper, pair: Addr) -> StdResult<StablePairConfig> {
+    Item::<StablePairConfig>::new("config").query(querier, pair)
 }
 
 pub fn query_token_precision(

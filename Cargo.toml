@@ -27,12 +27,12 @@ thiserror = { version = "1.0.31" }
 apollo-cw-asset = "0.1.0"
 osmosis-testing = { git = "https://github.com/apollodao/osmosis-rust.git", branch = "osmosis-v13" }
 osmosis-std = { git = "https://github.com/apollodao/osmosis-rust.git", branch = "osmosis-v13" }
-cw-it = { git = "https://github.com/apollodao/cw-it.git", ref = "4de4f23f257ccf694a4d5cabb3db0051292a5ab6" }
+cw-it = { git = "https://github.com/apollodao/cw-it.git", rev = "1a3eea575ef82e71460db7296a9e0b5ffa98dcff" }
 cw-dex = { path = "cw-dex" }
 cw-dex-test-contract = { path = "test-contracts/package" }
 cw-dex-test-helpers = { path = "test-helpers" }
 apollo-utils = "0.1.0"
-astroport-types = "0.1.0"
+astroport-types = "0.1.3"
 
 
 [profile.release]
