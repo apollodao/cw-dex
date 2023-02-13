@@ -37,8 +37,8 @@ mod tests {
         lock_duration: Option<u64>,
     ) -> RunnerResult<(OsmosisTestApp, Vec<SigningAccount>, u64, String)> {
         setup_pool_and_test_contract(
-            pool_type,
-            initial_liquidity,
+            &pool_type,
+            &initial_liquidity,
             lock_duration.unwrap_or(TWO_WEEKS_IN_SECS),
             1, // Lock ID. Since it is the first lock it will be 1.
             TEST_CONTRACT_WASM_FILE_PATH,

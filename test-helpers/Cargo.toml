@@ -4,7 +4,7 @@ description = "Contract to test the cw-dex library"
 version = "0.1.0"
 authors = ["Pacman <pacman@apollo.farm>"]
 edition = "2021"
-license.workspace = true
+license = { workspace = true }
 
 exclude = [
   # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
@@ -31,6 +31,8 @@ osmosis-testing = { workspace = true }
 osmosis-std = { workspace = true }
 apollo-utils = { workspace = true }
 cw-dex-test-contract = { workspace = true }
+proptest = "1.0.0"
+proptest-derive = "0.3.0"
 cw-it = { workspace = true, features = ["astroport"] }
 astroport = { git = "https://github.com/apollodao/astroport/", rev = "afbf5e70c3d7bf986bebba65609b5e60016f5919" }
 cw20 = "0.16.0"
