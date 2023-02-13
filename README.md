@@ -8,4 +8,3 @@ that the same contract code can be used to interact with any of them.
 The currently supported decentralized exchanges are:
 - [Osmosis](src/implementations/osmosis/)
 - [Astroport](src/implementations/astroport/)
-- [Junoswap](src/implementations/junoswap/)

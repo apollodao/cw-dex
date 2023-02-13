@@ -15,9 +15,6 @@ use {
     crate::implementations::osmosis::OsmosisPool, apollo_cw_asset::AssetInfoBase, std::str::FromStr,
 };
 
-#[cfg(feature = "junoswap")]
-use crate::junoswap::JunoswapPool;
-
 /// An enum with all known variants that implement the Pool trait.
 /// The ideal solution would of course instead be to use a trait object so that
 /// the caller can pass in any type that implements the Pool trait, but trait
@@ -29,9 +26,6 @@ pub enum Pool {
     /// Contains an Osmosis pool implementation
     #[cfg(feature = "osmosis")]
     Osmosis(OsmosisPool),
-    /// Contains an Junoswap pool implementation
-    #[cfg(feature = "junoswap")]
-    Junoswap(JunoswapPool),
     /// Contains an Astroport pool implementation
     #[cfg(feature = "astroport")]
     Astroport(AstroportPool),
@@ -45,8 +39,6 @@ impl Pool {
         match self {
             #[cfg(feature = "osmosis")]
             Pool::Osmosis(x) => Box::new(*x),
-            #[cfg(feature = "junoswap")]
-            Pool::Junoswap(x) => Box::new(x.clone()),
             #[cfg(feature = "astroport")]
             Pool::Astroport(x) => Box::new(x.clone()),
             _ => {
