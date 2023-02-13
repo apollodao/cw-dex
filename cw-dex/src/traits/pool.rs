@@ -1,7 +1,7 @@
 //! Contains the `Pool` trait for abstracting the behavior of a dex pool.
 
+use apollo_cw_asset::{Asset, AssetInfo, AssetList};
 use cosmwasm_std::{Deps, Env, Response, StdResult, Uint128};
-use cw_asset::{Asset, AssetInfo, AssetList};
 
 use crate::error::CwDexError;
 

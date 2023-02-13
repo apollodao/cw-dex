@@ -1,11 +1,11 @@
 #![allow(missing_docs)]
 
 use super::msg::{Config, FactoryQueryMsg, FeeInfo, FeeInfoResponse, PairType};
+use astroport_types::asset::AssetInfo as AstroAssetInfo;
 use cosmwasm_std::{
     to_binary, Addr, Decimal, Env, QuerierWrapper, QueryRequest, StdResult, Uint128, WasmQuery,
 };
 use cw20::{Cw20QueryMsg, TokenInfoResponse};
-use cw_asset::astroport::AstroAssetInfo;
 use cw_storage_plus::Item;
 use std::cmp::Ordering;
 

@@ -35,6 +35,6 @@ cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true }
 cw-storage-plus = { workspace = true }
 thiserror = { workspace = true }
-cw-asset = { workspace = true }
+apollo-cw-asset = { workspace = true }
 cw-dex = { workspace = true, features = ["osmosis"] }
 cw-dex-test-contract = { workspace = true }

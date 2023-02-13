@@ -1,11 +1,11 @@
+use apollo_cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use apollo_utils::assets::separate_natives_and_cw20s;
-use astroport::asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo};
-use astroport::factory::PairType;
-use astroport::pair::{ExecuteMsg as PairExecuteMsg, StablePoolParams};
+use astroport_types::asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo};
+use astroport_types::factory::PairType;
+use astroport_types::pair::{ExecuteMsg as PairExecuteMsg, StablePoolParams};
 use cosmwasm_std::{to_binary, Addr, Coin, Decimal, Uint128};
 use cw20::{Cw20ExecuteMsg, MinterResponse};
 use cw20_base::msg::InstantiateMsg as Cw20InstantiateMsg;
-use cw_asset::{AssetBase, AssetInfo, AssetInfoBase, AssetList};
 use cw_dex_test_contract::msg::AstroportContractInstantiateMsg;
 use cw_it::astroport::{create_astroport_pair, instantiate_astroport, upload_astroport_contracts};
 use cw_it::config::TestConfig;
@@ -103,7 +103,7 @@ pub fn setup_pool_and_test_contract(
     for (asset, amount) in initial_liquidity.into_iter() {
         if asset == "astro" {
             asset_list
-                .add(&AssetBase::new(
+                .add(&Asset::new(
                     AssetInfo::Cw20(Addr::unchecked(
                         astroport_contracts.clone().astro_token.address,
                     )),
@@ -112,14 +112,14 @@ pub fn setup_pool_and_test_contract(
                 .unwrap();
         } else if asset == "uluna" {
             asset_list
-                .add(&AssetBase::new(
+                .add(&Asset::new(
                     AssetInfo::Native("uluna".to_string()),
                     Uint128::new(amount.into()),
                 ))
                 .unwrap();
         } else if asset == "apollo" {
             asset_list
-                .add(&AssetBase::new(
+                .add(&Asset::new(
                     AssetInfo::Cw20(Addr::unchecked(apollo_token.clone())),
                     Uint128::new(amount.into()),
                 ))

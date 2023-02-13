@@ -2,12 +2,12 @@
 
 use std::vec;
 
+use apollo_cw_asset::{Asset, AssetInfo, AssetList};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_binary, Addr, CosmosMsg, Deps, Env, Event, QuerierWrapper, QueryRequest, Response, StdError,
     StdResult, Uint128, WasmMsg, WasmQuery,
 };
-use cw_asset::{Asset, AssetInfo, AssetList};
 use wasmswap::msg::{
     ExecuteMsg, InfoResponse, QueryMsg, Token1ForToken2PriceResponse, TokenSelect,
 };

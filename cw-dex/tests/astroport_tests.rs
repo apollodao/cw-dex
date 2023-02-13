@@ -1,8 +1,8 @@
+use apollo_cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use apollo_utils::coins::coin_from_str;
 use apollo_utils::submessages::{find_event, parse_attribute_value};
-use astroport::factory::PairType;
+use astroport_types::factory::PairType;
 use cosmwasm_std::{Coin, Decimal, SubMsgResponse, Uint128};
-use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use cw_dex::astroport::msg::PoolResponse;
 use cw_dex::implementations::astroport::msg::PairQueryMsg;
 use cw_dex_test_contract::msg::{AstroportExecuteMsg, ExecuteMsg, QueryMsg};

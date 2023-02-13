@@ -7,7 +7,7 @@ use cosmwasm_std::{
 };
 use cw20::Cw20ExecuteMsg;
 
-use cw_asset::AssetList;
+use apollo_cw_asset::AssetList;
 use cw_utils::Duration;
 use stake_cw20::msg::{
     ExecuteMsg as Cw20StakeExecuteMsg, QueryMsg as Cw20StakeQueryMsg,
