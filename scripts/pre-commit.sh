@@ -16,7 +16,7 @@ if ! cargo make --version 2&>/dev/null; then
 fi
 
 makefile="$PWD/Makefile.toml"
-steps="clippy-check format-check machete-check"
+steps="clippy-check format-check machete-check todo-check"
 
 # TODO: save staged and non-staged files here and automatically
 #		`git add` any new modified files between steps to avoid having the user

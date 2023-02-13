@@ -19,7 +19,7 @@ ignore = [
 ]
 
 [bans]
-multiple-versions = "allow" # TODO:update this
+multiple-versions = "allow"
 deny = []
 skip = []
 
@@ -56,4 +56,3 @@ expression = "ISC"
 license-files = [
     { path = "LICENSE", hash = 0xbd0eed23 },
 ]
-
