@@ -1,3 +1,4 @@
+use apollo_utils::assets::separate_natives_and_cw20s;
 use astroport::asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo};
 use astroport::factory::PairType;
 use astroport::pair::{ExecuteMsg as PairExecuteMsg, StablePoolParams};
@@ -186,16 +187,7 @@ pub fn setup_pool_and_test_contract(
         auto_stake: Some(false),
         receiver: None,
     };
-    let native_coins = asset_list
-        .into_iter()
-        .filter_map(|asset| match &asset.info {
-            AssetInfoBase::Native(denom) => Some(Coin {
-                denom: denom.to_string(),
-                amount: asset.amount,
-            }),
-            _ => None,
-        })
-        .collect::<Vec<_>>();
+    let (native_coins, _) = separate_natives_and_cw20s(&asset_list);
     let _res = wasm
         .execute(&pair_addr, &provide_liq_msg, &native_coins, admin)
         .unwrap();
