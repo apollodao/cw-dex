@@ -7,11 +7,12 @@ use cosmwasm_std::{
 };
 use cw20::Cw20ExecuteMsg;
 
-use super::msg::{
-    GeneratorCw20HookMsg, GeneratorExecuteMsg, GeneratorQueryMsg, PendingTokenResponse,
-};
 use apollo_cw_asset::{Asset, AssetList};
 use astroport_types::asset::Asset as AstroAsset;
+use astroport_types::generator::{
+    Cw20HookMsg as GeneratorCw20HookMsg, ExecuteMsg as GeneratorExecuteMsg, PendingTokenResponse,
+    QueryMsg as GeneratorQueryMsg,
+};
 
 use crate::traits::{Rewards, Stake, Staking, Unstake};
 use crate::CwDexError;

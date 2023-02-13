@@ -16,14 +16,15 @@ use super::helpers::{
     adjust_precision, compute_current_amp, compute_d, query_pair_config, query_supply,
     query_token_precision, MAX_ALLOWED_SLIPPAGE, N_COINS, U256,
 };
-use super::msg::{
-    PairCw20HookMsg, PairExecuteMsg, PairInfo, PairQueryMsg, PairType, PoolResponse,
-    SimulationResponse,
-};
 use crate::traits::Pool;
 use crate::CwDexError;
 use apollo_utils::assets::separate_natives_and_cw20s;
-use astroport_types::asset::AssetInfo as AstroAssetInfo;
+use astroport_types::asset::{AssetInfo as AstroAssetInfo, PairInfo};
+use astroport_types::factory::PairType;
+use astroport_types::pair::{
+    Cw20HookMsg as PairCw20HookMsg, ExecuteMsg as PairExecuteMsg, PoolResponse,
+    QueryMsg as PairQueryMsg, SimulationResponse,
+};
 
 /// Represents an AMM pool on Astroport
 #[cw_serde]
