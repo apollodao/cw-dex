@@ -12,11 +12,11 @@ use osmosis_std::types::osmosis::gamm::v1beta1::{
     SwapAmountInRoute,
 };
 
+use apollo_cw_asset::{Asset, AssetInfo, AssetList};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     Coin, CosmosMsg, Deps, Env, Event, QuerierWrapper, Response, StdError, StdResult, Uint128,
 };
-use cw_asset::{Asset, AssetInfo, AssetList};
 
 use crate::traits::Pool;
 use crate::CwDexError;
@@ -296,7 +296,7 @@ impl Pool for OsmosisPool {
 
 #[cfg(test)]
 mod tests {
-    use cw_asset::AssetInfo;
+    use apollo_cw_asset::AssetInfo;
 
     use crate::traits::Pool;
 

@@ -1,11 +1,11 @@
 use crate::error::ContractError;
 use crate::state::{POOL, STAKING};
+use apollo_cw_asset::{Asset, AssetInfo, AssetList};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, Uint128,
 };
-use cw_asset::{Asset, AssetInfo, AssetList};
 use cw_dex::astroport::{AstroportPool, AstroportStaking};
 use cw_dex::traits::{Pool, Stake, Unstake};
 use cw_dex_test_contract::msg::{

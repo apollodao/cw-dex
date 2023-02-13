@@ -1,8 +1,8 @@
 mod tests {
+    use apollo_cw_asset::{Asset, AssetInfo};
     use apollo_utils::coins::coin_from_str;
     use apollo_utils::submessages::{find_event, parse_attribute_value};
     use cosmwasm_std::{Coin, SubMsgResponse, Uint128};
-    use cw_asset::{Asset, AssetInfo};
     use cw_dex_test_contract::msg::{ExecuteMsg, QueryMsg};
     use cw_dex_test_helpers::osmosis::{setup_pool_and_test_contract, OsmosisPoolType};
     use cw_dex_test_helpers::provide_liquidity;

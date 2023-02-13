@@ -1,5 +1,5 @@
+use apollo_cw_asset::{AssetInfo, AssetList};
 use cosmwasm_std::{Coin, Uint128};
-use cw_asset::{AssetInfo, AssetList};
 use cw_dex_test_contract::msg::OsmosisTestContractInstantiateMsg;
 use cw_it::helpers::upload_wasm_file;
 use osmosis_std::types::osmosis::gamm::poolmodels::balancer::v1beta1::MsgCreateBalancerPool;

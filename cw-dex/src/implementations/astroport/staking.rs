@@ -10,8 +10,8 @@ use cw20::Cw20ExecuteMsg;
 use super::msg::{
     GeneratorCw20HookMsg, GeneratorExecuteMsg, GeneratorQueryMsg, PendingTokenResponse,
 };
-use cw_asset::astroport::AstroAsset;
-use cw_asset::{Asset, AssetList};
+use apollo_cw_asset::{Asset, AssetList};
+use astroport_types::asset::Asset as AstroAsset;
 
 use crate::traits::{Rewards, Stake, Staking, Unstake};
 use crate::CwDexError;

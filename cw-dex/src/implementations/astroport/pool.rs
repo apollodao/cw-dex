@@ -2,6 +2,7 @@
 
 use std::str::FromStr;
 
+use apollo_cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use apollo_utils::iterators::IntoElementwise;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
@@ -9,7 +10,6 @@ use cosmwasm_std::{
     QueryRequest, Response, StdError, StdResult, Uint128, WasmMsg, WasmQuery,
 };
 use cw20::Cw20ExecuteMsg;
-use cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use cw_utils::Expiration;
 
 use super::helpers::{
@@ -23,7 +23,7 @@ use super::msg::{
 use crate::traits::Pool;
 use crate::CwDexError;
 use apollo_utils::assets::separate_natives_and_cw20s;
-use cw_asset::astroport::AstroAssetInfo;
+use astroport_types::asset::AssetInfo as AstroAssetInfo;
 
 /// Represents an AMM pool on Astroport
 #[cw_serde]

@@ -5,7 +5,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, QuerierWrapper, StdResult, Uint128};
 
-use cw_asset::astroport::{AstroAsset, AstroAssetInfo};
+use astroport_types::asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo};
 
 ///////////////////////////////
 // Pair Msgs

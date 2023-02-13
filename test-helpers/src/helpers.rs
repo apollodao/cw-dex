@@ -1,8 +1,8 @@
+use apollo_cw_asset::{AssetInfo, AssetList};
 use apollo_utils::assets::separate_natives_and_cw20s;
 use cosmwasm_std::{StdResult, Uint128};
 use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 use cw20_base::msg::InstantiateMsg as Cw20InstantiateMsg;
-use cw_asset::{AssetInfo, AssetList};
 use cw_dex_test_contract::msg::ExecuteMsg;
 use cw_it::helpers::bank_balance_query;
 use osmosis_testing::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
