@@ -32,7 +32,7 @@ jobs:
         with:
           toolchain: nightly
           command: clippy
-          args: --fix -- -D warnings
+          args: --all-features -- -D warnings
 
       - name: Run cargo fmt
         uses: actions-rs/cargo@v1
