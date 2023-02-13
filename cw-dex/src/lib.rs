@@ -12,7 +12,6 @@
 //! The currently supported decentralized exchanges are:
 //! - [Osmosis](crate::implementations::osmosis)
 //! - [Astroport](crate::implementations::astroport)
-//! - [Junoswap](crate::implementations::junoswap)
 
 pub mod error;
 pub mod implementations;
