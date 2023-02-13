@@ -1,5 +1,5 @@
 [package]
-name = "cw-dex-test-helpers"
+name = "astroport-test-contract"
 description = "Contract to test the cw-dex library"
 version = "0.1.0"
 authors = ["Pacman <pacman@apollo.farm>"]
@@ -17,6 +17,12 @@ exclude = [
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+# for more explicit tests, cargo test --features=backtraces
+# backtraces = ["cosmwasm-std/backtraces"]
+# use library feature to disable all instantiate/execute/query exports
+library = []
+
 [package.metadata.scripts]
 optimize = """docker run --rm -v "$(pwd)":/code \
   --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
@@ -25,15 +31,10 @@ optimize = """docker run --rm -v "$(pwd)":/code \
 """
 
 [dependencies]
+cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true }
+cw-storage-plus = { workspace = true }
+thiserror = { workspace = true }
 cw-asset = { workspace = true }
-osmosis-testing = { workspace = true }
-osmosis-std = { workspace = true }
-apollo-utils = { workspace = true }
+cw-dex = { workspace = true, features = ["astroport"] }
 cw-dex-test-contract = { workspace = true }
-proptest = "1.0.0"
-proptest-derive = "0.3.0"
-cw-it = { workspace = true, features = ["astroport"] }
-astroport = { git = "https://github.com/apollodao/astroport/", rev = "afbf5e70c3d7bf986bebba65609b5e60016f5919" }
-cw20 = "0.16.0"
-cw20-base = "0.16.0"

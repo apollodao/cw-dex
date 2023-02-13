@@ -8,7 +8,7 @@ env:
 
 jobs:
   lint-and-format:
-    name: Lint and format
+    name: Lint and check formatting
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
@@ -32,16 +32,19 @@ jobs:
         with:
           toolchain: nightly
           command: clippy
-          args: --fix -- -D warnings
+          args: --all-features -- -D warnings
 
       - name: Run cargo fmt
         uses: actions-rs/cargo@v1
         with:
           toolchain: nightly
           command: fmt
-          args: --all -- --check
+          args: --all -- --check --verbose
 
       - name: Run cargo machete
         uses: actions-rs/cargo@v1
         with:
           command: machete
+
+      - name: Lint todo comments
+        run: ./scripts/todo-lint.sh
