@@ -32,7 +32,7 @@ apollo-utils = { workspace = true }
 osmosis-std = { workspace = true, optional = true }
 
 # Astroport
-astroport-types = { version = "0.1.0", optional = true}
+astroport-types = { workspace = true, optional = true}
 uint = {version = "0.9.3", optional = true}
 
 # Junoswap

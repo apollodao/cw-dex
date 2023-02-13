@@ -34,6 +34,6 @@ cw-dex-test-contract = { workspace = true }
 proptest = "1.0.0"
 proptest-derive = "0.3.0"
 cw-it = { workspace = true, features = ["astroport"] }
-astroport-types = "0.1.0"
+astroport-types = { workspace = true }
 cw20 = "0.16.0"
 cw20-base = "0.16.0"
