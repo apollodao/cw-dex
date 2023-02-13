@@ -34,7 +34,7 @@ astroport-types = { workspace = true, optional = true}
 uint = {version = "0.9.3", optional = true}
 
 [dev-dependencies]
-osmosis-testing = { workspace = true }
+osmosis-test-tube = { workspace = true }
 cw-it = { workspace = true }
 test-case = "2.2.2"
 cw-dex-test-contract = { workspace = true }

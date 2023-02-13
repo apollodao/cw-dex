@@ -4,7 +4,7 @@ use cw_dex_test_contract::msg::ExecuteMsg;
 use cw_dex_test_helpers::osmosis::{setup_pool_and_test_contract, test_pool, OsmosisTestPool};
 use cw_it::helpers::bank_balance_query;
 
-use osmosis_testing::{Module, OsmosisTestApp, RunnerResult, SigningAccount, Wasm};
+use osmosis_test_tube::{Module, OsmosisTestApp, RunnerResult, SigningAccount, Wasm};
 use prop::collection::vec;
 use proptest::prelude::*;
 

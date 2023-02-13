@@ -7,7 +7,7 @@ use osmosis_std::types::osmosis::gamm::poolmodels::stableswap::v1beta1::{
     MsgCreateStableswapPool, PoolParams as StableSwapPoolParams,
 };
 use osmosis_std::types::osmosis::gamm::v1beta1::{PoolAsset, PoolParams};
-use osmosis_testing::{
+use osmosis_test_tube::{
     Account, Gamm, Module, OsmosisTestApp, Runner, RunnerResult, SigningAccount, Wasm,
 };
 use prop::collection::vec;
