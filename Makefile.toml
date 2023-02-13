@@ -33,6 +33,9 @@ args = ["clippy","--all-features","--","-D","warnings"]
 command = "cargo"
 args = ["clippy","--fix","--allow-staged","--","-D","warnings"]
 
+[tasks.todo-check]
+script = { file = "${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/scripts/todo-lint.sh", absolute_path = true }
+
 # This task requires the `cargo-tarpaulin` package: https://crates.io/crates/cargo-tarpaulin
 [tasks.cov]
 command = "cargo"
