@@ -133,7 +133,7 @@ pub fn execute_force_unlock(
     env: Env,
     _info: MessageInfo,
     amount: Uint128,
-    lockup_id: u64,
+    lockup_id: Option<u64>,
 ) -> Result<Response, ContractError> {
     let staking = STAKING.load(deps.storage)?;
 

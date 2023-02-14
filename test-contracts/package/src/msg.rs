@@ -37,7 +37,7 @@ pub enum ExecuteMsg {
     },
     ForceUnlock {
         amount: Uint128,
-        lockup_id: u64,
+        lockup_id: Option<u64>,
     },
     Swap {
         offer: Asset,
