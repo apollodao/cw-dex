@@ -9,8 +9,8 @@ use cw_dex_test_helpers::astroport::setup_pool_and_test_contract;
 use cw_dex_test_helpers::{
     cw20_balance_query, cw20_transfer, provide_liquidity, query_asset_balance,
 };
-use osmosis_testing::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
-use osmosis_testing::{
+use osmosis_test_tube::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
+use osmosis_test_tube::{
     Account, ExecuteResponse, Module, OsmosisTestApp, Runner, RunnerResult, SigningAccount, Wasm,
 };
 use test_case::test_case;

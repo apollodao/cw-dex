@@ -4,7 +4,7 @@ use cw_dex_test_contract::msg::ExecuteMsg;
 use cw_dex_test_helpers::osmosis::{setup_pool_and_test_contract, test_pool, OsmosisTestPool};
 use cw_it::helpers::bank_balance_query;
 
-use osmosis_testing::{Module, OsmosisTestApp, RunnerResult, SigningAccount, Wasm};
+use osmosis_test_tube::{Module, OsmosisTestApp, RunnerResult, SigningAccount, Wasm};
 use prop::collection::vec;
 use proptest::prelude::*;
 
@@ -66,7 +66,7 @@ proptest! {
     fn test_pool_swap(
         (pool,offer_idx,ask_idx, offer_amount) in test_pool().prop_flat_map(|x| {
             let len = x.pool_liquidity.len();
-            (Just(x.clone()), 0usize..len, 0usize..len)
+            (Just(x), 0usize..len, 0usize..len)
         })
         .prop_filter("Offer and ask can't be the same asset", |(_x, offer_idx, ask_idx)| {
             offer_idx != ask_idx

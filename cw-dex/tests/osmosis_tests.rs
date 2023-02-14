@@ -7,8 +7,8 @@ mod tests {
     use cw_dex_test_helpers::osmosis::{setup_pool_and_test_contract, OsmosisPoolType};
     use cw_dex_test_helpers::provide_liquidity;
     use cw_it::helpers::{bank_balance_query, bank_send};
-    use osmosis_testing::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
-    use osmosis_testing::{
+    use osmosis_test_tube::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
+    use osmosis_test_tube::{
         Account, ExecuteResponse, Module, OsmosisTestApp, Runner, RunnerResult, SigningAccount,
         Wasm,
     };
