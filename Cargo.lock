@@ -469,7 +469,7 @@ dependencies = [
  "lazy_static",
  "libc",
  "unicode-width",
- "windows-sys",
+ "windows-sys 0.42.0",
 ]
 
 [[package]]
@@ -717,7 +717,7 @@ dependencies = [
 [[package]]
 name = "cw-it"
 version = "0.1.0"
-source = "git+https://github.com/apollodao/cw-it.git?rev=0eb3f3ce724901413df7440335fd832a95d951e6#0eb3f3ce724901413df7440335fd832a95d951e6"
+source = "git+https://github.com/apollodao/cw-it.git?rev=bbf4afe9153507efe13b035825396e62055ee3c3#bbf4afe9153507efe13b035825396e62055ee3c3"
 dependencies = [
  "anyhow",
  "astroport-types",
@@ -1099,9 +1099,9 @@ dependencies = [
 
 [[package]]
 name = "fastrand"
-version = "1.8.0"
+version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7a407cfaa3385c4ae6b23e84623d48c2798d06e3e6a1878f7f59f17b3f86499"
+checksum = "e51093e27b0797c359783294ca4f0a911c270184cb10f85783b118614a1501be"
 dependencies = [
  "instant",
 ]
@@ -1778,14 +1778,14 @@ checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
 
 [[package]]
 name = "mio"
-version = "0.8.5"
+version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5d732bc30207a6423068df043e3d02e0735b155ad7ce1a6f76fe2baa5b158de"
+checksum = "5b9d9a46eff5b4ff64b45a9e316a6d1e0bc719ef429cbec4dc630684212bfdf9"
 dependencies = [
  "libc",
  "log",
  "wasi 0.11.0+wasi-snapshot-preview1",
- "windows-sys",
+ "windows-sys 0.45.0",
 ]
 
 [[package]]
@@ -1897,9 +1897,9 @@ checksum = "9b7820b9daea5457c9f21c69448905d723fbd21136ccf521748f23fd49e723ee"
 
 [[package]]
 name = "osmosis-std"
-version = "0.13.2"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10d6fe6ac7fcba45ed61d738091d33c838c4cabbcf4892dc7aa56d19d39cc976"
+checksum = "2fc0a9075efd64ed5a8be3bf134cbf1080570d68384f2ad58ffaac6c00d063fd"
 dependencies = [
  "chrono",
  "cosmwasm-std",
@@ -1939,7 +1939,7 @@ dependencies = [
 [[package]]
 name = "osmosis-test-tube"
 version = "14.1.1"
-source = "git+https://github.com/apollodao/test-tube.git?rev=2039fd847d0c29e5175f298ef4635e121089f917#2039fd847d0c29e5175f298ef4635e121089f917"
+source = "git+https://github.com/apollodao/test-tube.git?rev=d2245dfed56329d8c2e84d109a5a01f29d0db0e8#d2245dfed56329d8c2e84d109a5a01f29d0db0e8"
 dependencies = [
  "base64",
  "bindgen",
@@ -2476,7 +2476,7 @@ version = "0.1.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "713cfb06c7059f3588fb8044c0fad1d09e3c01d225e25b9220dbfdcf16dbb1b3"
 dependencies = [
- "windows-sys",
+ "windows-sys 0.42.0",
 ]
 
 [[package]]
@@ -3007,7 +3007,7 @@ dependencies = [
 [[package]]
 name = "test-tube"
 version = "0.1.1"
-source = "git+https://github.com/apollodao/test-tube.git?rev=2039fd847d0c29e5175f298ef4635e121089f917#2039fd847d0c29e5175f298ef4635e121089f917"
+source = "git+https://github.com/apollodao/test-tube.git?rev=d2245dfed56329d8c2e84d109a5a01f29d0db0e8#d2245dfed56329d8c2e84d109a5a01f29d0db0e8"
 dependencies = [
  "base64",
  "cosmrs",
@@ -3123,7 +3123,7 @@ dependencies = [
  "pin-project-lite",
  "socket2",
  "tokio-macros",
- "windows-sys",
+ "windows-sys 0.42.0",
 ]
 
 [[package]]
@@ -3614,6 +3614,30 @@ name = "windows-sys"
 version = "0.42.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a3e1820f08b8513f676f7ab6c1f99ff312fb97b553d30ff4dd86f9f15728aa7"
+dependencies = [
+ "windows_aarch64_gnullvm",
+ "windows_aarch64_msvc",
+ "windows_i686_gnu",
+ "windows_i686_msvc",
+ "windows_x86_64_gnu",
+ "windows_x86_64_gnullvm",
+ "windows_x86_64_msvc",
+]
+
+[[package]]
+name = "windows-sys"
+version = "0.45.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75283be5efb2831d37ea142365f009c02ec203cd29a3ebecbc093d52315b66d0"
+dependencies = [
+ "windows-targets",
+]
+
+[[package]]
+name = "windows-targets"
+version = "0.42.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e2522491fbfcd58cc84d47aeb2958948c4b8982e9a2d8a2a35bbaed431390e7"
 dependencies = [
  "windows_aarch64_gnullvm",
  "windows_aarch64_msvc",
