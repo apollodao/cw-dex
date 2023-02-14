@@ -11,7 +11,7 @@ env:
 
 jobs:
   coverage:
-    name: Check test coverage
+    name: Check unit test coverage
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
@@ -37,4 +37,4 @@ jobs:
         with:
           toolchain: nightly
           command: tarpaulin
-          args: --workspace --timeout 120 -Z namespaced-features
+          args: --lib --workspace --timeout 120 -Z namespaced-features
