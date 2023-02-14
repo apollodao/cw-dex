@@ -1,42 +1,45 @@
-[package]
-authors = ["Apollo Devs"]
-description = "Helper library for interacting with Cosmos dexes"
-edition = "2021"
-license = "GPL-3.0-or-later"
-name = "cw-dex"
-repository = "https://github.com/apollodao/cw-dex"
-version = "0.0.1"
+[workspace]
+members = ["cw-dex", "test-contracts/*", "test-helpers"]
+resolver = "2"
 
-[features]
-default = ["osmosis"]
-osmosis = []
+[workspace.package]
+authors       = ["Apollo Devs <shared@apollo.farm>"]
+edition       = "2021"
+license       = "MPL-2.0"
+homepage      = "https://apollo.farm"
+repository    = "https://github.com/apollodao/cw-dex"
+documentation = "https://docs.rs/cw-dex"
+keywords      = ["blockchain", "cosmos", "cosmwasm"]
+rust-version  = "1.64.0"
 
-[dependencies]
-osmosis-std = { git = "https://github.com/osmosis-labs/osmosis-rust", rev = "3ea06eda3e5f2979a6232a118544d292a3bfca9f" }
-cosmwasm-schema = "1.1.0"
-cosmwasm-std = {version = "1.1.0", features = ["stargate"]}
-cosmwasm-storage = "1.1.0"
-cw-asset = { git="https://github.com/apollodao/cw-asset.git", features = ["astroport"] }
-cw-storage-plus = "0.16"
-cw-utils = "0.11"
-cw20 = "0.16"
-cw20-base = "0.16"
-num-bigint = "0.4"
-num-rational = "0.4"
-num-traits = "0.2.15"
-osmo-bindings = "0.5.1"
-schemars = "0.8.8"
-serde = {version = "1.0.137", default-features = false, features = ["derive"]}
-thiserror = {version = "1.0.31"}
-prost = {version = "0.11.0", default-features = false, features = ["prost-derive"]}
-apollo-utils = { git = "https://github.com/apollodao/apollo-utils.git" }
+[workspace.dependencies]
+cosmwasm-schema = "1.2.1"
+cosmwasm-std = "1.2.1"
+cosmwasm-storage = "1.2.1"
+cw-storage-plus = "1.0"
+cw2 = "1.0"
+cw-utils = "1.0"
+cw20 = "1.0"
+cw20-base = "1.0"
+schemars = "0.8.10"
+serde = { version = "1.0.145", default-features = false, features = ["derive"] }
+thiserror = { version = "1.0.31" }
+apollo-cw-asset = "0.1.0"
+osmosis-test-tube = { git = "https://github.com/apollodao/test-tube.git", rev = "d2245dfed56329d8c2e84d109a5a01f29d0db0e8" }
+osmosis-std = "0.14.0"
+cw-it = { git = "https://github.com/apollodao/cw-it.git", rev = "bbf4afe9153507efe13b035825396e62055ee3c3" }
+cw-dex = { path = "cw-dex" }
+cw-dex-test-contract = { path = "test-contracts/package" }
+cw-dex-test-helpers = { path = "test-helpers" }
+apollo-utils = "0.1.0"
+astroport-types = "0.1.3"
 
-# Junoswap
-wasmswap = { git = "https://github.com/Wasmswap/wasmswap-contracts.git", tag = "v1.1.0-beta", features = ["library"] }
-cw20-0_10_3 = { package = "cw20", version = "0.10.3" } # We must import this version separately since it is what wasmswap uses.
-stake-cw20 = "0.2"
-stake-cw20-external-rewards = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"] } # TODO: what version?
-
-# Astroport
-astroport-core = { package = "astroport", rev = "126d43216111df786472fe2a845c1e2fadfe4a36", git = "https://github.com/astroport-fi/astroport-core.git" }
-delegate = "0.8"
+[profile.release]
+codegen-units    = 1
+debug            = false
+debug-assertions = false
+incremental      = false
+lto              = true
+opt-level        = 3
+overflow-checks  = true
+rpath            = false
