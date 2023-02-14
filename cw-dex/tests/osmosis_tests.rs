@@ -298,7 +298,7 @@ mod tests {
         // Force unlock LP tokens
         let force_unlock_msg = ExecuteMsg::ForceUnlock {
             amount: unlock_amount,
-            lockup_id: 1,
+            lockup_id: Some(1),
         };
         runner.execute_cosmos_msgs::<MsgExecuteContractResponse>(
             &[force_unlock_msg.into_cosmos_msg(contract_addr.clone(), vec![])],
