@@ -66,7 +66,7 @@ proptest! {
     fn test_pool_swap(
         (pool,offer_idx,ask_idx, offer_amount) in test_pool().prop_flat_map(|x| {
             let len = x.pool_liquidity.len();
-            (Just(x.clone()), 0usize..len, 0usize..len)
+            (Just(x), 0usize..len, 0usize..len)
         })
         .prop_filter("Offer and ask can't be the same asset", |(_x, offer_idx, ask_idx)| {
             offer_idx != ask_idx
