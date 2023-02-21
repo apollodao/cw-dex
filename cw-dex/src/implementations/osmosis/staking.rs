@@ -202,9 +202,9 @@ impl ForceUnlock for OsmosisStaking {
 /// Implementation of superfluid staking for osmosis.
 #[cw_serde]
 pub struct OsmosisSuperfluidStaking {
-    validator_address: Addr,
-    lock_id: Option<u64>,
-    lp_token_denom: String,
+    pub validator_address: Addr,
+    pub lock_id: Option<u64>,
+    pub lp_token_denom: String,
 }
 
 const TWO_WEEKS_IN_SECS: u64 = 14 * 24 * 60 * 60;
