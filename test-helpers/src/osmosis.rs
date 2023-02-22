@@ -182,19 +182,6 @@ pub fn setup_pool_and_test_contract(
     Ok((runner, accs, pool_id, contract_addr))
 }
 
-/// Create an [`AssetList`] from a slice of tuples of asset denominations and
-/// amounts.
-pub fn native_assetlist_from_slice(assets: &[(&str, Uint128)]) -> AssetList {
-    assets
-        .iter()
-        .map(|(denom, amount)| Coin {
-            denom: denom.to_string(),
-            amount: *amount,
-        })
-        .collect::<Vec<_>>()
-        .into()
-}
-
 pub fn instantiate_test_contract<'a, R: Runner<'a>>(
     runner: &'a R,
     code_id: u64,
