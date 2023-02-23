@@ -27,7 +27,8 @@ thiserror = { version = "1.0.31" }
 apollo-cw-asset = "0.1.0"
 osmosis-test-tube = { git = "https://github.com/apollodao/test-tube.git", rev = "d2245dfed56329d8c2e84d109a5a01f29d0db0e8" }
 osmosis-std = "0.14.0"
-cw-it = { git = "https://github.com/apollodao/cw-it.git", rev = "bbf4afe9153507efe13b035825396e62055ee3c3" }
+# cw-it = { git = "https://github.com/apollodao/cw-it.git", branch = "master" }
+cw-it = { path = "../cw-it" }
 cw-dex = { path = "cw-dex" }
 cw-dex-test-contract = { path = "test-contracts/package" }
 cw-dex-test-helpers = { path = "test-helpers" }

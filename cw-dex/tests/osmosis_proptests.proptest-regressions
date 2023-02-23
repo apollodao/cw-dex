@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 8ad6024310b601c568285a2cc35a35fa6e170da6a67cd344adfeea3605d93265 # shrinks to (pool, added_liquidity) = (OsmosisTestPool { assets: [Native("denom0"), Native("denom1"), Native("denom2"), Native("denom3"), Native("denom4")], pool_liquidity: [14849857358886770723, 6929924224632456654, 11042848898156722336, 11743252745312854907, 12844547611706776996], pool_type: Basic }, [1241, 11798042441453439779])
+cc 5f2e2c66c269e7e903e42b25b14245936d62e5d4f72a134f999d2f4b41f286a9 # shrinks to (pool, added_liquidity) = (OsmosisTestPool { assets: [Native("denom0"), Native("denom1"), Native("denom2"), Native("denom3")], pool_liquidity: [13404504703740343156, 14614600668840454824, 12032633473655657727, 13593904774692379966], pool_type: Balancer { pool_weights: [153103, 142231, 787419, 888564] } }, [13529290035338261093])
