@@ -16,6 +16,10 @@ const TEST_CONTRACT_WASM_FILE_PATH: &str =
 
 const TWO_WEEKS_IN_SECONDS: u64 = 1_209_600;
 
+const SIXTY_FOUR_BITS: u128 = 18446744073709551616;
+const HUNDRED_AND_TEN_BITS: u128 = 1298074214633706907132624082305024;
+const HUNDRED_BITS: u128 = 1267650600228229401496703205376;
+
 pub fn setup_pool_and_contract(
     pool: &OsmosisTestPool,
 ) -> RunnerResult<(OsmosisTestApp, Vec<SigningAccount>, u64, String)> {
@@ -30,10 +34,10 @@ proptest! {
 
     #[test]
     fn test_provide_liquidity(
-        (pool,added_liquidity) in test_pool().prop_flat_map(|x| {
+        (pool,added_liquidity) in test_pool(Some(SIXTY_FOUR_BITS..HUNDRED_AND_TEN_BITS)).prop_flat_map(|x| {
             prop_oneof![
-                (Just(x.clone()), vec(1..u64::MAX, 1)),
-                (Just(x.clone()), vec(1..u64::MAX, x.liquidity.len()))
+                (Just(x.clone()), vec(1_000_000_000_000_000u128..HUNDRED_BITS, 1)),
+                (Just(x.clone()), vec(1_000_000_000_000_000u128..HUNDRED_BITS, x.liquidity.len()))
             ]
         })) {
         let (runner, accs, pool_id, contract_addr) = setup_pool_and_contract(&pool).unwrap();
@@ -75,7 +79,7 @@ proptest! {
 
     #[test]
     fn test_pool_swap(
-        (pool,offer_idx,ask_idx, offer_amount) in test_pool().prop_flat_map(|x| {
+        (pool,offer_idx,ask_idx, offer_amount) in test_pool(Some(SIXTY_FOUR_BITS..HUNDRED_AND_TEN_BITS)).prop_flat_map(|x| {
             let len = x.liquidity.len();
             (Just(x), 0usize..len, 0usize..len)
         })
