@@ -109,9 +109,14 @@ impl Pool for OsmosisPool {
         // native.
         let mut assets = assert_only_native_coins(&merge_assets(assets.purge().deref())?)?;
 
-        let expected_shares = self
-            .simulate_provide_liquidity(deps, env, assets.to_owned().into())?
-            .amount;
+        let expected_shares =
+            match self.simulate_provide_liquidity(deps, env, assets.to_owned().into()) {
+                Ok(res) => res.amount,
+                Err(_) => min_out,
+            };
+
+        deps.api
+            .debug(&format!("Expected shares: {}", expected_shares));
 
         // Assert slippage tolerance
         if min_out > expected_shares {

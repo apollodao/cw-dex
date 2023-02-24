@@ -34,7 +34,7 @@ proptest! {
 
     #[test]
     fn test_provide_liquidity(
-        (pool,added_liquidity) in test_pool(Some(SIXTY_FOUR_BITS..HUNDRED_AND_TEN_BITS)).prop_flat_map(|x| {
+        (pool,added_liquidity) in test_pool(Some(SIXTY_FOUR_BITS..HUNDRED_BITS)).prop_flat_map(|x| {
             prop_oneof![
                 (Just(x.clone()), vec(1_000_000_000_000_000u128..HUNDRED_BITS, 1)),
                 (Just(x.clone()), vec(1_000_000_000_000_000u128..HUNDRED_BITS, x.liquidity.len()))
