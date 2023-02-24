@@ -202,8 +202,11 @@ impl ForceUnlock for OsmosisStaking {
 /// Implementation of superfluid staking for osmosis.
 #[cw_serde]
 pub struct OsmosisSuperfluidStaking {
+    /// Address of the validator to delegate to.
     pub validator_address: Addr,
+    /// ID of the lockup record.
     pub lock_id: Option<u64>,
+    /// Denomination of the associated LP token.
     pub lp_token_denom: String,
 }
 
