@@ -37,7 +37,7 @@ uint = {version = "0.9.3", optional = true}
 [dev-dependencies]
 osmosis-test-tube = { workspace = true }
 cw-it = { workspace = true }
-test-case = "2.2.2"
+test-case = "3.0.0"
 cw-dex-test-contract = { workspace = true }
 cw-dex-test-helpers = { workspace = true }
 proptest = "1.0.0"
