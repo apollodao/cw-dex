@@ -5,8 +5,10 @@ use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 use cw20_base::msg::InstantiateMsg as Cw20InstantiateMsg;
 use cw_dex_test_contract::msg::ExecuteMsg;
 use cw_it::helpers::bank_balance_query;
-use osmosis_test_tube::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
-use osmosis_test_tube::{Account, Module, Runner, RunnerExecuteResult, SigningAccount, Wasm};
+use cw_it::osmosis_test_tube::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
+use cw_it::osmosis_test_tube::{
+    Account, Module, Runner, RunnerExecuteResult, SigningAccount, Wasm,
+};
 
 pub fn provide_liquidity<'a, R: Runner<'a>>(
     runner: &'a R,

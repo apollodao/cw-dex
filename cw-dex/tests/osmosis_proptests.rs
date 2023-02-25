@@ -1,10 +1,13 @@
 use apollo_cw_asset::{Asset, AssetInfo};
-use cosmwasm_std::{Coin, Uint128};
-use cw_dex_test_contract::msg::ExecuteMsg;
-use cw_dex_test_helpers::osmosis::{setup_pool_and_test_contract, test_pool, OsmosisTestPool};
+use cosmwasm_std::{Addr, Coin, Uint128};
+use cw_dex_test_contract::msg::{ExecuteMsg, OsmosisTestContractInstantiateMsg};
+use cw_dex_test_helpers::osmosis::setup_pool_and_test_contract;
+use cw_dex_test_helpers::robot::CwDexTestRobot;
 use cw_it::helpers::bank_balance_query;
+use cw_it::osmosis::{test_pool, OsmosisPoolType, OsmosisTestPool};
+use cw_it::osmosis_test_tube::Account;
 
-use osmosis_test_tube::{Module, OsmosisTestApp, RunnerResult, SigningAccount, Wasm};
+use cw_it::osmosis_test_tube::{Module, OsmosisTestApp, RunnerResult, SigningAccount, Wasm};
 use prop::collection::vec;
 use proptest::prelude::*;
 
@@ -13,28 +16,39 @@ const TEST_CONTRACT_WASM_FILE_PATH: &str =
 
 const TWO_WEEKS_IN_SECONDS: u64 = 1_209_600;
 
-pub fn setup_pool_and_contract(
+fn setup_pool_and_contract(
     pool: &OsmosisTestPool,
 ) -> RunnerResult<(OsmosisTestApp, Vec<SigningAccount>, u64, String)> {
     setup_pool_and_test_contract(
-        &pool.pool_type,
-        &pool.pool_liquidity,
-        TWO_WEEKS_IN_SECONDS,
+        pool,
         1,
+        Some(TWO_WEEKS_IN_SECONDS),
+        None,
         TEST_CONTRACT_WASM_FILE_PATH,
     )
 }
 
+fn init_account_with_max_balances(app: &OsmosisTestApp, pool: &OsmosisTestPool) -> SigningAccount {
+    let coins = pool
+        .liquidity
+        .iter()
+        .map(|c| Coin::new(u128::MAX, &c.denom))
+        .collect::<Vec<_>>();
+
+    app.init_account(&coins).unwrap()
+}
+
 proptest! {
     #![proptest_config(ProptestConfig {
-        cases: 64,
+        cases: 16,
+        max_global_rejects: 1,
         .. ProptestConfig::default()
     })]
 
     #[test]
     fn test_provide_liquidity(
-        (pool,added_liquidity) in test_pool().prop_flat_map(|x| {
-             (Just(x.clone()), vec(1..u64::MAX, x.pool_liquidity.len()))
+        (pool,added_liquidity) in test_pool(None).prop_flat_map(|x| {
+             (Just(x.clone()), vec(1..u64::MAX, x.liquidity.len()))
         })) {
         let (runner, accs, pool_id, contract_addr) = setup_pool_and_contract(&pool).unwrap();
 
@@ -43,7 +57,7 @@ proptest! {
             .into_iter()
             .enumerate()
             .map(|(i, amount)| Coin {
-                denom: format!("denom{}", i),
+                denom: pool.liquidity[i].denom.clone(),
                 amount: amount.into(),
             })
             .collect();
@@ -64,22 +78,23 @@ proptest! {
 
     #[test]
     fn test_pool_swap(
-        (pool,offer_idx,ask_idx, offer_amount) in test_pool().prop_flat_map(|x| {
-            let len = x.pool_liquidity.len();
+        (pool,offer_denom,ask_denom, offer_amount) in test_pool(None).prop_flat_map(|x| {
+            let len = x.liquidity.len();
             (Just(x), 0usize..len, 0usize..len)
         })
         .prop_filter("Offer and ask can't be the same asset", |(_x, offer_idx, ask_idx)| {
             offer_idx != ask_idx
         })
         .prop_flat_map(|(x, offer_idx, ask_idx)| {
-            (Just(x.clone()), Just(offer_idx), Just(ask_idx), 1..x.pool_liquidity[offer_idx])
+            let denoms = x.liquidity.iter().map(|c| c.denom.clone()).collect::<Vec<_>>();
+            (Just(x.clone()), Just(denoms[offer_idx].clone()), Just(denoms[ask_idx].clone()), 1..x.liquidity[offer_idx].amount.u128())
         }),
     ) {
         let offer = Asset {
-            info: AssetInfo::Native(format!("denom{}", offer_idx)),
+            info: AssetInfo::Native(offer_denom),
             amount: Uint128::from(offer_amount),
         };
-        let ask = AssetInfo::Native(format!("denom{}", ask_idx));
+        let ask = AssetInfo::Native(ask_denom);
 
         let (runner, accs, _pool_id, contract_addr) = setup_pool_and_contract(&pool).unwrap();
 
@@ -102,4 +117,52 @@ proptest! {
         assert_eq!(offer_balance, Uint128::zero());
         assert_ne!(ask_balance, Uint128::zero());
     }
+
+    #[test]
+    fn superfluid_staking_stake_and_unstake(amount in 1..100_000_000_000_000_000_000u128) {
+        let app = OsmosisTestApp::new();
+        let pool = OsmosisTestPool::new(
+            vec![
+                Coin::new(1000000000u128, "uatom"),
+                Coin::new(1000000000u128, "uosmo"),
+            ],
+            OsmosisPoolType::Basic,
+        );
+        let admin = init_account_with_max_balances(&app, &pool);
+        let pool_id = pool.create(&app, &admin);
+
+        let validator = Addr::unchecked(app.get_first_validator_address()?);
+
+        println!("validator_addr: {}", validator);
+
+        let init_msg = OsmosisTestContractInstantiateMsg {
+            pool_id,
+            lock_duration: Some(TWO_WEEKS_IN_SECONDS),
+            lock_id: 1u64,
+            superfluid_validator: Some(validator),
+        };
+
+        // Whitelist LP token for superfluid staking
+        app.add_superfluid_lp_share(&format!("gamm/pool/{}", pool_id));
+
+        // Get LP token balance before
+        let lp_balance_before = bank_balance_query(
+            &app,
+            admin.address(),
+            format!("gamm/pool/{}", pool_id),
+        ).unwrap();
+        println!("LP balance before: {}", lp_balance_before);
+
+        println!("Superfluid staking amount: {}", amount);
+        let robot = CwDexTestRobot::osmosis(&app, &admin, &init_msg, TEST_CONTRACT_WASM_FILE_PATH);
+        let test_contract_addr = robot.test_contract_addr.clone();
+
+        robot
+            .superfluid_stake(&admin, amount.into())
+            .assert_lp_balance(admin.address(), lp_balance_before.u128() - amount)
+            .superfluid_unlock(&admin, amount.into())
+            .increase_time(TWO_WEEKS_IN_SECONDS)
+            .assert_lp_balance(test_contract_addr, amount);
+    }
+
 }

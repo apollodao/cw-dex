@@ -2,14 +2,15 @@ use apollo_cw_asset::{Asset, AssetInfo, AssetList};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, Uint128,
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
+    Uint128,
 };
-use cw_dex::osmosis::{OsmosisPool, OsmosisStaking};
+use cw_dex::osmosis::{OsmosisPool, OsmosisStaking, OsmosisSuperfluidStaking};
 use cw_dex::traits::{ForceUnlock, Pool, Stake, Unlock};
 // use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::state::{POOL, STAKING};
+use crate::state::{POOL, STAKING, SUPERFLUID};
 use cw_dex_test_contract::msg::{ExecuteMsg, OsmosisTestContractInstantiateMsg, QueryMsg};
 
 /*
@@ -30,10 +31,26 @@ pub fn instantiate(
 
     let lp_token_denom = pool.lp_token().to_string();
 
-    STAKING.save(
-        deps.storage,
-        &OsmosisStaking::new(msg.lock_duration, Some(msg.lock_id), lp_token_denom)?,
-    )?;
+    if msg.lock_duration.is_none() && msg.superfluid_validator.is_none() {
+        return Err(StdError::generic_err(
+            "Must provide either lock_duration or superfluid_validator_addr",
+        )
+        .into());
+    }
+
+    if let Some(lock_duration) = msg.lock_duration {
+        STAKING.save(
+            deps.storage,
+            &OsmosisStaking::new(lock_duration, Some(msg.lock_id), lp_token_denom.clone())?,
+        )?;
+    }
+
+    if let Some(validator) = msg.superfluid_validator {
+        SUPERFLUID.save(
+            deps.storage,
+            &OsmosisSuperfluidStaking::new(validator, Some(msg.lock_id), lp_token_denom)?,
+        )?;
+    }
 
     Ok(Response::default())
 }
@@ -65,6 +82,10 @@ pub fn execute(
             ask,
             min_out,
         } => execute_swap(deps, env, offer, ask, min_out),
+        ExecuteMsg::SuperfluidStake { amount } => execute_superfluid_stake(deps, env, info, amount),
+        ExecuteMsg::SuperfluidUnlock { amount } => {
+            execute_superfluid_unlock(deps, env, info, amount)
+        }
     }
 }
 
@@ -113,6 +134,32 @@ pub fn execute_unlock(
     amount: Uint128,
 ) -> Result<Response, ContractError> {
     let staking = STAKING.load(deps.storage)?;
+
+    Ok(staking.unlock(deps.as_ref(), &env, amount)?)
+}
+
+pub fn execute_superfluid_stake(
+    deps: DepsMut,
+    env: Env,
+    _info: MessageInfo,
+    amount: Uint128,
+) -> Result<Response, ContractError> {
+    let staking = SUPERFLUID
+        .may_load(deps.storage)?
+        .ok_or(StdError::generic_err("Superfluid staking not set"))?;
+
+    Ok(staking.stake(deps.as_ref(), &env, amount)?)
+}
+
+pub fn execute_superfluid_unlock(
+    deps: DepsMut,
+    env: Env,
+    _info: MessageInfo,
+    amount: Uint128,
+) -> Result<Response, ContractError> {
+    let staking = SUPERFLUID
+        .may_load(deps.storage)?
+        .ok_or(StdError::generic_err("Superfluid staking not set"))?;
 
     Ok(staking.unlock(deps.as_ref(), &env, amount)?)
 }

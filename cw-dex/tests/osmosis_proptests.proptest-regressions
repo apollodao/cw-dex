@@ -1,0 +1,9 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc e22f8e171721ef28aa4455a55693db0d66d38dc34fcd13a29f99f241a297e9c5 # shrinks to (mut pool, added_liquidity) = (OsmosisTestPool { liquidity: [Coin { denom: "denom0", amount: Uint128(64398489025722006607121142527133757443) }, Coin { denom: "denom2", amount: Uint128(24749776827568749075501148375711454660) }, Coin { denom: "denom3", amount: Uint128(209232708431859127932131555418876463135) }], pool_type: StableSwap { scaling_factors: [6125911972980590975, 36836043941329637, 3741196375868371117] }, id: None }, [1, 2297327393948188247, 9649680553063585444])
+cc 491131784275305cbe74a1308b4f61bd9d1613991db75140ca4f14bc519568a8 # shrinks to (mut pool, offer_idx, ask_idx, offer_amount) = (OsmosisTestPool { liquidity: [Coin { denom: "denom0", amount: Uint128(69205465072514866847864745215393796241) }, Coin { denom: "denom1", amount: Uint128(217057400918852226210173550406390612888) }, Coin { denom: "denom2", amount: Uint128(257053008981358670749950541301584151482) }, Coin { denom: "denom3", amount: Uint128(248287397352331181831674854074148456157) }, Coin { denom: "denom5", amount: Uint128(267512863014068224646894171762879387107) }, Coin { denom: "denom7", amount: Uint128(136495380137982718741131105297167472666) }], pool_type: StableSwap { scaling_factors: [7379672990910284295, 3201606502839181030, 8143029735483265961, 7574665220120917016, 1011404902649139599, 1011259778286183074] }, id: None }, 0, 1, 3044241807239213473358838675772581010)
+cc 754fd1e241aa59aed96b963714dbb23697a2f48c6968922fc5d41331deb3488b # shrinks to amount = 1
