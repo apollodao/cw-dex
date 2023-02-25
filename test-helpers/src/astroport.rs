@@ -10,7 +10,7 @@ use cw_dex_test_contract::msg::AstroportContractInstantiateMsg;
 use cw_it::astroport::{create_astroport_pair, instantiate_astroport, upload_astroport_contracts};
 use cw_it::config::TestConfig;
 use cw_it::helpers::upload_wasm_file;
-use osmosis_test_tube::{
+use cw_it::osmosis_test_tube::{
     Account, Module, OsmosisTestApp, Runner, RunnerResult, SigningAccount, Wasm,
 };
 use std::str::FromStr;

@@ -1,7 +1,11 @@
 use apollo_cw_asset::{Asset, AssetInfo};
+use cosmwasm_std::{Addr, Coin, Uint128};
+use cw_dex_test_contract::msg::{ExecuteMsg, OsmosisTestContractInstantiateMsg};
+use cw_dex_test_helpers::{osmosis::setup_pool_and_test_contract, robot::CwDexTestRobot};
 use cw_it::osmosis::{test_pool, OsmosisPoolType, OsmosisTestPool};
+use cw_it::{helpers::bank_balance_query, osmosis_test_tube::Account};
 
-use osmosis_test_tube::{Module, OsmosisTestApp, RunnerResult, SigningAccount, Wasm};
+use cw_it::osmosis_test_tube::{Gamm, Module, OsmosisTestApp, RunnerResult, SigningAccount, Wasm};
 use prop::collection::vec;
 use proptest::prelude::*;
 

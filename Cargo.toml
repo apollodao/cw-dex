@@ -25,9 +25,9 @@ schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
 apollo-cw-asset = "0.1.0"
-osmosis-test-tube = { git = "https://github.com/apollodao/test-tube.git", rev = "d2245dfed56329d8c2e84d109a5a01f29d0db0e8" }
 osmosis-std = "0.14.0"
-cw-it = { git = "https://github.com/apollodao/cw-it.git", rev = "bbf4afe9153507efe13b035825396e62055ee3c3" }
+# cw-it = { git = "https://github.com/apollodao/cw-it.git", rev = "aa3414cc7af993d26493e05868ae805a45d12cf4" }
+cw-it = { path = "../cw-it" }
 cw-dex = { path = "cw-dex" }
 cw-dex-test-contract = { path = "test-contracts/package" }
 cw-dex-test-helpers = { path = "test-helpers" }
