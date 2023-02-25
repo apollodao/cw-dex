@@ -1,9 +1,11 @@
 use apollo_cw_asset::{Asset, AssetInfo};
 use cosmwasm_std::{Addr, Coin, Uint128};
 use cw_dex_test_contract::msg::{ExecuteMsg, OsmosisTestContractInstantiateMsg};
-use cw_dex_test_helpers::{osmosis::setup_pool_and_test_contract, robot::CwDexTestRobot};
+use cw_dex_test_helpers::osmosis::setup_pool_and_test_contract;
+use cw_dex_test_helpers::robot::CwDexTestRobot;
+use cw_it::helpers::bank_balance_query;
 use cw_it::osmosis::{test_pool, OsmosisPoolType, OsmosisTestPool};
-use cw_it::{helpers::bank_balance_query, osmosis_test_tube::Account};
+use cw_it::osmosis_test_tube::Account;
 
 use cw_it::osmosis_test_tube::{Module, OsmosisTestApp, RunnerResult, SigningAccount, Wasm};
 use prop::collection::vec;
@@ -45,10 +47,10 @@ proptest! {
 
     #[test]
     fn test_provide_liquidity(
-        (mut pool,added_liquidity) in test_pool(None).prop_flat_map(|x| {
+        (pool,added_liquidity) in test_pool(None).prop_flat_map(|x| {
              (Just(x.clone()), vec(1..u64::MAX, x.liquidity.len()))
         })) {
-        let (runner, accs, pool_id, contract_addr) = setup_pool_and_contract(&mut pool).unwrap();
+        let (runner, accs, pool_id, contract_addr) = setup_pool_and_contract(&pool).unwrap();
 
         let wasm = Wasm::new(&runner);
         let assets: Vec<Coin> = added_liquidity
