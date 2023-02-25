@@ -338,6 +338,7 @@ mod tests {
     }
 
     #[test_case(OsmosisPoolType::Basic, Uint128::new(1_000_000), false ; "basic pool")]
+    #[test_case(OsmosisPoolType::Basic, Uint128::new(1), false => panics ; "basic pool 1 unit amount")]
     #[test_case(OsmosisPoolType::Basic, Uint128::new(2), false ; "basic pool small amount")]
     #[test_case(OsmosisPoolType::Basic, Uint128::new(1000000), true ; "basic pool with min out")]
     #[test_case(OsmosisPoolType::Balancer { pool_weights: vec![2, 1] }, Uint128::new(1000000), false ; "2:1 balancer pool")]
