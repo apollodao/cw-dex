@@ -9,7 +9,7 @@ use cosmwasm_std::{
 use cw_utils::Duration as CwDuration;
 use osmosis_std::types::osmosis::lockup::{MsgBeginUnlocking, MsgForceUnlock, MsgLockTokens};
 use osmosis_std::types::osmosis::superfluid::{
-    MsgLockAndSuperfluidDelegate, MsgSuperfluidUnbondLock,
+    MsgLockAndSuperfluidDelegate, MsgSuperfluidUnbondLock, MsgSuperfluidUndelegate,
 };
 use std::time::Duration;
 
@@ -284,6 +284,10 @@ impl Unlock for OsmosisSuperfluidStaking {
             .lock_id
             .ok_or_else(|| StdError::generic_err("osmosis error: lock id not set"))?;
 
+        let undelegate_msg = MsgSuperfluidUndelegate {
+            sender: env.contract.address.to_string(),
+            lock_id,
+        };
         let unstake_msg = MsgSuperfluidUnbondLock {
             sender: env.contract.address.to_string(),
             lock_id,
@@ -294,7 +298,10 @@ impl Unlock for OsmosisSuperfluidStaking {
             .add_attribute("validator_address", self.validator_address.to_string())
             .add_attribute("lock_id", lock_id.to_string());
 
-        Ok(Response::new().add_message(unstake_msg).add_event(event))
+        Ok(Response::new()
+            .add_message(undelegate_msg)
+            .add_message(unstake_msg)
+            .add_event(event))
     }
 
     fn withdraw_unlocked(
