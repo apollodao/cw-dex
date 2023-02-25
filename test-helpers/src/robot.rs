@@ -2,14 +2,13 @@ use cosmwasm_std::{Coin, Uint128};
 use cw_dex_test_contract::msg::{ExecuteMsg, OsmosisTestContractInstantiateMsg};
 use cw_it::{
     helpers::{bank_balance_query, upload_wasm_file},
-    osmosis::OsmosisTestPool,
-    osmosis_test_tube::{Module, OsmosisTestApp, Runner, SigningAccount, Wasm},
+    osmosis_test_tube::{Module, OsmosisTestApp, SigningAccount, Wasm},
 };
 
 pub struct CwDexTestRobot<'a> {
-    app: &'a OsmosisTestApp,
-    test_contract_addr: String,
-    pool_id: u64,
+    pub app: &'a OsmosisTestApp,
+    pub test_contract_addr: String,
+    pub pool_id: u64,
 }
 
 impl<'a> CwDexTestRobot<'a> {
@@ -61,6 +60,18 @@ impl<'a> CwDexTestRobot<'a> {
                 amount,
                 denom: format!("gamm/pool/{}", self.pool_id),
             }],
+            signer,
+        )
+        .unwrap();
+        self
+    }
+
+    pub fn unlock(&self, signer: &SigningAccount, amount: Uint128) -> &Self {
+        let wasm = Wasm::new(self.app);
+        wasm.execute(
+            &self.test_contract_addr,
+            &ExecuteMsg::Unlock { amount },
+            &[],
             signer,
         )
         .unwrap();

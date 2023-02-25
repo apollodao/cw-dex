@@ -5,7 +5,7 @@ use cw_dex_test_helpers::{osmosis::setup_pool_and_test_contract, robot::CwDexTes
 use cw_it::osmosis::{test_pool, OsmosisPoolType, OsmosisTestPool};
 use cw_it::{helpers::bank_balance_query, osmosis_test_tube::Account};
 
-use cw_it::osmosis_test_tube::{Gamm, Module, OsmosisTestApp, RunnerResult, SigningAccount, Wasm};
+use cw_it::osmosis_test_tube::{Module, OsmosisTestApp, RunnerResult, SigningAccount, Wasm};
 use prop::collection::vec;
 use proptest::prelude::*;
 
@@ -38,7 +38,7 @@ fn init_account_with_max_balances(app: &OsmosisTestApp, pool: &OsmosisTestPool) 
 
 proptest! {
     #![proptest_config(ProptestConfig {
-        cases: 8,
+        cases: 16,
         max_global_rejects: 1,
         .. ProptestConfig::default()
     })]
@@ -142,14 +142,24 @@ proptest! {
         // Whitelist LP token for superfluid staking
         app.add_superfluid_lp_share(&format!("gamm/pool/{}", pool_id));
 
-        println!("staking normal");
-        CwDexTestRobot::osmosis(&app, &admin, &init_msg, TEST_CONTRACT_WASM_FILE_PATH)
-            .stake(&admin, amount.into())
+        // Get LP token balance before
+        let lp_balance_before = bank_balance_query(
+            &app,
+            admin.address(),
+            format!("gamm/pool/{}", pool_id),
+        ).unwrap();
+        println!("LP balance before: {}", lp_balance_before);
+
+        println!("Superfluid staking amount: {}", amount);
+        let robot = CwDexTestRobot::osmosis(&app, &admin, &init_msg, TEST_CONTRACT_WASM_FILE_PATH);
+        let test_contract_addr = robot.test_contract_addr.clone();
+
+        robot
             .superfluid_stake(&admin, amount.into())
-            .assert_lp_balance(admin.address(), u128::MAX - amount)
+            .assert_lp_balance(admin.address(), lp_balance_before.u128() - amount)
             .superfluid_unlock(&admin, amount.into())
             .increase_time(TWO_WEEKS_IN_SECONDS)
-            .assert_lp_balance(admin.address(), u128::MAX);
+            .assert_lp_balance(test_contract_addr, amount);
     }
 
 }
