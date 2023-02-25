@@ -7,8 +7,7 @@ mod tests {
     use cw_dex_test_helpers::osmosis::{setup_pool_and_test_contract, OsmosisPoolType};
     use cw_dex_test_helpers::provide_liquidity;
     use cw_it::helpers::{bank_balance_query, bank_send};
-    use osmosis_test_tube::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
-    use osmosis_test_tube::{
+    use cw_it::osmosis::{OsmosisPoolType, OsmosisTestPool};
         Account, ExecuteResponse, Module, OsmosisTestApp, Runner, RunnerResult, SigningAccount,
         Wasm,
     };
@@ -36,11 +35,20 @@ mod tests {
         initial_liquidity: Vec<u64>,
         lock_duration: Option<u64>,
     ) -> RunnerResult<(OsmosisTestApp, Vec<SigningAccount>, u64, String)> {
+        let test_pool = OsmosisTestPool {
+            liquidity: initial_liquidity
+                .into_iter()
+                .enumerate()
+                .map(|(i, amount)| Coin::new(amount as u128, format!("denom{}", i)))
+                .collect(),
+            pool_type,
+        };
+
         setup_pool_and_test_contract(
-            &pool_type,
-            &initial_liquidity,
-            lock_duration.unwrap_or(TWO_WEEKS_IN_SECS),
+            &test_pool,
             1, // Lock ID. Since it is the first lock it will be 1.
+            Some(lock_duration.unwrap_or(TWO_WEEKS_IN_SECS)),
+            None,
             TEST_CONTRACT_WASM_FILE_PATH,
         )
     }
@@ -67,9 +75,21 @@ mod tests {
         min_out: bool,
         expected_lps: Uint128,
     ) {
-        let initial_liquidity = added_liquidity.iter().map(|_| 1_000_000).collect();
-        let (runner, accs, pool_id, contract_addr) =
-            setup_pool_and_contract(pool_type, initial_liquidity, None).unwrap();
+        let initial_liquidity = added_liquidity
+            .iter()
+            .enumerate()
+            .map(|(i, _)| Coin::new(1_000_000, format!("denom{}", i)))
+            .collect();
+        let pool = OsmosisTestPool::new(initial_liquidity, pool_type);
+        let (runner, accs, pool_id, contract_addr) = setup_pool_and_test_contract(
+            &pool,
+            1, // First lock ID
+            Some(TWO_WEEKS_IN_SECS),
+            None,
+            TEST_CONTRACT_WASM_FILE_PATH,
+        )
+        .unwrap();
+        // setup_pool_and_contract(pool_type, initial_liquidity, None).unwrap();
         let admin = &accs[0];
 
         let coins = added_liquidity

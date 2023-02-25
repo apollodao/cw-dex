@@ -1,8 +1,5 @@
 use apollo_cw_asset::{Asset, AssetInfo};
-use cosmwasm_std::{Coin, Uint128};
-use cw_dex_test_contract::msg::ExecuteMsg;
-use cw_dex_test_helpers::osmosis::{setup_pool_and_test_contract, test_pool, OsmosisTestPool};
-use cw_it::helpers::bank_balance_query;
+use cw_it::osmosis::{test_pool, OsmosisPoolType, OsmosisTestPool};
 
 use osmosis_test_tube::{Module, OsmosisTestApp, RunnerResult, SigningAccount, Wasm};
 use prop::collection::vec;
@@ -14,13 +11,13 @@ const TEST_CONTRACT_WASM_FILE_PATH: &str =
 const TWO_WEEKS_IN_SECONDS: u64 = 1_209_600;
 
 pub fn setup_pool_and_contract(
-    pool: &OsmosisTestPool,
+    pool: &mut OsmosisTestPool,
 ) -> RunnerResult<(OsmosisTestApp, Vec<SigningAccount>, u64, String)> {
     setup_pool_and_test_contract(
-        &pool.pool_type,
-        &pool.pool_liquidity,
-        TWO_WEEKS_IN_SECONDS,
+        pool,
         1,
+        Some(TWO_WEEKS_IN_SECONDS),
+        None,
         TEST_CONTRACT_WASM_FILE_PATH,
     )
 }
