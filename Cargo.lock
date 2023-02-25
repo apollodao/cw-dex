@@ -805,7 +805,7 @@ dependencies = [
 [[package]]
 name = "cw-it"
 version = "0.1.0"
-source = "git+https://github.com/apollodao/cw-it.git?rev=e4084d621dd4a2ca4c4b47eece69031ace4d2713#e4084d621dd4a2ca4c4b47eece69031ace4d2713"
+source = "git+https://github.com/apollodao/cw-it.git?rev=83dad852bcb2a2a7274df88b2b4cf179e7df639a#83dad852bcb2a2a7274df88b2b4cf179e7df639a"
 dependencies = [
  "anyhow",
  "apollo-cw-asset",
@@ -2146,7 +2146,7 @@ dependencies = [
 [[package]]
 name = "osmosis-test-tube"
 version = "14.1.1"
-source = "git+https://github.com/apollodao/test-tube.git?rev=c55526a0c77bb38e4b6c97a4368f091304459a5a#c55526a0c77bb38e4b6c97a4368f091304459a5a"
+source = "git+https://github.com/apollodao/test-tube.git?rev=81e3cc2a360e9229449c3642e09eec656f7a83a7#81e3cc2a360e9229449c3642e09eec656f7a83a7"
 dependencies = [
  "base64",
  "bindgen",
@@ -3226,7 +3226,7 @@ dependencies = [
 [[package]]
 name = "test-tube"
 version = "0.1.1"
-source = "git+https://github.com/apollodao/test-tube.git?rev=c55526a0c77bb38e4b6c97a4368f091304459a5a#c55526a0c77bb38e4b6c97a4368f091304459a5a"
+source = "git+https://github.com/apollodao/test-tube.git?rev=81e3cc2a360e9229449c3642e09eec656f7a83a7#81e3cc2a360e9229449c3642e09eec656f7a83a7"
 dependencies = [
  "base64",
  "cosmrs",

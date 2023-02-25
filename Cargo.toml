@@ -26,7 +26,7 @@ serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
 apollo-cw-asset = "0.1.0"
 osmosis-std = "0.14.0"
-cw-it = { git = "https://github.com/apollodao/cw-it.git", rev = "e4084d621dd4a2ca4c4b47eece69031ace4d2713" }
+cw-it = { git = "https://github.com/apollodao/cw-it.git", rev = "83dad852bcb2a2a7274df88b2b4cf179e7df639a" }
 cw-dex = { path = "cw-dex" }
 cw-dex-test-contract = { path = "test-contracts/package" }
 cw-dex-test-helpers = { path = "test-helpers" }
