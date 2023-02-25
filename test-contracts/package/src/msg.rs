@@ -1,12 +1,13 @@
 use apollo_cw_asset::{Asset, AssetInfo, AssetList};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{to_binary, Coin, CosmosMsg, Uint128, WasmMsg};
+use cosmwasm_std::{to_binary, Addr, Coin, CosmosMsg, Uint128, WasmMsg};
 
 #[cw_serde]
 pub struct OsmosisTestContractInstantiateMsg {
     pub pool_id: u64,
-    pub lock_duration: u64,
+    pub lock_duration: Option<u64>,
     pub lock_id: u64,
+    pub superfluid_validator: Option<Addr>,
 }
 
 #[cw_serde]
@@ -30,6 +31,12 @@ pub enum ExecuteMsg {
         amount: Uint128,
     },
     Unlock {
+        amount: Uint128,
+    },
+    SuperfluidStake {
+        amount: Uint128,
+    },
+    SuperfluidUnlock {
         amount: Uint128,
     },
     WithdrawUnlocked {
