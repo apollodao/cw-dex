@@ -57,7 +57,7 @@ proptest! {
             .into_iter()
             .enumerate()
             .map(|(i, amount)| Coin {
-                denom: format!("denom{}", i),
+                denom: pool.liquidity[i].denom.clone(),
                 amount: amount.into(),
             })
             .collect();
@@ -78,7 +78,7 @@ proptest! {
 
     #[test]
     fn test_pool_swap(
-        (pool,offer_idx,ask_idx, offer_amount) in test_pool(None).prop_flat_map(|x| {
+        (pool,offer_denom,ask_denom, offer_amount) in test_pool(None).prop_flat_map(|x| {
             let len = x.liquidity.len();
             (Just(x), 0usize..len, 0usize..len)
         })
@@ -86,14 +86,15 @@ proptest! {
             offer_idx != ask_idx
         })
         .prop_flat_map(|(x, offer_idx, ask_idx)| {
-            (Just(x.clone()), Just(offer_idx), Just(ask_idx), 1..x.liquidity[offer_idx].amount.u128())
+            let denoms = x.liquidity.iter().map(|c| c.denom.clone()).collect::<Vec<_>>();
+            (Just(x.clone()), Just(denoms[offer_idx].clone()), Just(denoms[ask_idx].clone()), 1..x.liquidity[offer_idx].amount.u128())
         }),
     ) {
         let offer = Asset {
-            info: AssetInfo::Native(format!("denom{}", offer_idx)),
+            info: AssetInfo::Native(offer_denom),
             amount: Uint128::from(offer_amount),
         };
-        let ask = AssetInfo::Native(format!("denom{}", ask_idx));
+        let ask = AssetInfo::Native(ask_denom);
 
         let (runner, accs, _pool_id, contract_addr) = setup_pool_and_contract(&pool).unwrap();
 
