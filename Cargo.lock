@@ -805,6 +805,7 @@ dependencies = [
 [[package]]
 name = "cw-it"
 version = "0.1.0"
+source = "git+https://github.com/apollodao/cw-it.git?rev=e4084d621dd4a2ca4c4b47eece69031ace4d2713#e4084d621dd4a2ca4c4b47eece69031ace4d2713"
 dependencies = [
  "anyhow",
  "apollo-cw-asset",
