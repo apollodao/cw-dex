@@ -4,7 +4,7 @@ mod tests {
     use apollo_utils::submessages::{find_event, parse_attribute_value};
     use cosmwasm_std::{Coin, SubMsgResponse, Uint128};
     use cw_dex_test_contract::msg::{ExecuteMsg, QueryMsg};
-    use cw_dex_test_helpers::osmosis::{setup_pool_and_test_contract, OsmosisPoolType};
+    use cw_dex_test_helpers::osmosis::setup_pool_and_test_contract;
     use cw_dex_test_helpers::provide_liquidity;
     use cw_it::helpers::{bank_balance_query, bank_send};
     use cw_it::osmosis::{OsmosisPoolType, OsmosisTestPool};

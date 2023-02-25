@@ -9,7 +9,7 @@ use cw_it::osmosis_test_tube::{
 
 /// Setup a pool and test contract for testing.
 pub fn setup_pool_and_test_contract(
-    pool: &mut OsmosisTestPool,
+    pool: &OsmosisTestPool,
     lock_id: u64,
     lock_duration: Option<u64>,
     superfluid_validator_addr: Option<Addr>,
