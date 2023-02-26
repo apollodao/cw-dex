@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use apollo_cw_asset::{Asset, AssetInfo};
 use cosmwasm_std::{Addr, Coin, Uint128};
 use cw_dex_test_contract::msg::{ExecuteMsg, OsmosisTestContractInstantiateMsg};
@@ -16,6 +18,45 @@ const TEST_CONTRACT_WASM_FILE_PATH: &str =
 
 const TWO_WEEKS_IN_SECONDS: u64 = 1_209_600;
 
+/// A struct that is allowed to be const that can turned into an OsmosisTestPool
+pub struct ConstTestPool<'a> {
+    pub pool_type: OsmosisPoolType,
+    pub liquidity: &'a [(&'a str, u128)],
+}
+impl<'a> ConstTestPool<'a> {
+    pub const fn new(liquidity: &'a [(&'a str, u128)], pool_type: OsmosisPoolType) -> Self {
+        Self {
+            pool_type,
+            liquidity,
+        }
+    }
+}
+impl<'a> From<ConstTestPool<'a>> for OsmosisTestPool {
+    fn from(pool: ConstTestPool) -> Self {
+        let liquidity = pool
+            .liquidity
+            .iter()
+            .map(|(denom, amount)| Coin::new(*amount, *denom))
+            .collect::<Vec<_>>();
+
+        OsmosisTestPool {
+            pool_type: pool.pool_type,
+            liquidity,
+        }
+    }
+}
+
+const BASIC_TEST_POOL: ConstTestPool = ConstTestPool::new(
+    &[("uatom", 1_000_000_000u128), ("uosmo", 1_000_000_000u128)],
+    OsmosisPoolType::Basic,
+);
+
+// How many LP tokens are minted on first liquidity provision
+const TEN_POW_20: u128 = 100000000000000000000u128;
+
+// Starts from the amount of LP tokens that would be equivalent to 1 uosmo
+const STAKING_RANGE: Range<u128> = (TEN_POW_20 / 1_000_000_000u128)..TEN_POW_20;
+
 fn setup_pool_and_contract(
     pool: &OsmosisTestPool,
 ) -> RunnerResult<(OsmosisTestApp, Vec<SigningAccount>, u64, String)> {
@@ -28,14 +69,40 @@ fn setup_pool_and_contract(
     )
 }
 
-fn init_account_with_max_balances(app: &OsmosisTestApp, pool: &OsmosisTestPool) -> SigningAccount {
-    let coins = pool
-        .liquidity
-        .iter()
-        .map(|c| Coin::new(u128::MAX, &c.denom))
-        .collect::<Vec<_>>();
+/// Setup a test that will use the CwDexTestRobot
+fn setup_robot_test<'a>(
+    app: &'a OsmosisTestApp,
+    pool: &OsmosisTestPool,
+) -> RunnerResult<(CwDexTestRobot<'a>, u64, Vec<SigningAccount>)> {
+    // Initialize 10 accounts with max balance of each token in the pool
+    let accs = app
+        .init_accounts(
+            &pool
+                .liquidity
+                .iter()
+                .map(|c| Coin::new(u128::MAX, c.denom.clone()))
+                .collect::<Vec<_>>(),
+            10,
+        )
+        .unwrap();
+    let admin = &accs[0];
 
-    app.init_account(&coins).unwrap()
+    let pool_id = pool.create(app, admin);
+    let validator = Addr::unchecked(app.get_first_validator_address()?);
+
+    // Whitelist LP token for superfluid staking
+    app.add_superfluid_lp_share(&format!("gamm/pool/{}", pool_id));
+
+    let init_msg = OsmosisTestContractInstantiateMsg {
+        pool_id,
+        lock_duration: Some(TWO_WEEKS_IN_SECONDS),
+        lock_id: 1u64,
+        superfluid_validator: Some(validator),
+    };
+
+    let robot = CwDexTestRobot::osmosis(&app, &admin, &init_msg, TEST_CONTRACT_WASM_FILE_PATH);
+
+    Ok((robot, pool_id, accs))
 }
 
 proptest! {
@@ -119,31 +186,13 @@ proptest! {
     }
 
     #[test]
-    fn superfluid_staking_stake_and_unstake(amount in 1..100_000_000_000_000_000_000u128) {
+    fn superfluid_staking_stake_and_unstake(amount in STAKING_RANGE) {
         let app = OsmosisTestApp::new();
-        let pool = OsmosisTestPool::new(
-            vec![
-                Coin::new(1000000000u128, "uatom"),
-                Coin::new(1000000000u128, "uosmo"),
-            ],
-            OsmosisPoolType::Basic,
-        );
-        let admin = init_account_with_max_balances(&app, &pool);
-        let pool_id = pool.create(&app, &admin);
+        let pool: OsmosisTestPool = BASIC_TEST_POOL.into();
 
-        let validator = Addr::unchecked(app.get_first_validator_address()?);
-
-        println!("validator_addr: {}", validator);
-
-        let init_msg = OsmosisTestContractInstantiateMsg {
-            pool_id,
-            lock_duration: Some(TWO_WEEKS_IN_SECONDS),
-            lock_id: 1u64,
-            superfluid_validator: Some(validator),
-        };
-
-        // Whitelist LP token for superfluid staking
-        app.add_superfluid_lp_share(&format!("gamm/pool/{}", pool_id));
+        let (robot, pool_id, accs) = setup_robot_test(&app, &pool).unwrap();
+        let test_contract_addr = robot.test_contract_addr.clone();
+        let admin = &accs[0];
 
         // Get LP token balance before
         let lp_balance_before = bank_balance_query(
@@ -151,15 +200,36 @@ proptest! {
             admin.address(),
             format!("gamm/pool/{}", pool_id),
         ).unwrap();
-        println!("LP balance before: {}", lp_balance_before);
-
-        println!("Superfluid staking amount: {}", amount);
-        let robot = CwDexTestRobot::osmosis(&app, &admin, &init_msg, TEST_CONTRACT_WASM_FILE_PATH);
-        let test_contract_addr = robot.test_contract_addr.clone();
 
         robot
             .superfluid_stake(&admin, amount.into())
             .assert_lp_balance(admin.address(), lp_balance_before.u128() - amount)
+            .superfluid_unlock(&admin, amount.into())
+            .increase_time(TWO_WEEKS_IN_SECONDS)
+            .assert_lp_balance(test_contract_addr, amount);
+    }
+
+    #[test]
+    fn superfluid_staking_stake_twice((amount,amount2) in STAKING_RANGE.prop_flat_map(|x| (1..x).prop_map(move |y| (x-y,y)))) {
+        let app = OsmosisTestApp::new();
+        let pool: OsmosisTestPool = BASIC_TEST_POOL.into();
+
+        let (robot, pool_id, accs) = setup_robot_test(&app, &pool).unwrap();
+        let test_contract_addr = robot.test_contract_addr.clone();
+        let admin = &accs[0];
+
+        // Get LP token balance before
+        let lp_balance_before = bank_balance_query(
+            &app,
+            admin.address(),
+            format!("gamm/pool/{}", pool_id),
+        ).unwrap();
+
+        robot
+            .superfluid_stake(&admin, amount.into())
+            .assert_lp_balance(admin.address(), lp_balance_before.u128() - amount)
+            .superfluid_stake(&admin, amount2.into())
+            .assert_lp_balance(admin.address(), lp_balance_before.u128() - amount - amount2)
             .superfluid_unlock(&admin, amount.into())
             .increase_time(TWO_WEEKS_IN_SECONDS)
             .assert_lp_balance(test_contract_addr, amount);
