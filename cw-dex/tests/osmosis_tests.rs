@@ -140,7 +140,7 @@ mod tests {
         min_out: Vec<u64>,
     ) {
         let (runner, accs, pool_id, contract_addr) =
-            setup_pool_and_contract(pool_type, initial_liquidity.clone(), None).unwrap();
+            setup_pool_and_contract(pool_type, initial_liquidity, None).unwrap();
         let admin = &accs[0];
         let lp_token_denom = format!("gamm/pool/{}", pool_id);
 
