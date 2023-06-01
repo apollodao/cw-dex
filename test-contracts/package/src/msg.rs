@@ -26,6 +26,7 @@ pub enum ExecuteMsg {
     },
     WithdrawLiquidity {
         amount: Uint128,
+        min_out: AssetList,
     },
     Stake {
         amount: Uint128,
@@ -86,6 +87,7 @@ pub enum AstroportExecuteMsg {
     },
     WithdrawLiquidity {
         amount: Uint128,
+        min_out: AssetList,
     },
     Stake {
         amount: Uint128,

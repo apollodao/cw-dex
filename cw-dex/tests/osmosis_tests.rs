@@ -1,5 +1,5 @@
 mod tests {
-    use apollo_cw_asset::{Asset, AssetInfo};
+    use apollo_cw_asset::{Asset, AssetInfo, AssetList};
     use apollo_utils::coins::coin_from_str;
     use apollo_utils::submessages::{find_event, parse_attribute_value};
     use cosmwasm_std::{Coin, SubMsgResponse, Uint128};
@@ -130,11 +130,17 @@ mod tests {
         assert_eq!(lp_token_after, expected_lps);
     }
 
-    #[test_case(OsmosisPoolType::Basic, vec![1_000_000, 1_000_000] ; "basic pool")]
-    #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1] }, vec![1_000_000, 1_000_000] ; "stable swap pool")]
-    fn test_withdraw_liquidity(pool_type: OsmosisPoolType, initial_liquidity: Vec<u64>) {
+    #[test_case(OsmosisPoolType::Basic, vec![1_000_000, 1_000_000], vec![989_999, 989_999]; "basic pool")]
+    #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1] }, vec![1_000_000, 1_000_000], vec![989999, 0]; "stable swap pool")]
+    #[test_case(OsmosisPoolType::Basic, vec![1_000_000, 1_000_000], vec![990_000, 0] => panics; "basic pool, min_out too high asset 1")]
+    #[test_case(OsmosisPoolType::Basic, vec![1_000_000, 1_000_000], vec![0, 990_000] => panics; "basic pool, min_out too high asset 2")]
+    fn test_withdraw_liquidity(
+        pool_type: OsmosisPoolType,
+        initial_liquidity: Vec<u64>,
+        min_out: Vec<u64>,
+    ) {
         let (runner, accs, pool_id, contract_addr) =
-            setup_pool_and_contract(pool_type, initial_liquidity, None).unwrap();
+            setup_pool_and_contract(pool_type, initial_liquidity.clone(), None).unwrap();
         let admin = &accs[0];
         let lp_token_denom = format!("gamm/pool/{}", pool_id);
 
@@ -154,9 +160,17 @@ mod tests {
         )
         .unwrap();
 
-        // Withdraw liquidity. We are not allowed to withdraw all liquidity on osmosis.
+        // Withdraw all liquidity except 1. We are not allowed to withdraw all liquidity
+        // on osmosis.
+        let min_out: AssetList = min_out
+            .into_iter()
+            .enumerate()
+            .map(|(i, amount)| Asset::from(Coin::new(amount as u128, format!("denom{}", i))))
+            .collect::<Vec<_>>()
+            .into();
         let withdraw_msg = ExecuteMsg::WithdrawLiquidity {
             amount: admin_lp_token_balance.checked_sub(Uint128::one()).unwrap(),
+            min_out,
         };
         runner
             .execute_cosmos_msgs::<MsgExecuteContractResponse>(

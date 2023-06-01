@@ -6,7 +6,7 @@ use std::str::FromStr;
 use apollo_utils::assets::{
     assert_native_asset_info, assert_native_coin, assert_only_native_coins, merge_assets,
 };
-use apollo_utils::iterators::IntoElementwise;
+use apollo_utils::iterators::{IntoElementwise, TryIntoElementwise};
 use osmosis_std::types::osmosis::gamm::v1beta1::{
     GammQuerier, MsgExitPool, MsgJoinPool, MsgJoinSwapExternAmountIn, MsgSwapExactAmountIn,
     SwapAmountInRoute,
@@ -155,17 +155,25 @@ impl Pool for OsmosisPool {
         _deps: Deps,
         env: &Env,
         lp_token: Asset,
+        min_out: AssetList,
     ) -> Result<Response, CwDexError> {
+        let min_out_coins = assert_only_native_coins(&min_out)?.try_into_elementwise()?;
+
         let exit_msg = MsgExitPool {
             sender: env.contract.address.to_string(),
             pool_id: self.pool_id,
             share_in_amount: lp_token.amount.to_string(),
-            token_out_mins: vec![],
+            token_out_mins: min_out_coins,
         };
 
-        let event = Event::new("apollo/cw-dex/withdraw_liquidity")
+        let mut event = Event::new("apollo/cw-dex/withdraw_liquidity")
             .add_attribute("pool_id", self.pool_id.to_string())
             .add_attribute("shares_in", lp_token.to_string());
+
+        // We're not allowed to add empty values as attributes.
+        if !min_out.len() == 0 {
+            event = event.add_attribute("min_out", min_out.to_string());
+        }
 
         Ok(Response::new().add_message(exit_msg).add_event(event))
     }

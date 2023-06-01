@@ -92,8 +92,10 @@ impl PoolTrait for Pool {
         deps: Deps,
         env: &Env,
         asset: Asset,
+        min_out: AssetList,
     ) -> Result<Response, CwDexError> {
-        self.as_trait().withdraw_liquidity(deps, env, asset)
+        self.as_trait()
+            .withdraw_liquidity(deps, env, asset, min_out)
     }
 
     fn swap(

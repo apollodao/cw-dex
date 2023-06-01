@@ -303,7 +303,16 @@ impl Pool for AstroportPool {
         _deps: Deps,
         _env: &Env,
         asset: Asset,
+        min_out: AssetList,
     ) -> Result<Response, CwDexError> {
+        // Astroport currently does not support min_out, we throw here so that
+        // library users don't accidentally rely on it.
+        if min_out.len() > 0 {
+            return Err(CwDexError::Std(StdError::generic_err(
+                "min_out is not supported",
+            )));
+        }
+
         if let AssetInfoBase::Cw20(token_addr) = &asset.info {
             let withdraw_liquidity = CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: token_addr.to_string(),

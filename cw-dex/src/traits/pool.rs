@@ -47,6 +47,7 @@ pub trait Pool {
         deps: Deps,
         env: &Env,
         lp_token: Asset,
+        min_out: AssetList,
     ) -> Result<Response, CwDexError>;
 
     /// Swap assets in the pool.

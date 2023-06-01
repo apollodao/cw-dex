@@ -66,8 +66,8 @@ pub fn execute(
         ExecuteMsg::ProvideLiquidity { assets, min_out } => {
             execute_provide_liquidity(deps, env, info, assets, min_out)
         }
-        ExecuteMsg::WithdrawLiquidity { amount } => {
-            execute_withdraw_liquidity(deps, env, info, amount)
+        ExecuteMsg::WithdrawLiquidity { amount, min_out } => {
+            execute_withdraw_liquidity(deps, env, info, amount, min_out)
         }
         ExecuteMsg::Stake { amount } => execute_stake(deps, env, info, amount),
         ExecuteMsg::Unlock { amount } => execute_unlock(deps, env, info, amount),
@@ -106,6 +106,7 @@ pub fn execute_withdraw_liquidity(
     env: Env,
     _info: MessageInfo,
     amount: Uint128,
+    min_out: AssetList,
 ) -> Result<Response, ContractError> {
     let pool = POOL.load(deps.storage)?;
     let lp_token = Asset {
@@ -113,7 +114,7 @@ pub fn execute_withdraw_liquidity(
         amount,
     };
 
-    Ok(pool.withdraw_liquidity(deps.as_ref(), &env, lp_token)?)
+    Ok(pool.withdraw_liquidity(deps.as_ref(), &env, lp_token, min_out)?)
 }
 
 pub fn execute_stake(
