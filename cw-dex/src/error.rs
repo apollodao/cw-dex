@@ -28,6 +28,10 @@ pub enum CwDexError {
     #[error("{0}")]
     DivideByZero(#[from] DivideByZeroError),
 
+    /// Converts from `std::convert::Infallible`
+    #[error("Infallible")]
+    Infallible(#[from] std::convert::Infallible),
+
     /// Invalid Reply ID Error
     #[error("Invalid output asset")]
     InvalidOutAsset {},

@@ -108,6 +108,7 @@ fn test_withdraw_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str, u6
     // Withdraw liquidity
     let withdraw_msg = ExecuteMsg::WithdrawLiquidity {
         amount: contract_lp_token_balance,
+        min_out: AssetList::new(),
     };
     runner
         .execute_cosmos_msgs::<MsgExecuteContractResponse>(
