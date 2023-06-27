@@ -26,10 +26,10 @@ optimize = """docker run --rm -v "$(pwd)":/code \
 
 [dependencies]
 cosmwasm-std = { workspace = true }
-apollo-cw-asset = { workspace = true }
+apollo-cw-asset = { workspace = true, features = ["astroport"] }
 apollo-utils = { workspace = true }
 cw-dex-test-contract = { workspace = true }
 cw-it = { workspace = true, features = ["astroport", "osmosis"] }
-astroport-types = { workspace = true }
+astroport = { workspace = true }
 cw20 = { workspace = true }
 cw20-base = { workspace = true }

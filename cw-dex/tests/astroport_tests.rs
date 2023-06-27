@@ -1,8 +1,9 @@
+#![cfg(feature = "astroport")]
 use apollo_cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use apollo_utils::coins::coin_from_str;
 use apollo_utils::submessages::{find_event, parse_attribute_value};
-use astroport_types::factory::PairType;
-use astroport_types::pair::{PoolResponse, QueryMsg as PairQueryMsg};
+use astroport::factory::PairType;
+use astroport::pair::{PoolResponse, QueryMsg as PairQueryMsg};
 use cosmwasm_std::{Coin, Decimal, SubMsgResponse, Uint128};
 use cw_dex_test_contract::msg::{AstroportExecuteMsg, ExecuteMsg, QueryMsg};
 use cw_dex_test_helpers::astroport::setup_pool_and_test_contract;
