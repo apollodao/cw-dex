@@ -11,7 +11,7 @@ readme = "README.md"
 [features]
 default = []
 osmosis = ["dep:osmosis-std"]
-astroport = ["dep:astroport-types","dep:uint"]
+astroport = ["dep:astroport","dep:uint", "apollo-cw-asset/astroport"]
 
 [package.metadata.docs.rs]
 all-features = true
