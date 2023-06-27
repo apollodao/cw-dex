@@ -19,9 +19,9 @@ use super::helpers::{
 use crate::traits::Pool;
 use crate::CwDexError;
 use apollo_utils::assets::separate_natives_and_cw20s;
-use astroport_types::asset::{AssetInfo as AstroAssetInfo, PairInfo};
-use astroport_types::factory::PairType;
-use astroport_types::pair::{
+use astroport::asset::{AssetInfo as AstroAssetInfo, PairInfo};
+use astroport::factory::PairType;
+use astroport::pair::{
     Cw20HookMsg as PairCw20HookMsg, ExecuteMsg as PairExecuteMsg, PoolResponse,
     QueryMsg as PairQueryMsg, SimulationResponse,
 };
@@ -258,7 +258,7 @@ impl Pool for AstroportPool {
         }
 
         let msg = PairExecuteMsg::ProvideLiquidity {
-            assets: assets.to_owned().try_into()?,
+            assets: assets.clone().into(),
             slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
             auto_stake: Some(false),
             receiver: None,
@@ -319,7 +319,11 @@ impl Pool for AstroportPool {
                 msg: to_binary(&Cw20ExecuteMsg::Send {
                     contract: self.pair_addr.to_string(),
                     amount: asset.amount,
-                    msg: to_binary(&PairCw20HookMsg::WithdrawLiquidity {})?,
+                    msg: to_binary(&PairCw20HookMsg::WithdrawLiquidity {
+                        // This field is not used in the stable and XYK pair implementations.
+                        // Only used in the CL implementation which we do not support.
+                        assets: vec![],
+                    })?,
                 })?,
                 funds: vec![],
             });
@@ -359,6 +363,7 @@ impl Pool for AstroportPool {
                         belief_price,
                         max_spread: Some(Decimal::zero()),
                         to: Some(env.contract.address.to_string()),
+                        ask_asset_info: Some(ask_asset_info.to_owned().into()),
                     },
                     vec![offer_asset.clone().try_into()?],
                 )
@@ -372,6 +377,7 @@ impl Pool for AstroportPool {
                         belief_price,
                         max_spread: Some(Decimal::zero()),
                         to: Some(env.contract.address.to_string()),
+                        ask_asset_info: Some(ask_asset_info.to_owned().into()),
                     })?,
                 },
                 vec![],
@@ -432,7 +438,7 @@ impl Pool for AstroportPool {
         &self,
         deps: Deps,
         offer_asset: Asset,
-        _ask_asset_info: AssetInfo,
+        ask_asset_info: AssetInfo,
         _sender: Option<String>,
     ) -> StdResult<Uint128> {
         Ok(deps
@@ -441,6 +447,7 @@ impl Pool for AstroportPool {
                 contract_addr: self.pair_addr.to_string(),
                 msg: to_binary(&PairQueryMsg::Simulation {
                     offer_asset: offer_asset.into(),
+                    ask_asset_info: Some(ask_asset_info.into()),
                 })?,
             }))?
             .return_amount)

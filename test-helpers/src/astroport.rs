@@ -1,8 +1,8 @@
 use apollo_cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use apollo_utils::assets::separate_natives_and_cw20s;
-use astroport_types::asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo};
-use astroport_types::factory::PairType;
-use astroport_types::pair::{ExecuteMsg as PairExecuteMsg, StablePoolParams};
+use astroport::asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo};
+use astroport::factory::PairType;
+use astroport::pair::{ExecuteMsg as PairExecuteMsg, StablePoolParams};
 use cosmwasm_std::{to_binary, Addr, Coin, Decimal, Uint128};
 use cw20::{Cw20ExecuteMsg, MinterResponse};
 use cw20_base::msg::InstantiateMsg as Cw20InstantiateMsg;
@@ -157,16 +157,26 @@ pub fn setup_pool_and_test_contract(
 
     // Create pool
     let init_params = match pool_type {
-        PairType::Stable {} => Some(to_binary(&StablePoolParams { amp: 10u64 }).unwrap()),
+        PairType::Stable {} => Some(
+            to_binary(&StablePoolParams {
+                amp: 10u64,
+                owner: None,
+            })
+            .unwrap(),
+        ),
         _ => None,
     };
     let (pair_addr, lp_token_addr) = create_astroport_pair(
         &runner,
         &astroport_contracts.factory.address,
         pool_type,
-        astro_asset_infos.try_into().unwrap(),
+        [
+            astro_asset_infos[0].clone().into(),
+            astro_asset_infos[1].clone().into(),
+        ],
         init_params,
         admin,
+        None,
     );
 
     // Increase allowance of CW20's for Pair contract

@@ -31,7 +31,7 @@ apollo-utils = { workspace = true }
 osmosis-std = { workspace = true, optional = true }
 
 # Astroport
-astroport-types = { workspace = true, optional = true}
+astroport = { workspace = true, optional = true}
 uint = {version = "0.9.3", optional = true}
 
 [dev-dependencies]

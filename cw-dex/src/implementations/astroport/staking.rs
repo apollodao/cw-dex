@@ -8,8 +8,8 @@ use cosmwasm_std::{
 use cw20::Cw20ExecuteMsg;
 
 use apollo_cw_asset::{Asset, AssetList};
-use astroport_types::asset::Asset as AstroAsset;
-use astroport_types::generator::{
+use astroport::asset::Asset as AstroAsset;
+use astroport::generator::{
     Cw20HookMsg as GeneratorCw20HookMsg, ExecuteMsg as GeneratorExecuteMsg, PendingTokenResponse,
     QueryMsg as GeneratorQueryMsg,
 };
