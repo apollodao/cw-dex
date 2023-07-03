@@ -74,6 +74,7 @@ pub fn test_provide_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str,
 #[test_case(PairType::Xyk { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: xyk cw20-cw20")]
 #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: stableswap native-cw20")]
 #[test_case(PairType::Stable { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: stableswap cw20-cw20")]
+#[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "withdraw_liquidity: stableswap native-native")]
 fn test_withdraw_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str, u64)>) {
     let runner = TestRunner::OsmosisTestApp(OsmosisTestApp::new());
     let (accs, lp_token_addr, pair_addr, contract_addr, asset_list) =
@@ -164,6 +165,7 @@ fn stake_all_lp_tokens<'a, R: Runner<'a>>(
 #[test_case(PairType::Xyk {}, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "stake_and_unstake: xyk cw20-cw20")]
 #[test_case(PairType::Stable {}, vec![("uluna",1_000_000), ("astro", 1_000_000)]; "stake_and_unstake: stableswap native-cw20")]
 #[test_case(PairType::Stable {}, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "stake_and_unstake: stableswap cw20-cw20")]
+#[test_case(PairType::Stable {}, vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "stake_and_unstake: stableswap native-native")]
 fn test_stake_and_unstake(
     pool_type: PairType,
     initial_liquidity: Vec<(&str, u64)>,
@@ -236,6 +238,9 @@ fn test_stake_and_unstake(
 #[test_case(PairType::Stable { },vec![("uluna",1_000_000), ("astro", 1_000_000)], Uint128::new(1_000_000); "swap_and_simulate_swap: stable swap pool")]
 #[test_case(PairType::Stable { },vec![("uluna",1_000_000), ("astro", 1_000_000)], Uint128::new(100_000_000); "swap_and_simulate_swap: stable swap pool, high slippage")]
 #[test_case(PairType::Stable { },vec![("uluna",68_582_147), ("astro", 3_467_256)], Uint128::new(1_000_000); "swap_and_simulate_swap: stable swap pool, random prices")]
+#[test_case(PairType::Stable { },vec![("uluna",1_000_000), ("uatom", 1_000_000)], Uint128::new(1_000_000); "swap_and_simulate_swap: stable swap pool, native-native")]
+#[test_case(PairType::Stable { },vec![("uluna",1_000_000), ("uatom", 1_000_000)], Uint128::new(100_000_000); "swap_and_simulate_swap: stable swap pool, high slippage, native-native")]
+#[test_case(PairType::Stable { },vec![("uluna",68_582_147), ("uatom", 3_467_256)], Uint128::new(1_000_000); "swap_and_simulate_swap: stable swap pool, random prices, native-native")]
 fn test_swap_and_simulate_swap(
     pool_type: PairType,
     initial_liquidity: Vec<(&str, u64)>,
