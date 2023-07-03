@@ -38,6 +38,7 @@ fn setup_pool_and_contract<'a>(
 #[test_case(PairType::Xyk { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: cw20-cw20")]
 #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: stableswap native-cw20")]
 #[test_case(PairType::Stable { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: stableswap cw20-cw20")]
+#[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "provide_liquidity: stableswap native-native")]
 pub fn test_provide_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str, u64)>) {
     let runner = TestRunner::OsmosisTestApp(OsmosisTestApp::new());
     let (accs, lp_token_addr, _pair_addr, contract_addr, asset_list) =

@@ -34,17 +34,48 @@ pub fn setup_pool_and_test_contract<'a>(
         })
         .collect::<Vec<_>>();
     initial_balances.push(Coin {
+        denom: "uatom".to_string(),
+        amount: Uint128::MAX,
+    });
+    initial_balances.push(Coin {
         denom: "uluna".to_string(),
         amount: Uint128::MAX,
     });
+    initial_balances.push(Coin {
+        denom: "uosmo".to_string(),
+        amount: Uint128::MAX,
+    });
+
     let accs = runner.init_accounts(&initial_balances, 10).unwrap();
 
     let admin = &accs[0];
 
-    let astroport_code_ids = upload_astroport_contracts(&runner, &test_config, admin);
+    let contracts = get_local_contracts(runner, &None, false, &None);
 
     // Instantiate Astroport contracts
-    let astroport_contracts = instantiate_astroport(&runner, admin, &astroport_code_ids);
+    let astroport_contracts = setup_astroport(runner, contracts, admin);
+
+    // Update native coin registry with uluna precision
+    wasm.execute(
+        &astroport_contracts.coin_registry.address,
+        &astroport::native_coin_registry::ExecuteMsg::Add {
+            native_coins: vec![("uluna".to_string(), 6)],
+        },
+        &[],
+        &admin,
+    )
+    .unwrap();
+
+    // Update native coin registry with uatom precision
+    wasm.execute(
+        &astroport_contracts.coin_registry.address,
+        &astroport::native_coin_registry::ExecuteMsg::Add {
+            native_coins: vec![("uatom".to_string(), 6)],
+        },
+        &[],
+        &admin,
+    )
+    .unwrap();
 
     // Instantiate Apollo token (to have second CW20 to test CW20-CW20 pools)
     let apollo_token = instantiate_cw20(
@@ -110,6 +141,13 @@ pub fn setup_pool_and_test_contract<'a>(
             asset_list
                 .add(&Asset::new(
                     AssetInfo::Cw20(Addr::unchecked(apollo_token.clone())),
+                    Uint128::new(amount.into()),
+                ))
+                .unwrap();
+        } else if asset == "uatom" {
+            asset_list
+                .add(&Asset::new(
+                    AssetInfo::Native("uatom".to_string()),
                     Uint128::new(amount.into()),
                 ))
                 .unwrap();
