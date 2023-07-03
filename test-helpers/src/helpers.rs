@@ -5,7 +5,7 @@ use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 use cw20_base::msg::InstantiateMsg as Cw20InstantiateMsg;
 use cw_dex_test_contract::msg::ExecuteMsg;
 use cw_it::helpers::bank_balance_query;
-use cw_it::osmosis_test_tube::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
+use cw_it::osmosis_std::types::cosmwasm::wasm::v1::MsgExecuteContractResponse;
 use cw_it::osmosis_test_tube::{
     Account, Module, Runner, RunnerExecuteResult, SigningAccount, Wasm,
 };

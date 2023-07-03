@@ -6,6 +6,7 @@ use cw_dex_test_helpers::robot::CwDexTestRobot;
 use cw_it::helpers::bank_balance_query;
 use cw_it::osmosis::{test_pool, OsmosisPoolType, OsmosisTestPool};
 use cw_it::osmosis_test_tube::Account;
+use cw_it::{Artifact, ContractType};
 
 use cw_it::osmosis_test_tube::{Module, OsmosisTestApp, RunnerResult, SigningAccount, Wasm};
 use prop::collection::vec;
@@ -154,7 +155,7 @@ proptest! {
         println!("LP balance before: {}", lp_balance_before);
 
         println!("Superfluid staking amount: {}", amount);
-        let robot = CwDexTestRobot::osmosis(&app, &admin, &init_msg, TEST_CONTRACT_WASM_FILE_PATH);
+        let robot = CwDexTestRobot::osmosis(&app, &admin, &init_msg, ContractType::Artifact(Artifact::Local(TEST_CONTRACT_WASM_FILE_PATH.to_string())));
         let test_contract_addr = robot.test_contract_addr.clone();
 
         robot
