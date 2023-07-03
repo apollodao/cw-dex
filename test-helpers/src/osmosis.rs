@@ -6,6 +6,7 @@ use cw_it::osmosis::OsmosisTestPool;
 use cw_it::osmosis_test_tube::{
     Module, OsmosisTestApp, Runner, RunnerResult, SigningAccount, Wasm,
 };
+use cw_it::{Artifact, ContractType};
 
 /// Setup a pool and test contract for testing.
 pub fn setup_pool_and_test_contract(
@@ -34,7 +35,12 @@ pub fn setup_pool_and_test_contract(
     let pool_id = pool.create(&runner, &accs[0]);
 
     // Upload test contract wasm file
-    let code_id = upload_wasm_file(&runner, &accs[0], wasm_file_path).unwrap();
+    let code_id = upload_wasm_file(
+        &runner,
+        &accs[0],
+        ContractType::Artifact(Artifact::Local(wasm_file_path.to_string())),
+    )
+    .unwrap();
 
     // Instantiate the test contract
     let contract_addr = instantiate_test_contract(

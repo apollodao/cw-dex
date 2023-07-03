@@ -7,35 +7,24 @@ use cosmwasm_std::{to_binary, Addr, Coin, Decimal, Uint128};
 use cw20::{Cw20ExecuteMsg, MinterResponse};
 use cw20_base::msg::InstantiateMsg as Cw20InstantiateMsg;
 use cw_dex_test_contract::msg::AstroportContractInstantiateMsg;
-use cw_it::astroport::{create_astroport_pair, instantiate_astroport, upload_astroport_contracts};
-use cw_it::config::TestConfig;
+use cw_it::astroport::utils::{create_astroport_pair, get_local_contracts, setup_astroport};
 use cw_it::helpers::upload_wasm_file;
-use cw_it::osmosis_test_tube::{
-    Account, Module, OsmosisTestApp, Runner, RunnerResult, SigningAccount, Wasm,
-};
+use cw_it::osmosis_test_tube::{Account, Module, Runner, RunnerResult, SigningAccount, Wasm};
+use cw_it::traits::CwItRunner;
+use cw_it::{Artifact, ContractType, TestRunner};
 use std::str::FromStr;
 
 use crate::{cw20_mint, instantiate_cw20};
 
-const TEST_CONFIG_PATH: &str = "tests/configs/terra.yaml";
-
 /// Setup a pool and test contract for testing.
-pub fn setup_pool_and_test_contract(
+pub fn setup_pool_and_test_contract<'a>(
+    runner: &'a TestRunner<'a>,
     pool_type: PairType,
     initial_liquidity: Vec<(&str, u64)>,
     native_denom_count: usize,
     wasm_file_path: &str,
-) -> RunnerResult<(
-    OsmosisTestApp,
-    Vec<SigningAccount>,
-    String,
-    String,
-    String,
-    AssetList,
-)> {
-    let runner = OsmosisTestApp::new();
-    let wasm = Wasm::new(&runner);
-    let test_config = TestConfig::from_yaml(TEST_CONFIG_PATH);
+) -> RunnerResult<(Vec<SigningAccount>, String, String, String, AssetList)> {
+    let wasm = Wasm::new(runner);
 
     // Initialize 10 accounts with max balance of each token
     let mut initial_balances = (0..native_denom_count)
@@ -59,8 +48,8 @@ pub fn setup_pool_and_test_contract(
 
     // Instantiate Apollo token (to have second CW20 to test CW20-CW20 pools)
     let apollo_token = instantiate_cw20(
-        &runner,
-        astroport_code_ids["astro_token"],
+        runner,
+        astroport_contracts.astro_token.code_id,
         &Cw20InstantiateMsg {
             name: "APOLLO".to_string(),
             symbol: "APOLLO".to_string(),
@@ -80,7 +69,7 @@ pub fn setup_pool_and_test_contract(
     for account in &accs {
         // Mint Astro tokens
         cw20_mint(
-            &runner,
+            runner,
             astroport_contracts.clone().astro_token.address,
             account.address().clone(),
             Uint128::from(1_000_000_000_000_000_000u128),
@@ -89,7 +78,7 @@ pub fn setup_pool_and_test_contract(
         .unwrap();
         // Mint Apollo tokens
         cw20_mint(
-            &runner,
+            runner,
             apollo_token.clone(),
             account.address().clone(),
             Uint128::from(1_000_000_000_000_000_000u128),
@@ -167,7 +156,7 @@ pub fn setup_pool_and_test_contract(
         _ => None,
     };
     let (pair_addr, lp_token_addr) = create_astroport_pair(
-        &runner,
+        runner,
         &astroport_contracts.factory.address,
         pool_type,
         [
@@ -206,11 +195,16 @@ pub fn setup_pool_and_test_contract(
         .unwrap();
 
     // Upload test contract wasm file
-    let code_id = upload_wasm_file(&runner, &accs[0], wasm_file_path).unwrap();
+    let code_id = upload_wasm_file(
+        runner,
+        &accs[0],
+        ContractType::Artifact(Artifact::Local(wasm_file_path.to_string())),
+    )
+    .unwrap();
 
     // Instantiate the test contract
     let contract_addr = instantiate_test_astroport_contract(
-        &runner,
+        runner,
         code_id,
         pair_addr.clone(),
         astroport_contracts.clone().generator.address,
@@ -219,14 +213,7 @@ pub fn setup_pool_and_test_contract(
         &accs[0],
     )?;
 
-    Ok((
-        runner,
-        accs,
-        lp_token_addr,
-        pair_addr,
-        contract_addr,
-        asset_list,
-    ))
+    Ok((accs, lp_token_addr, pair_addr, contract_addr, asset_list))
 }
 
 pub fn instantiate_test_astroport_contract<'a, R: Runner<'a>>(
