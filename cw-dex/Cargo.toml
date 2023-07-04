@@ -10,8 +10,9 @@ readme = "README.md"
 
 [features]
 default = []
-osmosis = ["dep:osmosis-std"]
+osmosis = ["osmosis-std"]
 astroport = ["dep:astroport","dep:uint", "apollo-cw-asset/astroport"]
+backtraces = ["cosmwasm-std/backtraces", "osmosis-std/backtraces"]
 
 [package.metadata.docs.rs]
 all-features = true

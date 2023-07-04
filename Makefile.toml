@@ -89,12 +89,16 @@ dependencies = ["deny", "clippy-fix", "docs", "machete-fix"]
 command = "cargo"
 args = [
     "build",
+    "--features",
+    "backtraces",
     "--target",
     "wasm32-unknown-unknown",
     "--lib",
     "--release",
     "--package",
-    "osmosis-test-contract"
+    "osmosis-test-contract",
+    "--package",
+    "astroport-test-contract"
 ]
 
 # Docs and Test coverage are not run by default. Can run all with "cargo make all".

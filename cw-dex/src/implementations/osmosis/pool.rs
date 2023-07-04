@@ -9,7 +9,6 @@ use apollo_utils::assets::{
 use apollo_utils::iterators::{IntoElementwise, TryIntoElementwise};
 use osmosis_std::types::osmosis::gamm::v1beta1::{
     GammQuerier, MsgExitPool, MsgJoinPool, MsgJoinSwapExternAmountIn, MsgSwapExactAmountIn,
-    SwapAmountInRoute,
 };
 
 use apollo_cw_asset::{Asset, AssetInfo, AssetList};
@@ -17,6 +16,7 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     Coin, CosmosMsg, Deps, Env, Event, QuerierWrapper, Response, StdError, StdResult, Uint128,
 };
+use osmosis_std::types::osmosis::poolmanager::v1beta1::SwapAmountInRoute;
 
 use crate::traits::Pool;
 use crate::CwDexError;

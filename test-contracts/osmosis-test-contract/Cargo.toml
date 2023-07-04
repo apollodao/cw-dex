@@ -19,7 +19,7 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 # for more explicit tests, cargo test --features=backtraces
-# backtraces = ["cosmwasm-std/backtraces"]
+backtraces = ["cosmwasm-std/backtraces", "osmosis-std/backtraces", "cw-dex/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
 
@@ -38,3 +38,4 @@ thiserror = { workspace = true }
 apollo-cw-asset = { workspace = true }
 cw-dex = { workspace = true, features = ["osmosis"] }
 cw-dex-test-contract = { workspace = true }
+osmosis-std = { workspace = true }

@@ -7,6 +7,9 @@ use apollo_cw_asset::Asset;
 use cosmwasm_std::{DivideByZeroError, OverflowError, StdError, Uint128};
 use thiserror::Error;
 
+#[cfg(feature = "backtraces")]
+use std::backtrace::Backtrace;
+
 /// ## Description
 /// This enum describes router-test contract errors!
 #[derive(Error, Debug, PartialEq)]
@@ -87,6 +90,8 @@ impl From<CwDexError> for StdError {
     fn from(x: CwDexError) -> Self {
         Self::GenericErr {
             msg: String::from("CwDexError: ") + &x.to_string(),
+            #[cfg(feature = "backtraces")]
+            backtrace: Backtrace::capture(),
         }
     }
 }
