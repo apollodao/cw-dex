@@ -6,5 +6,6 @@ traits to abstract out the common behavior of various decentralized exchanges so
 that the same contract code can be used to interact with any of them.
 
 The currently supported decentralized exchanges are:
-- [Osmosis](src/implementations/osmosis/)
-- [Astroport](src/implementations/astroport/)
+- [Osmosis](cw-dex/src/implementations/osmosis/)
+- [Astroport](cw-dex/src/implementations/astroport/)
+- [Picasso](cw-dex/src/implementations/picasso/)

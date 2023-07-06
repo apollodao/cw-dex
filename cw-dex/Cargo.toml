@@ -9,9 +9,10 @@ version = "0.1.3"
 readme = "README.md"
 
 [features]
-default = []
+default = ["picasso"]
 osmosis = ["dep:osmosis-std"]
 astroport = ["dep:astroport-types","dep:uint"]
+picasso = []
 
 [package.metadata.docs.rs]
 all-features = true

@@ -9,6 +9,10 @@ pub mod astroport;
 #[cfg_attr(docsrs, doc(cfg(feature = "osmosis")))]
 pub mod osmosis;
 
+#[cfg(feature = "picasso")]
+#[cfg_attr(docsrs, doc(cfg(feature = "picasso")))]
+pub mod picasso;
+
 pub mod pool;
 
 pub use pool::*;
