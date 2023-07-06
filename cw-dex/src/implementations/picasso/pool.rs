@@ -25,7 +25,7 @@ pub struct PicassoPool {
 impl Pool for PicassoPool {
     fn provide_liquidity(
         &self,
-        __deps: Deps,
+        _deps: Deps,
         _env: &Env,
         assets: AssetList,
         min_out: Uint128,
@@ -191,7 +191,7 @@ impl Pool for PicassoPool {
 
     fn simulate_swap(
         &self,
-        _deps: Deps,
+        deps: Deps,
         offer_asset: Asset,
         ask_asset_info: AssetInfo,
         //For some reason Osmosis requires us to send a sender address for simulation.
@@ -219,7 +219,7 @@ impl Pool for PicassoPool {
             calculate_with_fees: true,
         };
 
-        let result: super::msg::SwapResponse = _deps
+        let result: super::msg::SwapResponse = deps
             .querier
             .query_wasm_smart("5w3oyasYQg6vkzwETMqUfvtVM99GQ4Xy8mMdKXMgJZDoRYwg", &msg)?;
 
