@@ -12,6 +12,7 @@ readme = "README.md"
 default = []
 osmosis = ["dep:osmosis-std"]
 astroport = ["dep:astroport-types","dep:uint"]
+picasso = []
 
 [package.metadata.docs.rs]
 all-features = true
