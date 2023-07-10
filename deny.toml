@@ -33,6 +33,7 @@ allow-git = [
 [sources.allow-org]
 github = [
     "apollodao",
+    "pacmanifold",
 ]
 
 [licenses]
