@@ -1,8 +1,8 @@
 #![allow(missing_docs)]
 
-use astroport_types::asset::{AssetInfo as AstroAssetInfo, PairInfo};
-use astroport_types::factory::{FeeInfoResponse, PairType, QueryMsg as FactoryQueryMsg};
-use astroport_types::querier::FeeInfo;
+use astroport::asset::{AssetInfo as AstroAssetInfo, PairInfo};
+use astroport::factory::{FeeInfoResponse, PairType, QueryMsg as FactoryQueryMsg};
+use astroport::querier::FeeInfo;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_binary, Addr, Decimal, Env, QuerierWrapper, QueryRequest, StdResult, Uint128, WasmQuery,
@@ -46,15 +46,20 @@ pub const ITERATIONS: u8 = 32;
 /// Astroport stable pair config
 #[cw_serde]
 pub struct StablePairConfig {
+    pub owner: Option<Addr>,
     pub pair_info: PairInfo,
     pub factory_addr: Addr,
     pub block_time_last: u64,
-    pub price0_cumulative_last: Uint128,
-    pub price1_cumulative_last: Uint128,
     pub init_amp: u64,
     pub init_amp_time: u64,
     pub next_amp: u64,
     pub next_amp_time: u64,
+    pub greatest_precision: u8,
+    pub cumulative_prices: Vec<(
+        astroport::asset::AssetInfo,
+        astroport::asset::AssetInfo,
+        Uint128,
+    )>,
 }
 
 /// Compute actual amplification coefficient (A)

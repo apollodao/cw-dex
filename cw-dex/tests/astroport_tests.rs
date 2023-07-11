@@ -1,8 +1,9 @@
+#![cfg(feature = "astroport")]
 use apollo_cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use apollo_utils::coins::coin_from_str;
 use apollo_utils::submessages::{find_event, parse_attribute_value};
-use astroport_types::factory::PairType;
-use astroport_types::pair::{PoolResponse, QueryMsg as PairQueryMsg};
+use astroport::factory::PairType;
+use astroport::pair::{PoolResponse, QueryMsg as PairQueryMsg};
 use cosmwasm_std::{Coin, Decimal, SubMsgResponse, Uint128};
 use cw_dex_test_contract::msg::{AstroportExecuteMsg, ExecuteMsg, QueryMsg};
 use cw_dex_test_helpers::astroport::setup_pool_and_test_contract;
@@ -13,23 +14,19 @@ use cw_it::osmosis_test_tube::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContr
 use cw_it::osmosis_test_tube::{
     Account, ExecuteResponse, Module, OsmosisTestApp, Runner, RunnerResult, SigningAccount, Wasm,
 };
+use cw_it::TestRunner;
 use test_case::test_case;
 
 const TEST_CONTRACT_WASM_FILE_PATH: &str =
     "../target/wasm32-unknown-unknown/release/astroport_test_contract.wasm";
 
-fn setup_pool_and_contract(
+fn setup_pool_and_contract<'a>(
+    runner: &'a TestRunner<'a>,
     pool_type: PairType,
     initial_liquidity: Vec<(&str, u64)>,
-) -> RunnerResult<(
-    OsmosisTestApp,
-    Vec<SigningAccount>,
-    String,
-    String,
-    String,
-    AssetList,
-)> {
+) -> RunnerResult<(Vec<SigningAccount>, String, String, String, AssetList)> {
     setup_pool_and_test_contract(
+        runner,
         pool_type,
         initial_liquidity,
         2,
@@ -41,9 +38,11 @@ fn setup_pool_and_contract(
 #[test_case(PairType::Xyk { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: cw20-cw20")]
 #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: stableswap native-cw20")]
 #[test_case(PairType::Stable { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: stableswap cw20-cw20")]
+#[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "provide_liquidity: stableswap native-native")]
 pub fn test_provide_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str, u64)>) {
-    let (runner, accs, lp_token_addr, _pair_addr, contract_addr, asset_list) =
-        setup_pool_and_contract(pool_type, initial_liquidity).unwrap();
+    let runner = TestRunner::OsmosisTestApp(OsmosisTestApp::new());
+    let (accs, lp_token_addr, _pair_addr, contract_addr, asset_list) =
+        setup_pool_and_contract(&runner, pool_type, initial_liquidity).unwrap();
     let admin = &accs[0];
 
     // Check contract's LP token balance before providing liquidity
@@ -75,9 +74,11 @@ pub fn test_provide_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str,
 #[test_case(PairType::Xyk { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: xyk cw20-cw20")]
 #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: stableswap native-cw20")]
 #[test_case(PairType::Stable { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: stableswap cw20-cw20")]
+#[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "withdraw_liquidity: stableswap native-native")]
 fn test_withdraw_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str, u64)>) {
-    let (runner, accs, lp_token_addr, pair_addr, contract_addr, asset_list) =
-        setup_pool_and_contract(pool_type, initial_liquidity).unwrap();
+    let runner = TestRunner::OsmosisTestApp(OsmosisTestApp::new());
+    let (accs, lp_token_addr, pair_addr, contract_addr, asset_list) =
+        setup_pool_and_contract(&runner, pool_type, initial_liquidity).unwrap();
     let admin = &accs[0];
     let wasm = Wasm::new(&runner);
 
@@ -165,12 +166,14 @@ fn stake_all_lp_tokens<'a, R: Runner<'a>>(
 #[test_case(PairType::Xyk {}, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "stake_and_unstake: xyk cw20-cw20")]
 #[test_case(PairType::Stable {}, vec![("uluna",1_000_000), ("astro", 1_000_000)]; "stake_and_unstake: stableswap native-cw20")]
 #[test_case(PairType::Stable {}, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "stake_and_unstake: stableswap cw20-cw20")]
+#[test_case(PairType::Stable {}, vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "stake_and_unstake: stableswap native-native")]
 fn test_stake_and_unstake(
     pool_type: PairType,
     initial_liquidity: Vec<(&str, u64)>,
 ) -> RunnerResult<()> {
-    let (runner, accs, lp_token_addr, _pair_addr, contract_addr, _asset_list) =
-        setup_pool_and_contract(pool_type, initial_liquidity).unwrap();
+    let runner = TestRunner::OsmosisTestApp(OsmosisTestApp::new());
+    let (accs, lp_token_addr, _pair_addr, contract_addr, _asset_list) =
+        setup_pool_and_contract(&runner, pool_type, initial_liquidity).unwrap();
 
     let admin = &accs[0];
 
@@ -236,13 +239,17 @@ fn test_stake_and_unstake(
 #[test_case(PairType::Stable { },vec![("uluna",1_000_000), ("astro", 1_000_000)], Uint128::new(1_000_000); "swap_and_simulate_swap: stable swap pool")]
 #[test_case(PairType::Stable { },vec![("uluna",1_000_000), ("astro", 1_000_000)], Uint128::new(100_000_000); "swap_and_simulate_swap: stable swap pool, high slippage")]
 #[test_case(PairType::Stable { },vec![("uluna",68_582_147), ("astro", 3_467_256)], Uint128::new(1_000_000); "swap_and_simulate_swap: stable swap pool, random prices")]
+#[test_case(PairType::Stable { },vec![("uluna",1_000_000), ("uatom", 1_000_000)], Uint128::new(1_000_000); "swap_and_simulate_swap: stable swap pool, native-native")]
+#[test_case(PairType::Stable { },vec![("uluna",1_000_000), ("uatom", 1_000_000)], Uint128::new(100_000_000); "swap_and_simulate_swap: stable swap pool, high slippage, native-native")]
+#[test_case(PairType::Stable { },vec![("uluna",68_582_147), ("uatom", 3_467_256)], Uint128::new(1_000_000); "swap_and_simulate_swap: stable swap pool, random prices, native-native")]
 fn test_swap_and_simulate_swap(
     pool_type: PairType,
     initial_liquidity: Vec<(&str, u64)>,
     amount: Uint128,
 ) {
-    let (runner, accs, _lp_token_addr, _pair_addr, contract_addr, asset_list) =
-        setup_pool_and_contract(pool_type, initial_liquidity).unwrap();
+    let runner = TestRunner::OsmosisTestApp(OsmosisTestApp::new());
+    let (accs, _lp_token_addr, _pair_addr, contract_addr, asset_list) =
+        setup_pool_and_contract(&runner, pool_type, initial_liquidity).unwrap();
 
     let admin = &accs[0];
     let wasm = Wasm::new(&runner);
@@ -258,7 +265,6 @@ fn test_swap_and_simulate_swap(
     let simulate_query = QueryMsg::SimulateSwap {
         offer: offer.clone(),
         ask: ask_info.clone(),
-        sender: None,
     };
 
     let expected_out = wasm.query(&contract_addr, &simulate_query).unwrap();

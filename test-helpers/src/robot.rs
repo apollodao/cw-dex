@@ -2,6 +2,7 @@ use cosmwasm_std::{Coin, Uint128};
 use cw_dex_test_contract::msg::{ExecuteMsg, OsmosisTestContractInstantiateMsg};
 use cw_it::helpers::{bank_balance_query, upload_wasm_file};
 use cw_it::osmosis_test_tube::{Module, OsmosisTestApp, SigningAccount, Wasm};
+use cw_it::ContractType;
 
 pub struct CwDexTestRobot<'a> {
     pub app: &'a OsmosisTestApp,
@@ -14,10 +15,10 @@ impl<'a> CwDexTestRobot<'a> {
         app: &'a OsmosisTestApp,
         signer: &SigningAccount,
         init_msg: &OsmosisTestContractInstantiateMsg,
-        wasm_file_path: &str,
+        contract: ContractType,
     ) -> Self {
         // Upload test contract wasm file
-        let code_id = upload_wasm_file(app, signer, wasm_file_path).unwrap();
+        let code_id = upload_wasm_file(app, signer, contract).unwrap();
 
         let wasm = Wasm::new(app);
         let test_contract_addr = wasm

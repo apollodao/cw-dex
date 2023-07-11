@@ -94,8 +94,13 @@ args = [
     "--lib",
     "--release",
     "--package",
-    "osmosis-test-contract"
+    "osmosis-test-contract",
+    "--package",
+    "astroport-test-contract"
 ]
+
+[tasks.build]
+dependencies = ["wasm"]
 
 # Docs and Test coverage are not run by default. Can run all with "cargo make all".
 [tasks.all]

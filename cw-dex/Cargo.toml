@@ -10,8 +10,9 @@ readme = "README.md"
 
 [features]
 default = []
-osmosis = ["dep:osmosis-std"]
-astroport = ["dep:astroport-types","dep:uint"]
+osmosis = ["osmosis-std"]
+astroport = ["dep:astroport","dep:uint", "apollo-cw-asset/astroport"]
+# backtraces = ["cosmwasm-std/backtraces", "osmosis-std/backtraces"]
 
 [package.metadata.docs.rs]
 all-features = true
@@ -31,11 +32,11 @@ apollo-utils = { workspace = true }
 osmosis-std = { workspace = true, optional = true }
 
 # Astroport
-astroport-types = { workspace = true, optional = true}
+astroport = { workspace = true, optional = true}
 uint = {version = "0.9.3", optional = true}
 
 [dev-dependencies]
-cw-it = { workspace = true, features = ["osmosis", "astroport"] }
+cw-it = { workspace = true, features = ["osmosis", "astroport", "multi-test"] }
 test-case = "3.0.0"
 cw-dex-test-contract = { workspace = true }
 cw-dex-test-helpers = { workspace = true }

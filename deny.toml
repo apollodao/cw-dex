@@ -12,10 +12,6 @@ unsound = "deny"
 ignore = [
     # Potential unaligned pointer read on windows. Doesn't happen in practice.
     "RUSTSEC-2021-0145",
-    # Not valid regarding the `chrono` dependency on `time`. May be valid for
-    # other crates. See
-    # https://github.com/chronotope/chrono/issues/602#issuecomment-1075915577
-    "RUSTSEC-2020-0071", # Alias: RUSTSEC-2020-26235
 ]
 
 [bans]
@@ -27,8 +23,7 @@ skip = []
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-git = [
-    "https://github.com/Wasmswap/wasmswap-contracts",
-    "https://github.com/DA0-DA0/dao-contracts",
+    "https://github.com/pacmanifold/cw-multi-test"
 ]
 [sources.allow-org]
 github = [
