@@ -62,7 +62,7 @@ pub fn setup_pool_and_test_contract<'a>(
             native_coins: vec![("uluna".to_string(), 6)],
         },
         &[],
-        &admin,
+        admin,
     )
     .unwrap();
 
@@ -73,7 +73,7 @@ pub fn setup_pool_and_test_contract<'a>(
             native_coins: vec![("uatom".to_string(), 6)],
         },
         &[],
-        &admin,
+        admin,
     )
     .unwrap();
 
@@ -197,10 +197,7 @@ pub fn setup_pool_and_test_contract<'a>(
         runner,
         &astroport_contracts.factory.address,
         pool_type,
-        [
-            astro_asset_infos[0].clone().into(),
-            astro_asset_infos[1].clone().into(),
-        ],
+        [astro_asset_infos[0].clone(), astro_asset_infos[1].clone()],
         init_params,
         admin,
         None,
@@ -222,7 +219,7 @@ pub fn setup_pool_and_test_contract<'a>(
 
     // Add initial pool liquidity
     let provide_liq_msg = PairExecuteMsg::ProvideLiquidity {
-        assets: astro_assets.try_into().unwrap(),
+        assets: astro_assets,
         slippage_tolerance: Some(Decimal::from_str("0.02").unwrap()),
         auto_stake: Some(false),
         receiver: None,

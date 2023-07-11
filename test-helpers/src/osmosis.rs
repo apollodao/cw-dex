@@ -24,7 +24,7 @@ pub fn setup_pool_and_test_contract(
             &pool
                 .liquidity
                 .iter()
-                .chain(vec![Coin::new(u128::MAX, "uosmo".to_string())].iter())
+                .chain([Coin::new(u128::MAX, "uosmo".to_string())].iter())
                 .map(|c| Coin::new(u128::MAX, c.denom.clone()))
                 .collect::<Vec<_>>(),
             10,

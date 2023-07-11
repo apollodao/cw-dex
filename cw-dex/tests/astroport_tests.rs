@@ -265,7 +265,6 @@ fn test_swap_and_simulate_swap(
     let simulate_query = QueryMsg::SimulateSwap {
         offer: offer.clone(),
         ask: ask_info.clone(),
-        sender: None,
     };
 
     let expected_out = wasm.query(&contract_addr, &simulate_query).unwrap();

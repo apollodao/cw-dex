@@ -129,20 +129,13 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::SimulateProvideLiquidity { assets } => {
             to_binary(&pool.simulate_provide_liquidity(deps, &env, assets)?.amount)
         }
-        QueryMsg::SimulateSwap { offer, ask, sender } => {
-            query_simulate_swap(deps, offer, ask, sender)
-        }
+        QueryMsg::SimulateSwap { offer, ask } => query_simulate_swap(deps, offer, ask),
     }
 }
 
-pub fn query_simulate_swap(
-    deps: Deps,
-    offer: Asset,
-    ask: AssetInfo,
-    to: Option<String>,
-) -> StdResult<Binary> {
+pub fn query_simulate_swap(deps: Deps, offer: Asset, ask: AssetInfo) -> StdResult<Binary> {
     let pool = POOL.load(deps.storage)?;
-    to_binary(&pool.simulate_swap(deps, offer, ask, to)?)
+    to_binary(&pool.simulate_swap(deps, offer, ask)?)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

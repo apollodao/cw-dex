@@ -89,8 +89,6 @@ dependencies = ["deny", "clippy-fix", "docs", "machete-fix"]
 command = "cargo"
 args = [
     "build",
-    "--features",
-    "backtraces",
     "--target",
     "wasm32-unknown-unknown",
     "--lib",
@@ -100,6 +98,9 @@ args = [
     "--package",
     "astroport-test-contract"
 ]
+
+[tasks.build]
+dependencies = ["wasm"]
 
 # Docs and Test coverage are not run by default. Can run all with "cargo make all".
 [tasks.all]

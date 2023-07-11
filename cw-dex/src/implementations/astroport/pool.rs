@@ -439,7 +439,6 @@ impl Pool for AstroportPool {
         deps: Deps,
         offer_asset: Asset,
         ask_asset_info: AssetInfo,
-        _sender: Option<String>,
     ) -> StdResult<Uint128> {
         Ok(deps
             .querier

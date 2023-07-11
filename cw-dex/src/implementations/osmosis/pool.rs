@@ -288,7 +288,6 @@ impl Pool for OsmosisPool {
         deps: Deps,
         offer: Asset,
         ask_asset_info: AssetInfo,
-        _sender: Option<String>,
     ) -> StdResult<Uint128> {
         let offer: Coin = offer.try_into()?;
         let swap_response = PoolmanagerQuerier::new(&deps.querier).estimate_swap_exact_amount_in(

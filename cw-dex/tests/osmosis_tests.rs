@@ -382,7 +382,6 @@ mod tests {
         let simulate_query = QueryMsg::SimulateSwap {
             offer: offer.clone(),
             ask: ask.clone(),
-            sender: Some(contract_addr.clone()),
         };
         let expected_out = wasm.query(&contract_addr, &simulate_query).unwrap();
         let min_out = if min_out {

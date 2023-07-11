@@ -136,10 +136,9 @@ impl PoolTrait for Pool {
         deps: Deps,
         offer_asset: Asset,
         ask_asset_info: AssetInfo,
-        sender: Option<String>,
     ) -> StdResult<Uint128> {
         self.as_trait()
-            .simulate_swap(deps, offer_asset, ask_asset_info, sender)
+            .simulate_swap(deps, offer_asset, ask_asset_info)
     }
 
     fn lp_token(&self) -> AssetInfo {

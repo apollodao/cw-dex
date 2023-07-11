@@ -72,11 +72,7 @@ pub enum QueryMsg {
     #[returns(Uint128)]
     SimulateProvideLiquidity { assets: AssetList },
     #[returns(Uint128)]
-    SimulateSwap {
-        offer: Asset,
-        ask: AssetInfo,
-        sender: Option<String>,
-    },
+    SimulateSwap { offer: Asset, ask: AssetInfo },
 }
 
 #[cw_serde]
