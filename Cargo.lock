@@ -1648,7 +1648,6 @@ dependencies = [
  "cw-dex",
  "cw-dex-test-contract",
  "cw-storage-plus 1.1.0",
- "osmosis-std 0.16.0",
  "thiserror",
 ]
 
