@@ -13,6 +13,7 @@ mod tests {
         Account, ExecuteResponse, Module, OsmosisTestApp, Runner, RunnerResult, SigningAccount,
         Wasm,
     };
+    use cw_it::WhitelistForceUnlock;
 
     use test_case::test_case;
 
@@ -330,7 +331,9 @@ mod tests {
 
         // Whitlist contract_addr
         if whitelist {
-            runner.whitelist_address_for_force_unlock(&contract_addr);
+            runner
+                .whitelist_address_for_force_unlock(&contract_addr)
+                .unwrap();
         }
 
         // Force unlock LP tokens

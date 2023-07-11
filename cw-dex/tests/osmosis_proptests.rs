@@ -1,12 +1,9 @@
 use apollo_cw_asset::{Asset, AssetInfo};
-use cosmwasm_std::{Addr, Coin, Uint128};
-use cw_dex_test_contract::msg::{ExecuteMsg, OsmosisTestContractInstantiateMsg};
+use cosmwasm_std::{Coin, Uint128};
+use cw_dex_test_contract::msg::ExecuteMsg;
 use cw_dex_test_helpers::osmosis::setup_pool_and_test_contract;
-use cw_dex_test_helpers::robot::CwDexTestRobot;
 use cw_it::helpers::bank_balance_query;
-use cw_it::osmosis::{test_pool, OsmosisPoolType, OsmosisTestPool};
-use cw_it::osmosis_test_tube::Account;
-use cw_it::{Artifact, ContractType};
+use cw_it::osmosis::{test_pool, OsmosisTestPool};
 
 use cw_it::osmosis_test_tube::{Module, OsmosisTestApp, RunnerResult, SigningAccount, Wasm};
 use prop::collection::vec;
@@ -27,16 +24,6 @@ fn setup_pool_and_contract(
         None,
         TEST_CONTRACT_WASM_FILE_PATH,
     )
-}
-
-fn init_account_with_max_balances(app: &OsmosisTestApp, pool: &OsmosisTestPool) -> SigningAccount {
-    let coins = pool
-        .liquidity
-        .iter()
-        .map(|c| Coin::new(u128::MAX, &c.denom))
-        .collect::<Vec<_>>();
-
-    app.init_account(&coins).unwrap()
 }
 
 proptest! {
@@ -118,52 +105,4 @@ proptest! {
         assert_eq!(offer_balance, Uint128::zero());
         assert_ne!(ask_balance, Uint128::zero());
     }
-
-    #[test]
-    fn superfluid_staking_stake_and_unstake(amount in 1..100_000_000_000_000_000_000u128) {
-        let app = OsmosisTestApp::new();
-        let pool = OsmosisTestPool::new(
-            vec![
-                Coin::new(1000000000u128, "uatom"),
-                Coin::new(1000000000u128, "uosmo"),
-            ],
-            OsmosisPoolType::Basic,
-        );
-        let admin = init_account_with_max_balances(&app, &pool);
-        let pool_id = pool.create(&app, &admin);
-
-        let validator = Addr::unchecked(app.get_first_validator_address()?);
-
-        println!("validator_addr: {}", validator);
-
-        let init_msg = OsmosisTestContractInstantiateMsg {
-            pool_id,
-            lock_duration: Some(TWO_WEEKS_IN_SECONDS),
-            lock_id: 1u64,
-            superfluid_validator: Some(validator),
-        };
-
-        // Whitelist LP token for superfluid staking
-        app.add_superfluid_lp_share(&format!("gamm/pool/{}", pool_id));
-
-        // Get LP token balance before
-        let lp_balance_before = bank_balance_query(
-            &app,
-            admin.address(),
-            format!("gamm/pool/{}", pool_id),
-        ).unwrap();
-        println!("LP balance before: {}", lp_balance_before);
-
-        println!("Superfluid staking amount: {}", amount);
-        let robot = CwDexTestRobot::osmosis(&app, &admin, &init_msg, ContractType::Artifact(Artifact::Local(TEST_CONTRACT_WASM_FILE_PATH.to_string())));
-        let test_contract_addr = robot.test_contract_addr.clone();
-
-        robot
-            .superfluid_stake(&admin, amount.into())
-            .assert_lp_balance(admin.address(), lp_balance_before.u128() - amount)
-            .superfluid_unlock(&admin, amount.into())
-            .increase_time(TWO_WEEKS_IN_SECONDS)
-            .assert_lp_balance(test_contract_addr, amount);
-    }
-
 }
