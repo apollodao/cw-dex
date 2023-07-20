@@ -88,10 +88,6 @@ pub enum CwDexError {
 
 impl From<CwDexError> for StdError {
     fn from(x: CwDexError) -> Self {
-        Self::GenericErr {
-            msg: String::from("CwDexError: ") + &x.to_string(),
-            #[cfg(feature = "backtraces")]
-            backtrace: Backtrace::capture(),
-        }
+        Self::generic_err(String::from("CwDexError: ") + &x.to_string())
     }
 }

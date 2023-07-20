@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# [0.3.1] - 2023-07-20
+
+### Changed
+
+Use `StdError::generic_err` instead of constructing a literal `StdError` in `cw-dex/src/error.rs`,
+so that we don't have to fill the backtraces field.
+
 ## [0.3.0] - 2023-07-17
 
 Note: This relase contains breaking API changes.
