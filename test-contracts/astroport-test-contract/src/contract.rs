@@ -29,7 +29,7 @@ pub fn instantiate(
 
             generator_addr: Addr::unchecked(msg.generator_addr),
 
-            astro_addr: Addr::unchecked(msg.astro_addr),
+            astro_token: msg.astro_token,
         },
     )?;
 

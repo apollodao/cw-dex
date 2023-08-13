@@ -7,7 +7,7 @@ use cosmwasm_std::{
 };
 use cw20::Cw20ExecuteMsg;
 
-use apollo_cw_asset::{Asset, AssetList};
+use apollo_cw_asset::{Asset, AssetInfo, AssetList};
 use astroport::asset::Asset as AstroAsset;
 use astroport::generator::{
     Cw20HookMsg as GeneratorCw20HookMsg, ExecuteMsg as GeneratorExecuteMsg, PendingTokenResponse,
@@ -25,7 +25,7 @@ pub struct AstroportStaking {
     /// The address of the associated generator contract
     pub generator_addr: Addr,
     /// The address of the ASTRO token contract
-    pub astro_addr: Addr,
+    pub astro_token: AssetInfo,
 }
 
 impl Staking for AstroportStaking {}
@@ -96,7 +96,7 @@ impl Rewards for AstroportStaking {
             .unwrap_or_default()
             .into_iter()
             .chain(vec![
-                Asset::cw20(self.astro_addr.clone(), pending_astro).into()
+                Asset::new(self.astro_token.clone(), pending_astro).into()
             ])
             .filter(|asset| !asset.amount.is_zero())
             .collect::<Vec<_>>();
