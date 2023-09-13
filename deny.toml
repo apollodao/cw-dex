@@ -12,6 +12,9 @@ unsound = "deny"
 ignore = [
     # Potential unaligned pointer read on windows. Doesn't happen in practice.
     "RUSTSEC-2021-0145",
+    # Only in dev-deps
+    "RUSTSEC-2022-0093",
+    "RUSTSEC-2023-0052",
 ]
 
 [bans]
