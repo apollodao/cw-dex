@@ -73,6 +73,8 @@ pub enum QueryMsg {
     SimulateProvideLiquidity { assets: AssetList },
     #[returns(Uint128)]
     SimulateSwap { offer: Asset, ask: AssetInfo },
+    #[returns(cw_dex::Pool)]
+    GetPoolForLpToken { lp_token: AssetInfo },
 }
 
 #[cw_serde]

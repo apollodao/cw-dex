@@ -4,7 +4,8 @@ use apollo_utils::coins::coin_from_str;
 use apollo_utils::submessages::{find_event, parse_attribute_value};
 use astroport::factory::PairType;
 use astroport::pair::{PoolResponse, QueryMsg as PairQueryMsg};
-use cosmwasm_std::{Coin, Decimal, SubMsgResponse, Uint128};
+use cosmwasm_std::{Addr, Coin, Decimal, SubMsgResponse, Uint128};
+use cw_dex::Pool;
 use cw_dex_test_contract::msg::{AstroportExecuteMsg, ExecuteMsg, QueryMsg};
 use cw_dex_test_helpers::astroport::setup_pool_and_test_contract;
 use cw_dex_test_helpers::{
@@ -309,4 +310,37 @@ fn test_swap_and_simulate_swap(
     // Assert that offer and ask balances are correct
     assert_eq!(ask_balance, expected_out);
     assert_eq!(offer_balance, Uint128::zero());
+}
+
+#[test]
+fn test_get_pool_for_lp_token() {
+    let runner = TestRunner::OsmosisTestApp(OsmosisTestApp::new());
+    let (_accs, lp_token_addr, pair_addr, contract_addr, asset_list) = setup_pool_and_contract(
+        &runner,
+        PairType::Xyk {},
+        vec![("uluna", 1_000_000), ("uatom", 1_000_000)],
+    )
+    .unwrap();
+
+    let wasm = Wasm::new(&runner);
+
+    let query = QueryMsg::GetPoolForLpToken {
+        lp_token: AssetInfo::Cw20(Addr::unchecked(lp_token_addr.clone())),
+    };
+    let pool = wasm.query::<_, Pool>(&contract_addr, &query).unwrap();
+
+    match pool {
+        Pool::Astroport(pool) => {
+            assert_eq!(pool.lp_token_addr, Addr::unchecked(lp_token_addr));
+            assert_eq!(pool.pair_addr, Addr::unchecked(pair_addr));
+            assert_eq!(
+                pool.pool_assets,
+                asset_list
+                    .into_iter()
+                    .map(|x| x.info.clone())
+                    .collect::<Vec<AssetInfo>>()
+            );
+        }
+        _ => panic!("Wrong pool type"),
+    }
 }

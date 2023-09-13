@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Changed field `astro_addr: Addr` to `astro_token: AssetInfo` on struct `AstroportStaking`.
   - This is a breaking change.
   - This is to support chains where ASTRO is a native token.
+- Implemented `Pool::get_pool_for_lp_token` for Astroport.
 
 # [0.3.1] - 2023-07-20
 

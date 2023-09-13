@@ -1,8 +1,10 @@
+#![cfg(feature = "osmosis")]
 mod tests {
     use apollo_cw_asset::{Asset, AssetInfo, AssetList};
     use apollo_utils::coins::coin_from_str;
     use apollo_utils::submessages::{find_event, parse_attribute_value};
     use cosmwasm_std::{Coin, SubMsgResponse, Uint128};
+    use cw_dex::Pool;
     use cw_dex_test_contract::msg::{ExecuteMsg, QueryMsg};
     use cw_dex_test_helpers::osmosis::setup_pool_and_test_contract;
     use cw_dex_test_helpers::provide_liquidity;
@@ -414,5 +416,30 @@ mod tests {
         // Assert that OSMO and ATOM balances are correct
         assert_eq!(ask_balance, expected_out);
         assert_eq!(offer_balance, Uint128::zero());
+    }
+
+    #[test]
+    fn test_get_pool_for_lp_token() {
+        let (runner, _accs, pool_id, contract_addr) = setup_pool_and_contract(
+            OsmosisPoolType::Basic,
+            INITIAL_TWO_POOL_LIQUIDITY.to_vec(),
+            None,
+        )
+        .unwrap();
+        let lp_token_denom = format!("gamm/pool/{}", pool_id);
+
+        let wasm = Wasm::new(&runner);
+
+        let query = QueryMsg::GetPoolForLpToken {
+            lp_token: AssetInfo::native(&lp_token_denom),
+        };
+        let pool = wasm.query::<_, Pool>(&contract_addr, &query).unwrap();
+
+        match pool {
+            Pool::Osmosis(pool) => {
+                assert_eq!(pool.pool_id(), pool_id);
+            }
+            _ => panic!("Wrong pool type"),
+        }
     }
 }
