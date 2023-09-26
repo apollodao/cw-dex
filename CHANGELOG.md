@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-# [Unreleased]
+# [0.4.0] - 2023-09-26
 
 ### Changed
 
@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - This is a breaking change.
   - This is to support chains where ASTRO is a native token.
 - Implemented `Pool::get_pool_for_lp_token` for Astroport.
+- Upgraded dependencies
+  - Upgraded osmosis-std to 0.19.2
+  - Upgraded cw-it to 0.2.1
 
 # [0.3.1] - 2023-07-20
 

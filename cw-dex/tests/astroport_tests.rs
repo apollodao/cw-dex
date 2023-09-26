@@ -41,7 +41,8 @@ fn setup_pool_and_contract<'a>(
 #[test_case(PairType::Stable { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: stableswap cw20-cw20")]
 #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "provide_liquidity: stableswap native-native")]
 pub fn test_provide_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str, u64)>) {
-    let runner = TestRunner::OsmosisTestApp(OsmosisTestApp::new());
+    let app = OsmosisTestApp::new();
+    let runner = TestRunner::OsmosisTestApp(&app);
     let (accs, lp_token_addr, _pair_addr, contract_addr, asset_list) =
         setup_pool_and_contract(&runner, pool_type, initial_liquidity).unwrap();
     let admin = &accs[0];
@@ -77,7 +78,8 @@ pub fn test_provide_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str,
 #[test_case(PairType::Stable { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: stableswap cw20-cw20")]
 #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "withdraw_liquidity: stableswap native-native")]
 fn test_withdraw_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str, u64)>) {
-    let runner = TestRunner::OsmosisTestApp(OsmosisTestApp::new());
+    let app = OsmosisTestApp::new();
+    let runner = TestRunner::OsmosisTestApp(&app);
     let (accs, lp_token_addr, pair_addr, contract_addr, asset_list) =
         setup_pool_and_contract(&runner, pool_type, initial_liquidity).unwrap();
     let admin = &accs[0];
@@ -172,7 +174,8 @@ fn test_stake_and_unstake(
     pool_type: PairType,
     initial_liquidity: Vec<(&str, u64)>,
 ) -> RunnerResult<()> {
-    let runner = TestRunner::OsmosisTestApp(OsmosisTestApp::new());
+    let app = OsmosisTestApp::new();
+    let runner = TestRunner::OsmosisTestApp(&app);
     let (accs, lp_token_addr, _pair_addr, contract_addr, _asset_list) =
         setup_pool_and_contract(&runner, pool_type, initial_liquidity).unwrap();
 
@@ -248,7 +251,8 @@ fn test_swap_and_simulate_swap(
     initial_liquidity: Vec<(&str, u64)>,
     amount: Uint128,
 ) {
-    let runner = TestRunner::OsmosisTestApp(OsmosisTestApp::new());
+    let app = OsmosisTestApp::new();
+    let runner = TestRunner::OsmosisTestApp(&app);
     let (accs, _lp_token_addr, _pair_addr, contract_addr, asset_list) =
         setup_pool_and_contract(&runner, pool_type, initial_liquidity).unwrap();
 
@@ -314,7 +318,8 @@ fn test_swap_and_simulate_swap(
 
 #[test]
 fn test_get_pool_for_lp_token() {
-    let runner = TestRunner::OsmosisTestApp(OsmosisTestApp::new());
+    let app = OsmosisTestApp::new();
+    let runner = TestRunner::OsmosisTestApp(&app);
     let (_accs, lp_token_addr, pair_addr, contract_addr, asset_list) = setup_pool_and_contract(
         &runner,
         PairType::Xyk {},

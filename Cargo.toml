@@ -25,8 +25,8 @@ schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
 apollo-cw-asset = "0.1.1"
-osmosis-std = "0.16.0"
-cw-it = { git = "https://github.com/apollodao/cw-it.git", rev = "e374e2e863503ae5334f76b6e433f757b0aaaeea" }
+osmosis-std = "0.19.2"
+cw-it = "0.2.1"
 cw-dex = { path = "cw-dex" }
 cw-dex-test-contract = { path = "test-contracts/package" }
 cw-dex-test-helpers = { path = "test-helpers" }
