@@ -72,16 +72,17 @@ impl Pool {
             AssetInfo::Cw20(address) => {
                 // The only Pool implementation that uses CW20 tokens right now is Astroport.
                 // To figure out if the CW20 is a LP token, we need to check which address
-                // instantiated the CW20 and check if that address is an Astroport pair contract.
+                // instantiated the CW20 and check if that address is an Astroport pair
+                // contract.
                 let contract_info = deps.querier.query_wasm_contract_info(address)?;
                 let creator_addr = deps.api.addr_validate(&contract_info.creator)?;
 
-                // Try to create an `AstroportPool` object with the creator address. This will query
-                // the contract and assume that it is an Astroport pair contract. If it succeeds,
-                // the pool object will be returned.
+                // Try to create an `AstroportPool` object with the creator address. This will
+                // query the contract and assume that it is an Astroport pair
+                // contract. If it succeeds, the pool object will be returned.
                 //
-                // NB: This does NOT validate that the pool is registered with the Astroport factory,
-                // and that it is an "official" Astroport pool.
+                // NB: This does NOT validate that the pool is registered with the Astroport
+                // factory, and that it is an "official" Astroport pool.
                 let pool = AstroportPool::new(deps, creator_addr)?;
 
                 Ok(Pool::Astroport(pool))

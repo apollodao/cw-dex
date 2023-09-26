@@ -431,7 +431,7 @@ mod tests {
         let wasm = Wasm::new(&runner);
 
         let query = QueryMsg::GetPoolForLpToken {
-            lp_token: AssetInfo::native(&lp_token_denom),
+            lp_token: AssetInfo::native(lp_token_denom),
         };
         let pool = wasm.query::<_, Pool>(&contract_addr, &query).unwrap();
 
