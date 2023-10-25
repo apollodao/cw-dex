@@ -581,7 +581,7 @@ dependencies = [
 
 [[package]]
 name = "cw-dex"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "apollo-cw-asset",
  "apollo-utils",
@@ -593,6 +593,7 @@ dependencies = [
  "cw-it",
  "cw-storage-plus 1.1.0",
  "cw-utils 1.0.1",
+ "cw2 1.1.0",
  "cw20 1.1.0",
  "cw20-base",
  "osmosis-std",

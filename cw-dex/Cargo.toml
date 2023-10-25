@@ -5,13 +5,13 @@ edition = "2021"
 license = "MPL-2.0"
 name = "cw-dex"
 repository = "https://github.com/apollodao/cw-dex"
-version = "0.4.0"
+version = "0.4.1"
 readme = "README.md"
 
 [features]
 default = []
 osmosis = ["osmosis-std"]
-astroport = ["dep:astroport","dep:uint", "apollo-cw-asset/astroport"]
+astroport = ["dep:astroport","dep:uint", "apollo-cw-asset/astroport", "dep:cw2"]
 # backtraces = ["cosmwasm-std/backtraces", "osmosis-std/backtraces"]
 
 [package.metadata.docs.rs]
@@ -32,8 +32,9 @@ apollo-utils = { workspace = true }
 osmosis-std = { workspace = true, optional = true }
 
 # Astroport
-astroport = { workspace = true, optional = true}
-uint = {version = "0.9.3", optional = true}
+astroport = { workspace = true, optional = true }
+uint = { version = "0.9.3", optional = true }
+cw2  = { workspace = true, optional = true }
 
 [dev-dependencies]
 cw-it = { workspace = true, features = ["osmosis", "astroport", "multi-test"] }

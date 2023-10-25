@@ -1,9 +1,10 @@
 //! Staking/rewards traits implementations for Astroport
 
+use apollo_utils::assets::separate_natives_and_cw20s;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, Deps, Env, Event, QuerierWrapper, QueryRequest, Response, Uint128,
-    WasmMsg, WasmQuery,
+    to_binary, Addr, CosmosMsg, Deps, Empty, Env, Event, QuerierWrapper, QueryRequest, Response,
+    Uint128, WasmMsg, WasmQuery,
 };
 use cw20::Cw20ExecuteMsg;
 
@@ -71,9 +72,42 @@ impl Rewards for AstroportStaking {
             funds: vec![],
         });
 
-        Ok(Response::new()
-            .add_message(claim_rewards_msg)
-            .add_event(event))
+        let mut res = Response::new().add_message(claim_rewards_msg);
+
+        // Astroport generator only supports CW20 tokens as proxy rewards and wraps
+        // native tokens in their "CW20 wrapper". We need to unwrap them here.
+        let (_, cw20s) = separate_natives_and_cw20s(&claimable_rewards);
+        for cw20 in cw20s {
+            // Query the cw20s creator to get the address of the wrapper contract
+            let contract_info = deps.querier.query_wasm_contract_info(&cw20.address)?;
+            let wrapper_contract = deps.api.addr_validate(&contract_info.creator)?;
+
+            // Query the wrapper contract's cw2 info to check if it is a native token
+            // wrapper, otherwise skip it
+            let contract_version = cw2::query_contract_info(&deps.querier, &wrapper_contract).ok();
+            match contract_version {
+                Some(contract_version) => {
+                    if &contract_version.contract != "astroport-native-coin-wrapper" {
+                        continue;
+                    }
+                }
+                None => continue,
+            }
+
+            // Unwrap the native token
+            let unwrap_msg: CosmosMsg<Empty> = CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: cw20.address.to_string(),
+                msg: to_binary(&cw20::Cw20ExecuteMsg::Send {
+                    contract: wrapper_contract.to_string(),
+                    amount: cw20.amount,
+                    msg: to_binary(&astroport::native_coin_wrapper::Cw20HookMsg::Unwrap {})?,
+                })?,
+                funds: vec![],
+            });
+            res = res.add_message(unwrap_msg);
+        }
+
+        Ok(res.add_event(event))
     }
 
     fn query_pending_rewards(

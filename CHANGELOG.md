@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# [0.4.1] - 2023-10-25
+
+### Added
+
+- fn `claim_rewards` on `AstroportStaking` now unwraps any CW20-wrapped native tokens claimed from the staking contract.
+  - See the astroport [native-coin-wrapper](https://github.com/astroport-fi/astroport-core/tree/main/contracts/periphery/native-coin-wrapper) contract.
+
 # [0.4.0] - 2023-09-26
 
 ### Changed
