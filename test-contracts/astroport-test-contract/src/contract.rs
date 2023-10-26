@@ -19,7 +19,9 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    let pool = AstroportPool::new(deps.as_ref(), Addr::unchecked(msg.pair_addr))?;
+    let pair_addr = deps.api.addr_validate(&msg.pair_addr)?;
+    let liquidity_manager = deps.api.addr_validate(&msg.liquidity_manager_addr)?;
+    let pool = AstroportPool::new(deps.as_ref(), pair_addr, liquidity_manager)?;
     POOL.save(deps.storage, &pool)?;
 
     STAKING.save(
@@ -130,9 +132,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_binary(&pool.simulate_provide_liquidity(deps, &env, assets)?.amount)
         }
         QueryMsg::SimulateSwap { offer, ask } => query_simulate_swap(deps, offer, ask),
-        QueryMsg::GetPoolForLpToken { lp_token } => {
-            to_binary(&cw_dex::Pool::get_pool_for_lp_token(deps, &lp_token)?)
-        }
+        QueryMsg::GetPoolForLpToken { lp_token } => to_binary(
+            &cw_dex::Pool::get_pool_for_lp_token(deps, &lp_token, Some(pool.liquidity_manager))?,
+        ),
     }
 }
 

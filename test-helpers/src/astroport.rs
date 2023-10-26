@@ -242,9 +242,10 @@ pub fn setup_pool_and_test_contract<'a>(
         runner,
         code_id,
         pair_addr.clone(),
-        astroport_contracts.clone().generator.address,
+        astroport_contracts.generator.address,
         AssetInfo::cw20(Addr::unchecked(astroport_contracts.astro_token.address)),
         lp_token_addr.clone(),
+        astroport_contracts.liquidity_manager.address,
         &accs[0],
     )?;
 
@@ -258,6 +259,7 @@ pub fn instantiate_test_astroport_contract<'a, R: Runner<'a>>(
     generator_addr: String,
     astro_token: AssetInfo,
     lp_token_addr: String,
+    liquidity_manager_addr: String,
     signer: &SigningAccount,
 ) -> RunnerResult<String> {
     let init_msg = AstroportContractInstantiateMsg {
@@ -265,6 +267,7 @@ pub fn instantiate_test_astroport_contract<'a, R: Runner<'a>>(
         lp_token_addr,
         generator_addr,
         astro_token,
+        liquidity_manager_addr,
     };
 
     let wasm = Wasm::new(runner);

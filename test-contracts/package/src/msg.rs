@@ -16,6 +16,7 @@ pub struct AstroportContractInstantiateMsg {
     pub lp_token_addr: String,
     pub generator_addr: String,
     pub astro_token: AssetInfo,
+    pub liquidity_manager_addr: String,
 }
 
 #[cw_serde]

@@ -24,14 +24,17 @@ cw20-base = "1.0"
 schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
-apollo-cw-asset = "0.1.1"
+# apollo-cw-asset = "0.1.1"
+apollo-cw-asset = { path = "../apollo-cw-asset" }
 osmosis-std = "0.19.2"
-cw-it = "0.2.1"
+# cw-it = "0.2.1"
+cw-it = { path = "../cw-it" }
 cw-dex = { path = "cw-dex" }
 cw-dex-test-contract = { path = "test-contracts/package" }
 cw-dex-test-helpers = { path = "test-helpers" }
-apollo-utils = "0.1.0"
-astroport = "2.8.0"
+# apollo-utils = "0.1.0"
+apollo-utils = { path = "../apollo-utils" }
+astroport = "3.6.1"
 
 [profile.release]
 codegen-units    = 1

@@ -5,7 +5,7 @@ use crate::error::CwDexError;
 use crate::traits::pool::Pool as PoolTrait;
 use apollo_cw_asset::{Asset, AssetInfo, AssetList};
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Deps, Env, Response, StdResult, Uint128};
+use cosmwasm_std::{Addr, Deps, Env, Response, StdError, StdResult, Uint128};
 
 #[cfg(feature = "astroport")]
 use crate::astroport::AstroportPool;
@@ -49,9 +49,15 @@ impl Pool {
     ///
     /// Arguments:
     /// - `lp_token`: Said LP token
+    /// - `astroport_liquidity_manager`: The Astroport liquidity manager address. This must be set
+    ///  if the LP token is an Astroport LP token.
     #[allow(unused_variables)]
     #[allow(unreachable_patterns)]
-    pub fn get_pool_for_lp_token(deps: Deps, lp_token: &AssetInfo) -> Result<Self, CwDexError> {
+    pub fn get_pool_for_lp_token(
+        deps: Deps,
+        lp_token: &AssetInfo,
+        astroport_liquidity_manager: Option<Addr>,
+    ) -> Result<Self, CwDexError> {
         match lp_token {
             #[cfg(feature = "osmosis")]
             AssetInfo::Native(lp_token_denom) => {
@@ -77,13 +83,18 @@ impl Pool {
                 let contract_info = deps.querier.query_wasm_contract_info(address)?;
                 let creator_addr = deps.api.addr_validate(&contract_info.creator)?;
 
+                // Unwrap the Astroport liquidity manager address.
+                let liquidity_manager = astroport_liquidity_manager.ok_or(
+                    StdError::generic_err("Must provide liquidity manager address"),
+                )?;
+
                 // Try to create an `AstroportPool` object with the creator address. This will
                 // query the contract and assume that it is an Astroport pair
                 // contract. If it succeeds, the pool object will be returned.
                 //
                 // NB: This does NOT validate that the pool is registered with the Astroport
                 // factory, and that it is an "official" Astroport pool.
-                let pool = AstroportPool::new(deps, creator_addr)?;
+                let pool = AstroportPool::new(deps, creator_addr, liquidity_manager)?;
 
                 Ok(Pool::Astroport(pool))
             }
