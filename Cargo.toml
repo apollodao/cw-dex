@@ -34,7 +34,7 @@ astroport-test-contract = { path = "test-contracts/astroport-test-contract" }
 cw-dex-test-helpers = { path = "test-helpers" }
 apollo-utils = "0.1.0"
 astroport = "=2.8.7"
-astroport = "3.6.1"
+astroport_v3 = { package = "astroport", version = "=3.6.1" }
 
 [profile.release]
 codegen-units    = 1

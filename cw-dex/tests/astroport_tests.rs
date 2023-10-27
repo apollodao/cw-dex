@@ -52,6 +52,9 @@ fn setup_pool_and_contract<'a>(
 #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: stableswap native-cw20")]
 #[test_case(PairType::Stable { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: stableswap cw20-cw20")]
 #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "provide_liquidity: stableswap native-native")]
+#[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: concentrated native-cw20")]
+#[test_case(PairType::Custom("concentrated".to_string()), vec![("apollo",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: concentrated cw20-cw20")]
+#[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "provide_liquidity: concentrated native-native")]
 pub fn test_provide_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str, u64)>) {
     let owned_runner = get_test_runner();
     let runner = owned_runner.as_ref();
@@ -89,9 +92,12 @@ pub fn test_provide_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str,
 #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: stableswap native-cw20")]
 #[test_case(PairType::Stable { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: stableswap cw20-cw20")]
 #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "withdraw_liquidity: stableswap native-native")]
+#[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: concentrated native-cw20")]
+#[test_case(PairType::Custom("concentrated".to_string()), vec![("apollo",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: concentrated cw20-cw20")]
+#[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "withdraw_liquidity: concentrated native-native")]
 fn test_withdraw_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str, u64)>) {
-    let app = OsmosisTestApp::new();
-    let runner = TestRunner::OsmosisTestApp(&app);
+    let owned_runner = get_test_runner();
+    let runner = owned_runner.as_ref();
     let (accs, lp_token_addr, pair_addr, contract_addr, asset_list) =
         setup_pool_and_contract(&runner, pool_type, initial_liquidity).unwrap();
     let admin = &accs[0];
@@ -179,9 +185,13 @@ fn stake_all_lp_tokens<'a, R: Runner<'a>>(
 
 #[test_case(PairType::Xyk {}, vec![("uluna",1_000_000), ("astro", 1_000_000)]; "stake_and_unstake: xyk native-cw20")]
 #[test_case(PairType::Xyk {}, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "stake_and_unstake: xyk cw20-cw20")]
+#[test_case(PairType::Xyk {}, vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "stake_and_unstake: xyk native-native")]
 #[test_case(PairType::Stable {}, vec![("uluna",1_000_000), ("astro", 1_000_000)]; "stake_and_unstake: stableswap native-cw20")]
 #[test_case(PairType::Stable {}, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "stake_and_unstake: stableswap cw20-cw20")]
 #[test_case(PairType::Stable {}, vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "stake_and_unstake: stableswap native-native")]
+#[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("astro", 1_000_000)]; "stake_and_unstake: concentrated native-cw20")]
+#[test_case(PairType::Custom("concentrated".to_string()), vec![("apollo",1_000_000), ("astro", 1_000_000)]; "stake_and_unstake: concentrated cw20-cw20")]
+#[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "stake_and_unstake: concentrated native-native")]
 fn test_stake_and_unstake(
     pool_type: PairType,
     initial_liquidity: Vec<(&str, u64)>,
@@ -258,6 +268,15 @@ fn test_stake_and_unstake(
 #[test_case(PairType::Stable { },vec![("uluna",1_000_000), ("uatom", 1_000_000)], Uint128::new(1_000_000); "swap_and_simulate_swap: stable swap pool, native-native")]
 #[test_case(PairType::Stable { },vec![("uluna",1_000_000), ("uatom", 1_000_000)], Uint128::new(100_000_000); "swap_and_simulate_swap: stable swap pool, high slippage, native-native")]
 #[test_case(PairType::Stable { },vec![("uluna",68_582_147), ("uatom", 3_467_256)], Uint128::new(1_000_000); "swap_and_simulate_swap: stable swap pool, random prices, native-native")]
+#[test_case(PairType::Custom("concentrated".to_string()),vec![("uluna",1_000_000), ("astro", 1_000_000)], Uint128::new(1_000_000); "swap_and_simulate_swap: concentrated pool, native-cw20")]
+#[test_case(PairType::Custom("concentrated".to_string()),vec![("uluna",1_000_000), ("astro", 1_000_000)], Uint128::new(100_000_000); "swap_and_simulate_swap: concentrated pool, high slippage, native-cw20")]
+#[test_case(PairType::Custom("concentrated".to_string()),vec![("uluna",68_582_147), ("astro", 3_467_256)], Uint128::new(1_000_000); "swap_and_simulate_swap: concentrated pool, random prices, native-cw20")]
+#[test_case(PairType::Custom("concentrated".to_string()),vec![("apollo",1_000_000), ("astro", 1_000_000)], Uint128::new(1_000_000); "swap_and_simulate_swap: concentrated pool, cw20-cw20")]
+#[test_case(PairType::Custom("concentrated".to_string()),vec![("apollo",1_000_000), ("astro", 1_000_000)], Uint128::new(100_000_000); "swap_and_simulate_swap: concentrated pool, high slippage, cw20-cw20")]
+#[test_case(PairType::Custom("concentrated".to_string()),vec![("apollo",68_582_147), ("astro", 3_467_256)], Uint128::new(1_000_000); "swap_and_simulate_swap: concentrated pool, random prices, cw20-cw20")]
+#[test_case(PairType::Custom("concentrated".to_string()),vec![("uluna",1_000_000), ("uatom", 1_000_000)], Uint128::new(1_000_000); "swap_and_simulate_swap: concentrated pool, native-native")]
+#[test_case(PairType::Custom("concentrated".to_string()),vec![("uluna",1_000_000), ("uatom", 1_000_000)], Uint128::new(100_000_000); "swap_and_simulate_swap: concentrated pool, high slippage, native-native")]
+#[test_case(PairType::Custom("concentrated".to_string()),vec![("uluna",68_582_147), ("uatom", 3_467_256)], Uint128::new(1_000_000); "swap_and_simulate_swap: concentrated pool, random prices, native-native")]
 fn test_swap_and_simulate_swap(
     pool_type: PairType,
     initial_liquidity: Vec<(&str, u64)>,

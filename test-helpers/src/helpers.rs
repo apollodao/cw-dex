@@ -1,6 +1,10 @@
+use std::error::Error;
+use std::str::FromStr;
+
 use apollo_cw_asset::{AssetInfo, AssetList};
 use apollo_utils::assets::separate_natives_and_cw20s;
-use cosmwasm_std::{StdResult, Uint128};
+use astroport::pair_concentrated::ConcentratedPoolParams;
+use cosmwasm_std::{Decimal, StdResult, Uint128};
 use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 use cw20_base::msg::InstantiateMsg as Cw20InstantiateMsg;
 use cw_dex_test_contract::msg::ExecuteMsg;
@@ -117,4 +121,27 @@ pub fn instantiate_cw20<'a>(
         .unwrap()
         .data
         .address)
+}
+
+pub fn f64_to_dec<T>(val: f64) -> T
+where
+    T: FromStr,
+    T::Err: Error,
+{
+    T::from_str(&val.to_string()).unwrap()
+}
+
+pub fn common_pcl_params() -> ConcentratedPoolParams {
+    ConcentratedPoolParams {
+        amp: f64_to_dec(40f64),
+        gamma: f64_to_dec(0.000145),
+        mid_fee: f64_to_dec(0.0026),
+        out_fee: f64_to_dec(0.0045),
+        fee_gamma: f64_to_dec(0.00023),
+        repeg_profit_threshold: f64_to_dec(0.000002),
+        min_price_scale_delta: f64_to_dec(0.000146),
+        price_scale: Decimal::one(),
+        ma_half_time: 600,
+        track_asset_balances: None,
+    }
 }

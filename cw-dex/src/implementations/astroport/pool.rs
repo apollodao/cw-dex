@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use apollo_cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use apollo_utils::iterators::IntoElementwise;
-use astroport::liquidity_manager;
+use astroport_v3::liquidity_manager;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_binary, wasm_execute, Addr, CosmosMsg, Decimal, Deps, Env, Event, QuerierWrapper,
@@ -24,6 +24,14 @@ use astroport::pair::{
     QueryMsg as PairQueryMsg, SimulationResponse,
 };
 use astroport::querier::query_supply;
+
+pub fn astro_v3_asset_from_asset(asset: &Asset) -> astroport_v3::asset::Asset {
+    let info = match &asset.info {
+        AssetInfoBase::Cw20(addr) => astroport_v3::asset::AssetInfo::cw20(addr.clone()),
+        AssetInfoBase::Native(denom) => astroport_v3::asset::AssetInfo::native(denom),
+    };
+    astroport_v3::asset::Asset::new(info, asset.amount)
+}
 
 /// Represents an AMM pool on Astroport
 #[cw_serde]
@@ -114,8 +122,8 @@ impl Pool for AstroportPool {
             msg: to_binary(&liquidity_manager::ExecuteMsg::ProvideLiquidity {
                 pair_addr: self.pair_addr.to_string(),
                 min_lp_to_receive: Some(min_out),
-                pair_msg: PairExecuteMsg::ProvideLiquidity {
-                    assets: assets.clone().into(),
+                pair_msg: astroport_v3::pair::ExecuteMsg::ProvideLiquidity {
+                    assets: assets.into_iter().map(astro_v3_asset_from_asset).collect(),
                     slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
                     auto_stake: Some(false),
                     receiver: None,
@@ -156,11 +164,14 @@ impl Pool for AstroportPool {
                     contract: self.liquidity_manager.to_string(),
                     amount: asset.amount,
                     msg: to_binary(&liquidity_manager::Cw20HookMsg::WithdrawLiquidity {
-                        pair_msg: PairCw20HookMsg::WithdrawLiquidity {
+                        pair_msg: astroport_v3::pair::Cw20HookMsg::WithdrawLiquidity {
                             // This field is currently not used...
                             assets: vec![],
                         },
-                        min_assets_to_receive: min_out.into(),
+                        min_assets_to_receive: min_out
+                            .into_iter()
+                            .map(astro_v3_asset_from_asset)
+                            .collect(),
                     })?,
                 })?,
                 funds: vec![],
@@ -244,8 +255,8 @@ impl Pool for AstroportPool {
             self.liquidity_manager.to_string(),
             &liquidity_manager::QueryMsg::SimulateProvide {
                 pair_addr: self.pair_addr.to_string(),
-                pair_msg: PairExecuteMsg::ProvideLiquidity {
-                    assets: assets.into(),
+                pair_msg: astroport_v3::pair::ExecuteMsg::ProvideLiquidity {
+                    assets: assets.into_iter().map(astro_v3_asset_from_asset).collect(),
                     slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
                     auto_stake: Some(false),
                     receiver: None,
