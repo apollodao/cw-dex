@@ -267,6 +267,7 @@ pub fn setup_pool_and_test_contract<'a>(
     Ok((accs, lp_token_addr, pair_addr, contract_addr, asset_list))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn instantiate_test_astroport_contract<'a, R: Runner<'a>>(
     runner: &'a R,
     code_id: u64,
