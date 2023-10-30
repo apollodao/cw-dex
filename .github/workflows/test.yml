@@ -50,7 +50,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --locked --test osmosis_tests
+          args: --locked --test osmosis_tests --features osmosis-test-tube
         env:
           RUST_BACKTRACE: 1
 
@@ -58,7 +58,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --locked --test astroport_tests
+          args: --locked --test astroport_tests --features osmosis-test-tube
         env:
           RUST_BACKTRACE: 1
 

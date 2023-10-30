@@ -12,12 +12,16 @@ use cw_it::cw_multi_test::ContractWrapper;
 use cw_it::helpers::upload_wasm_file;
 use cw_it::test_tube::{Account, Module, Runner, RunnerResult, SigningAccount, Wasm};
 use cw_it::traits::CwItRunner;
-use cw_it::{Artifact, ContractType, TestRunner};
+use cw_it::{ContractType, TestRunner};
 use std::str::FromStr;
+
+#[cfg(feature = "osmosis-test-tube")]
+use cw_it::Artifact;
 
 use crate::{common_pcl_params, cw20_mint, instantiate_cw20};
 
 /// Setup a pool and test contract for testing.
+#[allow(unused_variables)]
 pub fn setup_pool_and_test_contract<'a>(
     runner: &'a TestRunner<'a>,
     pool_type: PairType,
