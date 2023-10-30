@@ -5,10 +5,12 @@ use crate::error::CwDexError;
 use crate::traits::pool::Pool as PoolTrait;
 use apollo_cw_asset::{Asset, AssetInfo, AssetList};
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Deps, Env, Response, StdError, StdResult, Uint128};
+use cosmwasm_std::{Addr, Deps, Env, Response, StdResult, Uint128};
 
 #[cfg(feature = "astroport")]
 use crate::astroport::AstroportPool;
+#[cfg(feature = "astroport")]
+use cosmwasm_std::StdError;
 
 #[cfg(feature = "osmosis")]
 use {crate::implementations::osmosis::OsmosisPool, std::str::FromStr};
@@ -49,7 +51,8 @@ impl Pool {
     ///
     /// Arguments:
     /// - `lp_token`: Said LP token
-    /// - `astroport_liquidity_manager`: The Astroport liquidity manager address. This must be set
+    /// - `astroport_liquidity_manager`: The Astroport liquidity manager
+    ///   address. This must be set
     ///  if the LP token is an Astroport LP token.
     #[allow(unused_variables)]
     #[allow(unreachable_patterns)]

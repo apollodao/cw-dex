@@ -9,10 +9,10 @@ version = "0.4.1"
 readme = "README.md"
 
 [features]
-default = ["astroport", "osmosis-test-tube", "osmosis"]
+default = []
 osmosis = ["osmosis-std", "cw-it/osmosis", "osmosis-test-tube", "cw-dex-test-helpers/osmosis"]
 osmosis-test-tube = ["cw-it/osmosis-test-tube", "cw-dex-test-helpers/osmosis-test-tube"]
-astroport = ["dep:astroport","dep:astroport_v3", "dep:uint", "apollo-cw-asset/astroport", "dep:cw2", "cw-it/astroport", "cw-it/astroport-multi-test", "cw-dex-test-helpers/astroport"]
+astroport = ["dep:astroport","dep:astroport_v3", "apollo-cw-asset/astroport", "dep:cw2", "cw-it/astroport", "cw-it/astroport-multi-test", "cw-dex-test-helpers/astroport"]
 # backtraces = ["cosmwasm-std/backtraces", "osmosis-std/backtraces"]
 
 [package.metadata.docs.rs]
@@ -22,7 +22,6 @@ rustdoc-args = ["--cfg", "docsrs"]
 [dependencies]
 cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true }
-cw-storage-plus = { workspace = true }
 thiserror = { workspace = true }
 apollo-cw-asset = { workspace = true }
 cw-utils = { workspace = true }
@@ -35,7 +34,6 @@ osmosis-std = { workspace = true, optional = true }
 # Astroport
 astroport = { workspace = true, optional = true }
 astroport_v3 = { workspace = true, optional = true }
-uint = { version = "0.9.3", optional = true }
 cw2  = { workspace = true, optional = true }
 
 [dev-dependencies]

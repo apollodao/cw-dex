@@ -18,10 +18,9 @@ use crate::CwDexError;
 use apollo_utils::assets::separate_natives_and_cw20s;
 use astroport::asset::{Asset as AstroAsset, PairInfo};
 use astroport::factory::PairType;
-use astroport::pair::MAX_ALLOWED_SLIPPAGE;
 use astroport::pair::{
     Cw20HookMsg as PairCw20HookMsg, ExecuteMsg as PairExecuteMsg, PoolResponse,
-    QueryMsg as PairQueryMsg, SimulationResponse,
+    QueryMsg as PairQueryMsg, SimulationResponse, MAX_ALLOWED_SLIPPAGE,
 };
 use astroport::querier::query_supply;
 
@@ -152,8 +151,9 @@ impl Pool for AstroportPool {
         if let AssetInfoBase::Cw20(token_addr) = &asset.info {
             // Liquidity manager requires min_out to contain all assets in the pool
             for asset in &self.pool_assets {
-                if min_out.find(&asset).is_none() {
-                    // Add one unit as AssetList does not allow zero amounts (calls self.purge on add)
+                if min_out.find(asset).is_none() {
+                    // Add one unit as AssetList does not allow zero amounts (calls self.purge on
+                    // add)
                     min_out.add(&Asset::new(asset.clone(), Uint128::one()))?;
                 }
             }

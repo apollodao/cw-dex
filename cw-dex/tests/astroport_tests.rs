@@ -68,7 +68,8 @@ mod tests {
             cw20_balance_query(&runner, lp_token_addr.clone(), contract_addr.clone()).unwrap();
         assert_eq!(lp_token_before, Uint128::zero());
 
-        // Simulate Provide Liquidity. Not supported for concentrated liquidity, so we just make sure to use the right amounts of input assets
+        // Simulate Provide Liquidity. Not supported for concentrated liquidity, so we
+        // just make sure to use the right amounts of input assets
         let expected_out = match &pool_type {
             PairType::Custom(_) => Uint128::new(1000000),
             _ => {
@@ -88,7 +89,7 @@ mod tests {
                 cw20.address,
                 contract_addr.clone(),
                 cw20.amount,
-                &admin,
+                admin,
             )
             .unwrap();
         }
@@ -102,7 +103,7 @@ mod tests {
         };
         unwrap.unwrap(runner.execute_cosmos_msgs::<MsgExecuteContractResponse>(
             &[provide_msg.into_cosmos_msg(contract_addr.clone(), funds.clone())],
-            &admin,
+            admin,
         ));
 
         // Provide liquidity with expected_out as min_out. Should succeed.
@@ -113,7 +114,7 @@ mod tests {
         let _res = runner
             .execute_cosmos_msgs::<MsgExecuteContractResponse>(
                 &[provide_msg.into_cosmos_msg(contract_addr.clone(), funds)],
-                &admin,
+                admin,
             )
             .unwrap();
 
