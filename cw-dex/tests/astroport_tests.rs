@@ -5,8 +5,7 @@ mod tests {
     use apollo_utils::coins::coin_from_str;
     use apollo_utils::submessages::{find_event, parse_attribute_value};
     use astroport::factory::PairType;
-    use astroport::pair::{PoolResponse, QueryMsg as PairQueryMsg};
-    use cosmwasm_std::{Addr, Coin, Decimal, SubMsgResponse, Uint128};
+    use cosmwasm_std::{Addr, Coin, SubMsgResponse, Uint128};
     use cw_dex::Pool;
     use cw_dex_test_contract::msg::{AstroportExecuteMsg, ExecuteMsg, QueryMsg};
     use cw_dex_test_helpers::astroport::setup_pool_and_test_contract;
@@ -141,7 +140,7 @@ mod tests {
     fn test_withdraw_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str, u64)>) {
         let owned_runner = get_test_runner();
         let runner = owned_runner.as_ref();
-        let (accs, lp_token_addr, pair_addr, contract_addr, asset_list) =
+        let (accs, lp_token_addr, _pair_addr, contract_addr, asset_list) =
             setup_pool_and_contract(&runner, pool_type, initial_liquidity).unwrap();
         let admin = &accs[0];
         let wasm = Wasm::new(&runner);
@@ -164,16 +163,36 @@ mod tests {
             cw20_balance_query(&runner, lp_token_addr.clone(), contract_addr.clone()).unwrap();
         assert_eq!(contract_lp_token_balance, amount_to_send);
 
-        // Query pool info
-        let pool_res = wasm
-            .query::<_, PoolResponse>(&pair_addr, &PairQueryMsg::Pool {})
-            .unwrap();
-        let lp_token_ratio = Decimal::from_ratio(amount_to_send, pool_res.total_share);
+        // Simulate withdraw liquidity to get expected out assets
+        let simulate_query = QueryMsg::SimulateWithdrawLiquidty {
+            amount: contract_lp_token_balance,
+        };
+        let expected_out: AssetList = wasm.query(&contract_addr, &simulate_query).unwrap();
 
-        // Withdraw liquidity
+        // Withdraw liquidity with min_out one more than expected_out. Should fail.
+        let unwrap = Unwrap::Err("but expected");
+        let min_out: AssetList = expected_out
+            .to_vec()
+            .into_iter()
+            .map(|mut a| {
+                a.amount += Uint128::one();
+                a
+            })
+            .collect::<Vec<_>>()
+            .into();
         let withdraw_msg = ExecuteMsg::WithdrawLiquidity {
             amount: contract_lp_token_balance,
-            min_out: AssetList::new(),
+            min_out,
+        };
+        unwrap.unwrap(runner.execute_cosmos_msgs::<MsgExecuteContractResponse>(
+            &[withdraw_msg.into_cosmos_msg(contract_addr.clone(), vec![])],
+            admin,
+        ));
+
+        // Withdraw liquidity with expected_out as min_out. Should succeed.
+        let withdraw_msg = ExecuteMsg::WithdrawLiquidity {
+            amount: contract_lp_token_balance,
+            min_out: expected_out.clone(),
         };
         runner
             .execute_cosmos_msgs::<MsgExecuteContractResponse>(
@@ -192,13 +211,7 @@ mod tests {
         // Query contract asset balances, assert that all were returned
         for asset in asset_list.into_iter() {
             let asset_balance = query_asset_balance(&runner, &asset.info, &contract_addr);
-            let expected_balance = pool_res
-                .assets
-                .iter()
-                .find(|a| AssetInfo::from(a.info.clone()) == asset.info)
-                .unwrap()
-                .amount
-                * lp_token_ratio;
+            let expected_balance = expected_out.find(&asset.info).unwrap().amount;
             assert_eq!(asset_balance, expected_balance);
         }
     }

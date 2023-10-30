@@ -72,6 +72,8 @@ pub enum QueryMsg {
     PoolLiquidity {},
     #[returns(Uint128)]
     SimulateProvideLiquidity { assets: AssetList },
+    #[returns(AssetList)]
+    SimulateWithdrawLiquidty { amount: Uint128 },
     #[returns(Uint128)]
     SimulateSwap { offer: Asset, ask: AssetInfo },
     #[returns(cw_dex::Pool)]

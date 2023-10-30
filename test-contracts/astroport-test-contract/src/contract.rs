@@ -131,6 +131,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::SimulateProvideLiquidity { assets } => {
             to_binary(&pool.simulate_provide_liquidity(deps, &env, assets)?.amount)
         }
+        QueryMsg::SimulateWithdrawLiquidty { amount } => to_binary(
+            &pool.simulate_withdraw_liquidity(deps, &Asset::new(pool.lp_token(), amount))?,
+        ),
         QueryMsg::SimulateSwap { offer, ask } => query_simulate_swap(deps, offer, ask),
         QueryMsg::GetPoolForLpToken { lp_token } => to_binary(
             &cw_dex::Pool::get_pool_for_lp_token(deps, &lp_token, Some(pool.liquidity_manager))?,
