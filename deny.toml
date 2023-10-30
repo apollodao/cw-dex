@@ -4,6 +4,10 @@ targets = [
     { triple = "x86_64-unknown-linux-musl" },
 ]
 
+# Ignore dev dependencies as well as all dependencies of `test-helpers` since it is only a dev dependency for the other packages.
+exclude-dev = true
+exclude = ["cw-dex-test-helpers"]
+
 [advisories]
 vulnerability = "deny"
 unmaintained = "deny"
