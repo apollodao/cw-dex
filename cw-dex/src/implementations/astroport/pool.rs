@@ -24,11 +24,15 @@ use astroport::pair::{
 };
 use astroport::querier::query_supply;
 
+pub fn astro_v3_asset_info_from_asset_info(info: &AssetInfo) -> astroport_v3::asset::AssetInfo {
+    match info {
+        AssetInfo::Native(denom) => astroport_v3::asset::AssetInfo::native(denom),
+        AssetInfo::Cw20(addr) => astroport_v3::asset::AssetInfo::cw20(addr.clone()),
+    }
+}
+
 pub fn astro_v3_asset_from_asset(asset: &Asset) -> astroport_v3::asset::Asset {
-    let info = match &asset.info {
-        AssetInfoBase::Cw20(addr) => astroport_v3::asset::AssetInfo::cw20(addr.clone()),
-        AssetInfoBase::Native(denom) => astroport_v3::asset::AssetInfo::native(denom),
-    };
+    let info = astro_v3_asset_info_from_asset_info(&asset.info);
     astroport_v3::asset::Asset::new(info, asset.amount)
 }
 
@@ -115,6 +119,16 @@ impl Pool for AstroportPool {
             })
             .collect::<StdResult<Vec<_>>>()?;
 
+        // Liquidity manager requires assets vec to contain all assets in the pool
+        let mut astro_assets: Vec<astroport_v3::asset::Asset> =
+            assets.into_iter().map(astro_v3_asset_from_asset).collect();
+        for asset in &self.pool_assets {
+            let asset_info = astro_v3_asset_info_from_asset_info(asset);
+            if !astro_assets.iter().any(|x| x.info == asset_info) {
+                astro_assets.push(astroport_v3::asset::Asset::new(asset_info, Uint128::zero()));
+            }
+        }
+
         // Create the provide liquidity message
         let provide_liquidity_msg = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.liquidity_manager.to_string(),
@@ -122,7 +136,7 @@ impl Pool for AstroportPool {
                 pair_addr: self.pair_addr.to_string(),
                 min_lp_to_receive: Some(min_out),
                 pair_msg: astroport_v3::pair::ExecuteMsg::ProvideLiquidity {
-                    assets: assets.into_iter().map(astro_v3_asset_from_asset).collect(),
+                    assets: astro_assets,
                     slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
                     auto_stake: Some(false),
                     receiver: None,
