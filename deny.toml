@@ -13,11 +13,7 @@ vulnerability = "deny"
 unmaintained = "deny"
 notice = "deny"
 unsound = "deny"
-ignore = [
-    # Only in dev-deps
-    "RUSTSEC-2022-0093",
-    "RUSTSEC-2023-0052",
-]
+ignore = []
 
 [bans]
 multiple-versions = "allow"
@@ -36,19 +32,5 @@ unlicensed = "deny"
 copyleft = "deny"
 # We want really high confidence when inferring licenses from text
 confidence-threshold = 0.93
-allow = ["Apache-2.0", "MIT", "BSD-3-Clause", "MPL-2.0", "ISC"]
+allow = ["Apache-2.0", "MIT", "BSD-3-Clause", "MPL-2.0"]
 exceptions = [{ allow = ["Unicode-DFS-2016"], name = "unicode-ident" }]
-
-[[licenses.clarify]]
-name = "webpki"
-expression = "ISC"
-license-files = [
-    { path = "LICENSE", hash = 0x001c7e6c },
-]
-
-[[licenses.clarify]]
-name = "ring"
-expression = "ISC"
-license-files = [
-    { path = "LICENSE", hash = 0xbd0eed23 },
-]

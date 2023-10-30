@@ -1,8 +1,14 @@
 use cosmwasm_std::{Coin, Uint128};
-use cw_dex_test_contract::msg::{ExecuteMsg, OsmosisTestContractInstantiateMsg};
-use cw_it::helpers::{bank_balance_query, upload_wasm_file};
+use cw_dex_test_contract::msg::ExecuteMsg;
+use cw_it::helpers::bank_balance_query;
 use cw_it::test_tube::{Module, SigningAccount, Wasm};
 use cw_it::traits::CwItRunner;
+
+#[cfg(feature = "osmosis")]
+use cw_it::helpers::upload_wasm_file;
+
+#[cfg(feature = "osmosis")]
+use cw_dex_test_contract::msg::OsmosisTestContractInstantiateMsg;
 
 #[cfg(feature = "osmosis")]
 use cw_it::ContractType;
