@@ -926,6 +926,8 @@ dependencies = [
 [[package]]
 name = "cw-it"
 version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a9067228bda68ea8eef97dc7e9dbdf3dae321bfa6cd2f24e623bcc78fee39d4a"
 dependencies = [
  "anyhow",
  "apollo-cw-multi-test",

@@ -20,7 +20,7 @@ where
 }
 
 #[cfg(feature = "osmosis")]
-impl<'a, R> CwDexTestRobot<'a, OsmosisTestApp> {
+impl<'a> CwDexTestRobot<'a, OsmosisTestApp> {
     pub fn osmosis(
         app: &'a OsmosisTestApp,
         signer: &SigningAccount,

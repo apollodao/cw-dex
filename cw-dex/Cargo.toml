@@ -9,7 +9,7 @@ version = "0.4.1"
 readme = "README.md"
 
 [features]
-default = ["astroport", "osmosis-test-tube"]
+default = ["astroport", "osmosis-test-tube", "osmosis"]
 osmosis = ["osmosis-std", "cw-it/osmosis", "osmosis-test-tube", "cw-dex-test-helpers/osmosis"]
 osmosis-test-tube = ["cw-it/osmosis-test-tube", "cw-dex-test-helpers/osmosis-test-tube"]
 astroport = ["dep:astroport","dep:astroport_v3", "dep:uint", "apollo-cw-asset/astroport", "dep:cw2", "cw-it/astroport", "cw-it/astroport-multi-test", "cw-dex-test-helpers/astroport"]
