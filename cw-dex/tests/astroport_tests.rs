@@ -23,7 +23,7 @@ mod tests {
     use cw_it::osmosis_test_tube::OsmosisTestApp;
 
     pub fn get_test_runner<'a>() -> OwnedTestRunner<'a> {
-        match option_env!("TEST_RUNNER").unwrap_or("osmosis-test-tube") {
+        match option_env!("TEST_RUNNER").unwrap_or("multi-test") {
             "multi-test" => OwnedTestRunner::MultiTest(MultiTestRunner::new("osmo")),
             #[cfg(feature = "osmosis-test-tube")]
             "osmosis-test-tube" => OwnedTestRunner::OsmosisTestApp(OsmosisTestApp::new()),

@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use apollo_cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use apollo_utils::iterators::IntoElementwise;
-use astroport_v3::liquidity_manager;
+use astroport::liquidity_manager;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_binary, wasm_execute, Addr, CosmosMsg, Decimal, Deps, Env, Event, QuerierWrapper,
@@ -23,18 +23,6 @@ use astroport::pair::{
     QueryMsg as PairQueryMsg, SimulationResponse, MAX_ALLOWED_SLIPPAGE,
 };
 use astroport::querier::query_supply;
-
-pub fn astro_v3_asset_info_from_asset_info(info: &AssetInfo) -> astroport_v3::asset::AssetInfo {
-    match info {
-        AssetInfo::Native(denom) => astroport_v3::asset::AssetInfo::native(denom),
-        AssetInfo::Cw20(addr) => astroport_v3::asset::AssetInfo::cw20(addr.clone()),
-    }
-}
-
-pub fn astro_v3_asset_from_asset(asset: &Asset) -> astroport_v3::asset::Asset {
-    let info = astro_v3_asset_info_from_asset_info(&asset.info);
-    astroport_v3::asset::Asset::new(info, asset.amount)
-}
 
 /// Represents an AMM pool on Astroport
 #[cw_serde]
@@ -120,12 +108,10 @@ impl Pool for AstroportPool {
             .collect::<StdResult<Vec<_>>>()?;
 
         // Liquidity manager requires assets vec to contain all assets in the pool
-        let mut astro_assets: Vec<astroport_v3::asset::Asset> =
-            assets.into_iter().map(astro_v3_asset_from_asset).collect();
-        for asset in &self.pool_assets {
-            let asset_info = astro_v3_asset_info_from_asset_info(asset);
-            if !astro_assets.iter().any(|x| x.info == asset_info) {
-                astro_assets.push(astroport_v3::asset::Asset::new(asset_info, Uint128::zero()));
+        let mut assets_vec = assets.to_vec();
+        for pool_asset_info in &self.pool_assets {
+            if !assets_vec.iter().any(|x| &x.info == pool_asset_info) {
+                assets_vec.push(Asset::new(pool_asset_info.clone(), Uint128::zero()));
             }
         }
 
@@ -135,8 +121,8 @@ impl Pool for AstroportPool {
             msg: to_binary(&liquidity_manager::ExecuteMsg::ProvideLiquidity {
                 pair_addr: self.pair_addr.to_string(),
                 min_lp_to_receive: Some(min_out),
-                pair_msg: astroport_v3::pair::ExecuteMsg::ProvideLiquidity {
-                    assets: astro_assets,
+                pair_msg: astroport::pair::ExecuteMsg::ProvideLiquidity {
+                    assets: assets_vec.into_elementwise(),
                     slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
                     auto_stake: Some(false),
                     receiver: None,
@@ -178,14 +164,11 @@ impl Pool for AstroportPool {
                     contract: self.liquidity_manager.to_string(),
                     amount: asset.amount,
                     msg: to_binary(&liquidity_manager::Cw20HookMsg::WithdrawLiquidity {
-                        pair_msg: astroport_v3::pair::Cw20HookMsg::WithdrawLiquidity {
+                        pair_msg: astroport::pair::Cw20HookMsg::WithdrawLiquidity {
                             // This field is currently not used...
                             assets: vec![],
                         },
-                        min_assets_to_receive: min_out
-                            .into_iter()
-                            .map(astro_v3_asset_from_asset)
-                            .collect(),
+                        min_assets_to_receive: min_out.to_vec().into_elementwise(),
                     })?,
                 })?,
                 funds: vec![],
@@ -269,8 +252,8 @@ impl Pool for AstroportPool {
             self.liquidity_manager.to_string(),
             &liquidity_manager::QueryMsg::SimulateProvide {
                 pair_addr: self.pair_addr.to_string(),
-                pair_msg: astroport_v3::pair::ExecuteMsg::ProvideLiquidity {
-                    assets: assets.into_iter().map(astro_v3_asset_from_asset).collect(),
+                pair_msg: astroport::pair::ExecuteMsg::ProvideLiquidity {
+                    assets: assets.into(),
                     slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
                     auto_stake: Some(false),
                     receiver: None,
