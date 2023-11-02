@@ -1,16 +1,32 @@
 use cosmwasm_std::{Coin, Uint128};
-use cw_dex_test_contract::msg::{ExecuteMsg, OsmosisTestContractInstantiateMsg};
-use cw_it::helpers::{bank_balance_query, upload_wasm_file};
-use cw_it::osmosis_test_tube::{Module, OsmosisTestApp, SigningAccount, Wasm};
+use cw_dex_test_contract::msg::ExecuteMsg;
+use cw_it::helpers::bank_balance_query;
+use cw_it::test_tube::{Module, SigningAccount, Wasm};
+use cw_it::traits::CwItRunner;
+
+#[cfg(feature = "osmosis")]
+use cw_it::helpers::upload_wasm_file;
+
+#[cfg(feature = "osmosis")]
+use cw_dex_test_contract::msg::OsmosisTestContractInstantiateMsg;
+
+#[cfg(feature = "osmosis")]
 use cw_it::ContractType;
 
-pub struct CwDexTestRobot<'a> {
-    pub app: &'a OsmosisTestApp,
+#[cfg(feature = "osmosis")]
+use cw_it::osmosis_test_tube::OsmosisTestApp;
+
+pub struct CwDexTestRobot<'a, R>
+where
+    R: CwItRunner<'a>,
+{
+    pub app: &'a R,
     pub test_contract_addr: String,
     pub pool_id: u64,
 }
 
-impl<'a> CwDexTestRobot<'a> {
+#[cfg(feature = "osmosis")]
+impl<'a> CwDexTestRobot<'a, OsmosisTestApp> {
     pub fn osmosis(
         app: &'a OsmosisTestApp,
         signer: &SigningAccount,
@@ -34,6 +50,16 @@ impl<'a> CwDexTestRobot<'a> {
         }
     }
 
+    pub fn increase_time(&self, seconds: u64) -> &Self {
+        self.app.increase_time(seconds);
+        self
+    }
+}
+
+impl<'a, R> CwDexTestRobot<'a, R>
+where
+    R: CwItRunner<'a>,
+{
     pub fn assert_native_balance(
         &self,
         address: String,
@@ -101,11 +127,6 @@ impl<'a> CwDexTestRobot<'a> {
             signer,
         )
         .unwrap();
-        self
-    }
-
-    pub fn increase_time(&self, seconds: u64) -> &Self {
-        self.app.increase_time(seconds);
         self
     }
 

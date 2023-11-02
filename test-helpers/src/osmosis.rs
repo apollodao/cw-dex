@@ -3,9 +3,8 @@ use cosmwasm_std::{Addr, Coin, Uint128};
 use cw_dex_test_contract::msg::OsmosisTestContractInstantiateMsg;
 use cw_it::helpers::upload_wasm_file;
 use cw_it::osmosis::OsmosisTestPool;
-use cw_it::osmosis_test_tube::{
-    Module, OsmosisTestApp, Runner, RunnerResult, SigningAccount, Wasm,
-};
+use cw_it::osmosis_test_tube::OsmosisTestApp;
+use cw_it::test_tube::{Module, Runner, RunnerResult, SigningAccount, Wasm};
 use cw_it::{Artifact, ContractType};
 
 /// Setup a pool and test contract for testing.

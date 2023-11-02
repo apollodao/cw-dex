@@ -8,15 +8,20 @@ use cw20::{Cw20ExecuteMsg, MinterResponse};
 use cw20_base::msg::InstantiateMsg as Cw20InstantiateMsg;
 use cw_dex_test_contract::msg::AstroportContractInstantiateMsg;
 use cw_it::astroport::utils::{create_astroport_pair, get_local_contracts, setup_astroport};
+use cw_it::cw_multi_test::ContractWrapper;
 use cw_it::helpers::upload_wasm_file;
-use cw_it::osmosis_test_tube::{Account, Module, Runner, RunnerResult, SigningAccount, Wasm};
+use cw_it::test_tube::{Account, Module, Runner, RunnerResult, SigningAccount, Wasm};
 use cw_it::traits::CwItRunner;
-use cw_it::{Artifact, ContractType, TestRunner};
+use cw_it::{ContractType, TestRunner};
 use std::str::FromStr;
 
-use crate::{cw20_mint, instantiate_cw20};
+#[cfg(feature = "osmosis-test-tube")]
+use cw_it::Artifact;
+
+use crate::{common_pcl_params, cw20_mint, instantiate_cw20};
 
 /// Setup a pool and test contract for testing.
+#[allow(unused_variables)]
 pub fn setup_pool_and_test_contract<'a>(
     runner: &'a TestRunner<'a>,
     pool_type: PairType,
@@ -183,7 +188,7 @@ pub fn setup_pool_and_test_contract<'a>(
     }
 
     // Create pool
-    let init_params = match pool_type {
+    let init_params = match &pool_type {
         PairType::Stable {} => Some(
             to_binary(&StablePoolParams {
                 amp: 10u64,
@@ -191,6 +196,10 @@ pub fn setup_pool_and_test_contract<'a>(
             })
             .unwrap(),
         ),
+        PairType::Custom(t) => match t.as_str() {
+            "concentrated" => Some(to_binary(&common_pcl_params()).unwrap()),
+            _ => None,
+        },
         _ => None,
     };
     let (pair_addr, lp_token_addr) = create_astroport_pair(
@@ -230,27 +239,39 @@ pub fn setup_pool_and_test_contract<'a>(
         .unwrap();
 
     // Upload test contract wasm file
-    let code_id = upload_wasm_file(
-        runner,
-        &accs[0],
-        ContractType::Artifact(Artifact::Local(wasm_file_path.to_string())),
-    )
-    .unwrap();
+    let contract = match &runner {
+        TestRunner::MultiTest(_) => ContractType::MultiTestContract(Box::new(
+            ContractWrapper::new_with_empty(
+                astroport_test_contract::contract::execute,
+                astroport_test_contract::contract::instantiate,
+                astroport_test_contract::contract::query,
+            )
+            .with_reply(astroport_test_contract::contract::reply),
+        )),
+        #[cfg(feature = "osmosis-test-tube")]
+        TestRunner::OsmosisTestApp(_) => {
+            ContractType::Artifact(Artifact::Local(wasm_file_path.to_string()))
+        }
+        _ => panic!("Unsupported test runner"),
+    };
+    let code_id = upload_wasm_file(runner, &accs[0], contract).unwrap();
 
     // Instantiate the test contract
     let contract_addr = instantiate_test_astroport_contract(
         runner,
         code_id,
         pair_addr.clone(),
-        astroport_contracts.clone().generator.address,
+        astroport_contracts.generator.address,
         AssetInfo::cw20(Addr::unchecked(astroport_contracts.astro_token.address)),
         lp_token_addr.clone(),
+        astroport_contracts.liquidity_manager.address,
         &accs[0],
     )?;
 
     Ok((accs, lp_token_addr, pair_addr, contract_addr, asset_list))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn instantiate_test_astroport_contract<'a, R: Runner<'a>>(
     runner: &'a R,
     code_id: u64,
@@ -258,6 +279,7 @@ pub fn instantiate_test_astroport_contract<'a, R: Runner<'a>>(
     generator_addr: String,
     astro_token: AssetInfo,
     lp_token_addr: String,
+    liquidity_manager_addr: String,
     signer: &SigningAccount,
 ) -> RunnerResult<String> {
     let init_msg = AstroportContractInstantiateMsg {
@@ -265,6 +287,7 @@ pub fn instantiate_test_astroport_contract<'a, R: Runner<'a>>(
         lp_token_addr,
         generator_addr,
         astro_token,
+        liquidity_manager_addr,
     };
 
     let wasm = Wasm::new(runner);

@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# [0.5.0] - 2023-10-30
+
+### Added
+
+- Added support for Astroport's passive concentrated liquidity pool type.
+
+### Changed
+
+- Changed `AstroportPool` to use the new Astroport liquidity manager contract which supports directly passing a min_out for provide and withdraw liquidity.
+  - This is a breaking change as `AstroportPool::new` now takes an argument `liquidity_manager: Addr`.
+- Changed fn `get_pool_for_lp_token` in `Pool` to take an argument `astroport_liquidity_manager: Option<Addr>`. This is needed to support using the new liquidity manager contract.
+- Bump `cw-it` to `0.2.2`
+
 # [0.4.1] - 2023-10-25
 
 ### Added
