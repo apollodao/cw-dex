@@ -8,15 +8,16 @@ use apollo_utils::assets::{
 };
 use apollo_utils::iterators::IntoElementwise;
 use osmosis_std::types::osmosis::gamm::v1beta1::{
-    GammQuerier, MsgExitPool, MsgJoinPool, MsgJoinSwapExternAmountIn, MsgSwapExactAmountIn,
-    SwapAmountInRoute,
+    GammQuerier, MsgExitPool, MsgJoinPool, MsgJoinSwapExternAmountIn,
 };
+use osmosis_std::types::osmosis::poolmanager::v1beta1::{MsgSwapExactAmountIn, PoolmanagerQuerier};
 
 use apollo_cw_asset::{Asset, AssetInfo, AssetList};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     Coin, CosmosMsg, Deps, Env, Event, QuerierWrapper, Response, StdError, StdResult, Uint128,
 };
+use osmosis_std::types::osmosis::poolmanager::v1beta1::SwapAmountInRoute;
 
 use crate::traits::Pool;
 use crate::CwDexError;
@@ -52,6 +53,7 @@ impl OsmosisPool {
 
     /// Simulates a single sided join and returns `Uint128` amount of LP tokens
     /// returned. A single sided join will use all of the provided asset.
+    #[deprecated]
     pub fn simulate_single_sided_join(
         &self,
         querier: &QuerierWrapper,
@@ -69,6 +71,7 @@ impl OsmosisPool {
     /// Simulates a liquidity provision with all of the assets of the pool.
     /// Returns `(Uint128, AssetList)` amount of LP tokens returned and the
     /// tokens used to join the pool.
+    #[deprecated]
     pub fn simulate_noswap_join(
         &self,
         querier: &QuerierWrapper,
@@ -277,8 +280,7 @@ impl Pool for OsmosisPool {
         sender: Option<String>,
     ) -> StdResult<Uint128> {
         let offer: Coin = offer.try_into()?;
-        let swap_response = GammQuerier::new(&deps.querier).estimate_swap_exact_amount_in(
-            sender.ok_or_else(|| StdError::generic_err("sender is required for osmosis"))?,
+        let swap_response = PoolmanagerQuerier::new(&deps.querier).estimate_swap_exact_amount_in(
             self.pool_id,
             offer.to_string(),
             vec![SwapAmountInRoute {

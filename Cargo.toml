@@ -3,42 +3,42 @@ members = ["cw-dex", "test-contracts/*", "test-helpers"]
 resolver = "2"
 
 [workspace.package]
-authors       = ["Apollo Devs <shared@apollo.farm>"]
-edition       = "2021"
-license       = "MPL-2.0"
-homepage      = "https://apollo.farm"
-repository    = "https://github.com/apollodao/cw-dex"
+authors = ["Apollo Devs <shared@apollo.farm>"]
 documentation = "https://docs.rs/cw-dex"
-keywords      = ["blockchain", "cosmos", "cosmwasm"]
-rust-version  = "1.64.0"
+edition = "2021"
+homepage = "https://apollo.farm"
+keywords = ["blockchain", "cosmos", "cosmwasm"]
+license = "MPL-2.0"
+repository = "https://github.com/apollodao/cw-dex"
+rust-version = "1.64.0"
 
 [workspace.dependencies]
+apollo-cw-asset = "0.1.0"
+apollo-utils = "0.1.0"
+astroport-types = "0.1.3"
 cosmwasm-schema = "1.2.1"
 cosmwasm-std = "1.2.1"
 cosmwasm-storage = "1.2.1"
+cw-dex = {path = "cw-dex"}
+cw-dex-test-contract = {path = "test-contracts/package"}
+cw-dex-test-helpers = {path = "test-helpers"}
+cw-it = {git = "https://github.com/apollodao/cw-it.git", rev = "59299395d74480f0a419ccafe4eeba95323fcb86"}
 cw-storage-plus = "1.0"
-cw2 = "1.0"
 cw-utils = "1.0"
+cw2 = "1.0"
 cw20 = "1.0"
 cw20-base = "1.0"
+osmosis-std = "0.21.0"
 schemars = "0.8.10"
-serde = { version = "1.0.145", default-features = false, features = ["derive"] }
-thiserror = { version = "1.0.31" }
-apollo-cw-asset = "0.1.0"
-osmosis-std = "0.14.0"
-cw-it = { git = "https://github.com/apollodao/cw-it.git", rev = "59299395d74480f0a419ccafe4eeba95323fcb86" }
-cw-dex = { path = "cw-dex" }
-cw-dex-test-contract = { path = "test-contracts/package" }
-cw-dex-test-helpers = { path = "test-helpers" }
-apollo-utils = "0.1.0"
-astroport-types = "0.1.3"
+serde = {version = "1.0.145", default-features = false, features = ["derive"]}
+thiserror = {version = "1.0.31"}
 
 [profile.release]
-codegen-units    = 1
-debug            = false
+codegen-units = 1
+debug = false
 debug-assertions = false
-incremental      = false
-lto              = true
-opt-level        = 3
-overflow-checks  = true
-rpath            = false
+incremental = false
+lto = true
+opt-level = 3
+overflow-checks = true
+rpath = false
