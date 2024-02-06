@@ -5,6 +5,7 @@ on:
 
 env:
   RUSTFLAGS: -D warnings
+  TEST_RUNNER: osmosis-test-tube
 
 jobs:
   test:
