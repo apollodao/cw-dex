@@ -5,7 +5,7 @@ edition = "2021"
 license = "MPL-2.0"
 name = "cw-dex"
 repository = "https://github.com/apollodao/cw-dex"
-version = "0.5.0"
+version = "0.5.1"
 readme = "README.md"
 
 [features]
