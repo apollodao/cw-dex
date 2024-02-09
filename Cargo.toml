@@ -32,7 +32,7 @@ cw-dex-test-contract = { path = "test-contracts/package" }
 astroport-test-contract = { path = "test-contracts/astroport-test-contract" }
 cw-dex-test-helpers = { path = "test-helpers" }
 apollo-utils = "0.1.0"
-astroport = "=2.9.3"
+astroport = "=2.9.0"
 astroport_v3 = { package = "astroport", version = "=3.11.1" }
 
 [profile.release]
