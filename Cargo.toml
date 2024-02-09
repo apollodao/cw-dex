@@ -26,7 +26,7 @@ serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
 apollo-cw-asset = "0.1.1"
 osmosis-std = "0.19.2"
-cw-it = "0.3.0-rc.3"
+cw-it = "0.3.0-rc.4"
 cw-dex = { path = "cw-dex" }
 cw-dex-test-contract = { path = "test-contracts/package" }
 astroport-test-contract = { path = "test-contracts/astroport-test-contract" }
