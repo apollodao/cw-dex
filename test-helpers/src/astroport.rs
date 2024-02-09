@@ -261,7 +261,7 @@ pub fn setup_pool_and_test_contract<'a>(
         runner,
         code_id,
         pair_addr.clone(),
-        astroport_contracts.generator.address,
+        astroport_contracts.incentives.address,
         AssetInfo::cw20(Addr::unchecked(astroport_contracts.astro_token.address)),
         lp_token_addr.clone(),
         astroport_contracts.liquidity_manager.address,
@@ -276,7 +276,7 @@ pub fn instantiate_test_astroport_contract<'a, R: Runner<'a>>(
     runner: &'a R,
     code_id: u64,
     pair_addr: String,
-    generator_addr: String,
+    incentives_addr: String,
     astro_token: AssetInfo,
     lp_token_addr: String,
     liquidity_manager_addr: String,
@@ -285,7 +285,7 @@ pub fn instantiate_test_astroport_contract<'a, R: Runner<'a>>(
     let init_msg = AstroportContractInstantiateMsg {
         pair_addr,
         lp_token_addr,
-        generator_addr,
+        incentives_addr,
         astro_token,
         liquidity_manager_addr,
     };

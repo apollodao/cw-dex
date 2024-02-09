@@ -7,7 +7,7 @@ use apollo_utils::iterators::IntoElementwise;
 use astroport::liquidity_manager;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, wasm_execute, Addr, CosmosMsg, Decimal, Deps, Env, Event, QuerierWrapper,
+    to_json_binary, wasm_execute, Addr, CosmosMsg, Decimal, Deps, Env, Event, QuerierWrapper,
     QueryRequest, Response, StdError, StdResult, Uint128, WasmMsg, WasmQuery,
 };
 use cw20::Cw20ExecuteMsg;
@@ -77,7 +77,7 @@ impl AstroportPool {
     pub fn query_pool_info(&self, querier: &QuerierWrapper) -> StdResult<PoolResponse> {
         querier.query::<PoolResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: self.pair_addr.to_string(),
-            msg: to_binary(&PairQueryMsg::Pool {})?,
+            msg: to_json_binary(&PairQueryMsg::Pool {})?,
         }))
     }
 }
@@ -98,7 +98,7 @@ impl Pool for AstroportPool {
             .map(|asset| {
                 Ok(CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr: asset.address,
-                    msg: to_binary(&Cw20ExecuteMsg::IncreaseAllowance {
+                    msg: to_json_binary(&Cw20ExecuteMsg::IncreaseAllowance {
                         spender: self.liquidity_manager.to_string(),
                         amount: asset.amount,
                         expires: Some(Expiration::AtHeight(env.block.height + 1)),
@@ -119,7 +119,7 @@ impl Pool for AstroportPool {
         // Create the provide liquidity message
         let provide_liquidity_msg = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.liquidity_manager.to_string(),
-            msg: to_binary(&liquidity_manager::ExecuteMsg::ProvideLiquidity {
+            msg: to_json_binary(&liquidity_manager::ExecuteMsg::ProvideLiquidity {
                 pair_addr: self.pair_addr.to_string(),
                 min_lp_to_receive: Some(min_out),
                 pair_msg: astroport::pair::ExecuteMsg::ProvideLiquidity {
@@ -161,10 +161,10 @@ impl Pool for AstroportPool {
 
             let withdraw_liquidity = CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: token_addr.to_string(),
-                msg: to_binary(&Cw20ExecuteMsg::Send {
+                msg: to_json_binary(&Cw20ExecuteMsg::Send {
                     contract: self.liquidity_manager.to_string(),
                     amount: asset.amount,
-                    msg: to_binary(&liquidity_manager::Cw20HookMsg::WithdrawLiquidity {
+                    msg: to_json_binary(&liquidity_manager::Cw20HookMsg::WithdrawLiquidity {
                         pair_msg: astroport::pair::Cw20HookMsg::WithdrawLiquidity {
                             // This field is currently not used...
                             assets: vec![],
@@ -220,7 +220,7 @@ impl Pool for AstroportPool {
                 &Cw20ExecuteMsg::Send {
                     contract: self.pair_addr.to_string(),
                     amount: offer_asset.amount,
-                    msg: to_binary(&PairCw20HookMsg::Swap {
+                    msg: to_json_binary(&PairCw20HookMsg::Swap {
                         belief_price,
                         max_spread: Some(Decimal::zero()),
                         to: Some(env.contract.address.to_string()),
@@ -296,7 +296,7 @@ impl Pool for AstroportPool {
             .querier
             .query::<SimulationResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
                 contract_addr: self.pair_addr.to_string(),
-                msg: to_binary(&PairQueryMsg::Simulation {
+                msg: to_json_binary(&PairQueryMsg::Simulation {
                     offer_asset: offer_asset.into(),
                     ask_asset_info: Some(ask_asset_info.into()),
                 })?,

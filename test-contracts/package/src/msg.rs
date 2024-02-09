@@ -1,6 +1,6 @@
 use apollo_cw_asset::{Asset, AssetInfo, AssetList};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{to_binary, Addr, Coin, CosmosMsg, Uint128, WasmMsg};
+use cosmwasm_std::{to_json_binary, Addr, Coin, CosmosMsg, Uint128, WasmMsg};
 
 #[cw_serde]
 pub struct OsmosisTestContractInstantiateMsg {
@@ -14,7 +14,7 @@ pub struct OsmosisTestContractInstantiateMsg {
 pub struct AstroportContractInstantiateMsg {
     pub pair_addr: String,
     pub lp_token_addr: String,
-    pub generator_addr: String,
+    pub incentives_addr: String,
     pub astro_token: AssetInfo,
     pub liquidity_manager_addr: String,
 }
@@ -59,7 +59,7 @@ impl ExecuteMsg {
     pub fn into_cosmos_msg(&self, contract_addr: String, funds: Vec<Coin>) -> CosmosMsg {
         CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr,
-            msg: to_binary(self).unwrap(),
+            msg: to_json_binary(self).unwrap(),
             funds,
         })
     }
@@ -96,6 +96,7 @@ pub enum AstroportExecuteMsg {
     Unstake {
         amount: Uint128,
     },
+    ClaimRewards {},
     Swap {
         offer: Asset,
         ask: AssetInfo,
@@ -107,7 +108,7 @@ impl AstroportExecuteMsg {
     pub fn into_cosmos_msg(&self, contract_addr: String, funds: Vec<Coin>) -> CosmosMsg {
         CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr,
-            msg: to_binary(self).unwrap(),
+            msg: to_json_binary(self).unwrap(),
             funds,
         })
     }
