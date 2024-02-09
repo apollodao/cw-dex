@@ -3,7 +3,7 @@ use apollo_utils::assets::separate_natives_and_cw20s;
 use astroport::asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo};
 use astroport::factory::PairType;
 use astroport::pair::{ExecuteMsg as PairExecuteMsg, StablePoolParams};
-use cosmwasm_std::{to_binary, Addr, Coin, Decimal, Uint128};
+use cosmwasm_std::{to_json_binary, Addr, Coin, Decimal, Uint128};
 use cw20::{Cw20ExecuteMsg, MinterResponse};
 use cw20_base::msg::InstantiateMsg as Cw20InstantiateMsg;
 use cw_dex_test_contract::msg::AstroportContractInstantiateMsg;
@@ -190,14 +190,14 @@ pub fn setup_pool_and_test_contract<'a>(
     // Create pool
     let init_params = match &pool_type {
         PairType::Stable {} => Some(
-            to_binary(&StablePoolParams {
+            to_json_binary(&StablePoolParams {
                 amp: 10u64,
                 owner: None,
             })
             .unwrap(),
         ),
         PairType::Custom(t) => match t.as_str() {
-            "concentrated" => Some(to_binary(&common_pcl_params()).unwrap()),
+            "concentrated" => Some(to_json_binary(&common_pcl_params()).unwrap()),
             _ => None,
         },
         _ => None,
