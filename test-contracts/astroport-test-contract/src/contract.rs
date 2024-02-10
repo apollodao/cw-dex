@@ -31,8 +31,6 @@ pub fn instantiate(
             lp_token_addr: Addr::unchecked(msg.lp_token_addr),
 
             incentives: Addr::unchecked(msg.incentives_addr),
-
-            astro_token: msg.astro_token,
         },
     )?;
 

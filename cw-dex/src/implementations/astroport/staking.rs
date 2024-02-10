@@ -8,7 +8,7 @@ use cosmwasm_std::{
 };
 use cw20::Cw20ExecuteMsg;
 
-use apollo_cw_asset::{AssetInfo, AssetList};
+use apollo_cw_asset::AssetList;
 use astroport::asset::Asset as AstroAsset;
 use astroport_v3::incentives::{
     Cw20Msg as IncentivesCw20Msg, ExecuteMsg as IncentivesExecuteMsg,
@@ -25,8 +25,6 @@ pub struct AstroportStaking {
     pub lp_token_addr: Addr,
     /// The address of the astroport incentives contract
     pub incentives: Addr,
-    /// The address of the ASTRO token contract
-    pub astro_token: AssetInfo,
 }
 
 impl Staking for AstroportStaking {}
