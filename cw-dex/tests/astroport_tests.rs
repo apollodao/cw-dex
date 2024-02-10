@@ -1,22 +1,29 @@
 #![cfg(feature = "astroport")]
 mod tests {
+    use std::fs;
+
     use apollo_cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
     use apollo_utils::assets::separate_natives_and_cw20s;
     use apollo_utils::coins::coin_from_str;
     use apollo_utils::submessages::{find_event, parse_attribute_value};
     use astroport::factory::PairType;
-    use cosmwasm_std::{Addr, Coin, SubMsgResponse, Uint128};
+    use astroport_v3::asset::Asset as AstroportAsset;
+    use cosmwasm_std::{coin, Addr, Coin, Decimal, SubMsgResponse, Uint128};
+    use cw20::AllAccountsResponse;
     use cw_dex::Pool;
     use cw_dex_test_contract::msg::{AstroportExecuteMsg, ExecuteMsg, QueryMsg};
     use cw_dex_test_helpers::astroport::setup_pool_and_test_contract;
     use cw_dex_test_helpers::{cw20_balance_query, cw20_transfer, query_asset_balance};
+    use cw_it::astroport::utils::AstroportContracts;
+    use cw_it::cw_multi_test::{Contract, ContractWrapper};
     use cw_it::helpers::Unwrap;
     use cw_it::multi_test::MultiTestRunner;
     use cw_it::test_tube::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
     use cw_it::test_tube::{
         Account, ExecuteResponse, Module, Runner, RunnerResult, SigningAccount, Wasm,
     };
-    use cw_it::{OwnedTestRunner, TestRunner};
+    use cw_it::traits::CwItRunner;
+    use cw_it::{Artifact, OwnedTestRunner, TestRunner};
     use test_case::test_case;
 
     #[cfg(feature = "osmosis-test-tube")]
@@ -33,11 +40,18 @@ mod tests {
     const TEST_CONTRACT_WASM_FILE_PATH: &str =
         "../target/wasm32-unknown-unknown/release/astroport_test_contract.wasm";
 
-    fn setup_pool_and_contract<'a>(
+    fn setup_pool_and_testing_contract<'a>(
         runner: &'a TestRunner<'a>,
         pool_type: PairType,
         initial_liquidity: Vec<(&str, u64)>,
-    ) -> RunnerResult<(Vec<SigningAccount>, String, String, String, AssetList)> {
+    ) -> RunnerResult<(
+        Vec<SigningAccount>,
+        String,
+        String,
+        String,
+        AssetList,
+        AstroportContracts,
+    )> {
         setup_pool_and_test_contract(
             runner,
             pool_type,
@@ -58,8 +72,8 @@ mod tests {
     pub fn test_provide_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str, u64)>) {
         let owned_runner = get_test_runner();
         let runner = owned_runner.as_ref();
-        let (accs, lp_token_addr, _pair_addr, contract_addr, asset_list) =
-            setup_pool_and_contract(&runner, pool_type.clone(), initial_liquidity).unwrap();
+        let (accs, lp_token_addr, _pair_addr, contract_addr, asset_list, _) =
+            setup_pool_and_testing_contract(&runner, pool_type.clone(), initial_liquidity).unwrap();
         let admin = &accs[0];
         let wasm = Wasm::new(&runner);
 
@@ -141,8 +155,8 @@ mod tests {
     fn test_withdraw_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str, u64)>) {
         let owned_runner = get_test_runner();
         let runner = owned_runner.as_ref();
-        let (accs, lp_token_addr, _pair_addr, contract_addr, asset_list) =
-            setup_pool_and_contract(&runner, pool_type, initial_liquidity).unwrap();
+        let (accs, lp_token_addr, _pair_addr, contract_addr, asset_list, _) =
+            setup_pool_and_testing_contract(&runner, pool_type, initial_liquidity).unwrap();
         let admin = &accs[0];
         let wasm = Wasm::new(&runner);
 
@@ -255,8 +269,8 @@ mod tests {
     ) -> RunnerResult<()> {
         let owned_runner = get_test_runner();
         let runner = owned_runner.as_ref();
-        let (accs, lp_token_addr, _pair_addr, contract_addr, _asset_list) =
-            setup_pool_and_contract(&runner, pool_type, initial_liquidity).unwrap();
+        let (accs, lp_token_addr, _pair_addr, contract_addr, _asset_list, _) =
+            setup_pool_and_testing_contract(&runner, pool_type, initial_liquidity).unwrap();
 
         let admin = &accs[0];
 
@@ -342,8 +356,8 @@ mod tests {
     ) {
         let owned_runner = get_test_runner();
         let runner = owned_runner.as_ref();
-        let (accs, _lp_token_addr, _pair_addr, contract_addr, asset_list) =
-            setup_pool_and_contract(&runner, pool_type, initial_liquidity).unwrap();
+        let (accs, _lp_token_addr, _pair_addr, contract_addr, asset_list, _) =
+            setup_pool_and_testing_contract(&runner, pool_type, initial_liquidity).unwrap();
 
         let admin = &accs[0];
         let wasm = Wasm::new(&runner);
@@ -405,16 +419,284 @@ mod tests {
         assert_eq!(offer_balance, Uint128::zero());
     }
 
+    #[test_case(vec![(coin(2_000_000_000, "uluna"), 1)], vec![]; "one native incentive one period")]
+    #[test_case(vec![(coin(4_000_000_000, "uluna"), 2)], vec![]; "one native incentive two periods")]
+    #[test_case(vec![(coin(4_000_000_000, "uluna"), 2), (coin(2_000_000_000, "untrn"), 1)], vec![]; "two native incentive different periods")]
+    #[test_case(vec![(coin(4_000_000_000, "uluna"), 2), (coin(2_000_000_000, "untrn"), 1)], vec![(4_000_000_000u128.into(), 2)]; "two native incentive different periods one cw20 incentive")]
+    fn test_claim_rewards(
+        native_incentives: Vec<(Coin, u64)>,
+        cw20_incentives: Vec<(Uint128, u64)>,
+    ) -> RunnerResult<()> {
+        let pool_type = PairType::Xyk {};
+        let initial_liquidity = vec![("uluna", 1_000_000), ("astro", 1_000_000)];
+
+        let owned_runner = get_test_runner();
+        let runner = owned_runner.as_ref();
+        let (
+            accs,
+            lp_token_addr,
+            _pair_addr,
+            testing_contract_addr,
+            _asset_list,
+            astroport_contracts,
+        ) = setup_pool_and_testing_contract(&runner, pool_type, initial_liquidity).unwrap();
+
+        let admin = &accs[0];
+
+        // Increase time to current time. For some reason the start time of the incenitve
+        // epochs is hard coded in the astroport incentives contract and the logic doesn't
+        // work for earlier timestamps
+        let block_time = runner.query_block_time_nanos() / 1_000_000_000;
+        let current_time = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        runner
+            .increase_time((current_time - block_time) as u64)
+            .unwrap();
+
+        // Setup wasm runner
+        let wasm = Wasm::new(&runner);
+
+        // Initialize account with balances of all native incentives
+        let incentives_provider = runner
+            .init_account(
+                &native_incentives
+                    .clone()
+                    .into_iter()
+                    .map(|(coin, _)| coin)
+                    .collect::<Vec<_>>(),
+            )
+            .unwrap();
+
+        // Convert native incentives to AstroportAssets
+        let mut incentives: Vec<(AstroportAsset, u64)> = native_incentives
+            .clone()
+            .into_iter()
+            .map(|(coin, duration)| (coin.into(), duration))
+            .collect();
+
+        // Upload cw20 code
+        let cw20_code_id = runner
+            .store_code(
+                cw_it::ContractType::MultiTestContract(Box::new(ContractWrapper::new_with_empty(
+                    cw20_base::contract::execute,
+                    cw20_base::contract::instantiate,
+                    cw20_base::contract::query,
+                ))),
+                admin,
+            )
+            .unwrap();
+
+        // Create Cw20 tokens for each Cw20 incentive, mint incentive amount to incentives_provider
+        // and add to incentives
+        for (i, (amount, duration)) in cw20_incentives.iter().enumerate() {
+            // Instantiate Cw20 token
+            let cw20_addr = wasm
+                .instantiate(
+                    cw20_code_id,
+                    &cw20_base::msg::InstantiateMsg {
+                        name: format!("cw20_incentive_{}", i),
+                        symbol: format!("incentive"),
+                        decimals: 6,
+                        initial_balances: vec![cw20::Cw20Coin {
+                            address: incentives_provider.address(),
+                            amount: *amount,
+                        }],
+                        mint: None,
+                        marketing: None,
+                    },
+                    Some(&admin.address()),
+                    Some("incentive"),
+                    &[],
+                    admin,
+                )
+                .unwrap()
+                .data
+                .address;
+
+            // Add Cw20 incentive to incentives
+            incentives.push((
+                AstroportAsset::cw20(Addr::unchecked(cw20_addr), *amount),
+                *duration,
+            ));
+        }
+
+        // Setup incentives for the pool
+        for (incentive, periods) in incentives.clone() {
+            // Increase allowance for cw20 incentives and construct funds
+            let funds = match incentive.info.clone() {
+                astroport_v3::asset::AssetInfo::Token { contract_addr } => {
+                    // Increase allowance for incentives contract
+                    wasm.execute(
+                        contract_addr.as_str(),
+                        &cw20::Cw20ExecuteMsg::IncreaseAllowance {
+                            spender: astroport_contracts.incentives.address.clone(),
+                            amount: incentive.amount.clone(),
+                            expires: None,
+                        },
+                        &[],
+                        &incentives_provider,
+                    )
+                    .unwrap();
+                    vec![]
+                }
+                astroport_v3::asset::AssetInfo::NativeToken { denom } => {
+                    vec![coin(incentive.amount.u128(), &denom)]
+                }
+            };
+            wasm.execute(
+                &astroport_contracts.incentives.address,
+                &astroport_v3::incentives::ExecuteMsg::Incentivize {
+                    lp_token: lp_token_addr.clone(),
+                    schedule: astroport_v3::incentives::InputSchedule {
+                        reward: incentive,
+                        duration_periods: periods,
+                    },
+                },
+                &funds,
+                &incentives_provider,
+            )
+            .unwrap();
+        }
+
+        // Query LP token balance
+        let lp_token_balance =
+            cw20_balance_query(&runner, lp_token_addr.clone(), admin.address()).unwrap();
+
+        // Send LP tokens to the test contract
+        cw20_transfer(
+            &runner,
+            lp_token_addr.clone(),
+            testing_contract_addr.clone(),
+            lp_token_balance,
+            admin,
+        )
+        .unwrap();
+
+        // Stake LP tokens
+        let events = stake_all_lp_tokens(
+            &runner,
+            testing_contract_addr.clone(),
+            lp_token_addr.clone(),
+            admin,
+        )
+        .events;
+
+        // Increase time by 1 week
+        runner.increase_time(60 * 60 * 24 * 1).unwrap();
+
+        // Query incentives contract for admin users pending rewards
+        let pending_rewards: Vec<AstroportAsset> = wasm
+            .query(
+                &astroport_contracts.incentives.address,
+                &astroport_v3::incentives::QueryMsg::PendingRewards {
+                    lp_token: lp_token_addr.clone(),
+                    user: testing_contract_addr.clone(),
+                },
+            )
+            .unwrap();
+
+        // Query pending rewards through CwDex testing contract
+        let cw_dex_pending_rewards: AssetList = wasm
+            .query(
+                &testing_contract_addr,
+                &cw_dex_test_contract::msg::QueryMsg::PendingRewards {},
+            )
+            .unwrap();
+
+        // Assert that both pending rewards queries return the same result
+        for asset in pending_rewards.clone() {
+            // Convert astroport asset info to asset info
+            let asset_info = match asset.info {
+                astroport_v3::asset::AssetInfo::Token { contract_addr } => {
+                    AssetInfo::Cw20(contract_addr)
+                }
+                astroport_v3::asset::AssetInfo::NativeToken { denom } => AssetInfo::Native(denom),
+            };
+
+            let amount = cw_dex_pending_rewards.find(&asset_info).unwrap().amount;
+
+            assert_eq!(amount, asset.amount);
+        }
+
+        println!("{:?}", incentives);
+        println!("{:?}", pending_rewards);
+        println!("{:?}", cw_dex_pending_rewards);
+
+        // TODO: For some reason there are a lot of lp holders...
+        let lp_holders = wasm
+            .query::<_, AllAccountsResponse>(
+                &lp_token_addr,
+                &cw20::Cw20QueryMsg::AllAccounts {
+                    start_after: None,
+                    limit: None,
+                },
+            )
+            .unwrap()
+            .accounts;
+
+        println!("{:?}", lp_holders);
+        println!("{:?}", testing_contract_addr);
+
+        // Query total staked amount
+        let total_staked = wasm
+            .query::<_, astroport_v3::incentives::PoolInfoResponse>(
+                &astroport_contracts.incentives.address,
+                &astroport_v3::incentives::QueryMsg::PoolInfo {
+                    lp_token: lp_token_addr.clone(),
+                },
+            )
+            .unwrap()
+            .total_lp;
+
+        println!("{:?}", total_staked);
+        println!("{:?}", lp_token_balance);
+
+        // // Assert that pending rewards are correct
+        // for pending_reward in pending_rewards {
+        //     // Find corresponding incentive
+        //     let (incentive, duration) = incentives
+        //         .iter()
+        //         .find(|(incentive, _)| incentive.info == pending_reward.info)
+        //         .unwrap();
+
+        //     // Calculate expected reward based on incentive amount and total duration
+        //     let expected_reward = incentive.amount * Decimal::from_ratio(1u128, *duration);
+
+        //     // Assert that pending reward is correct
+        //     assert_eq!(pending_reward.amount, expected_reward);
+        // }
+
+        // Claim rewards
+        wasm.execute(
+            &testing_contract_addr,
+            &cw_dex_test_contract::msg::AstroportExecuteMsg::ClaimRewards {},
+            &[],
+            admin,
+        )
+        .unwrap();
+
+        // Assert that testing contract has correct asset balances
+        for reward in cw_dex_pending_rewards.to_vec() {
+            let asset_balance = query_asset_balance(&runner, &reward.info, &testing_contract_addr);
+            assert_eq!(asset_balance, reward.amount);
+        }
+
+        Ok(())
+    }
+
     #[test]
     fn test_get_pool_for_lp_token() {
         let owned_runner = get_test_runner();
         let runner = owned_runner.as_ref();
-        let (_accs, lp_token_addr, pair_addr, contract_addr, asset_list) = setup_pool_and_contract(
-            &runner,
-            PairType::Xyk {},
-            vec![("uluna", 1_000_000), ("uatom", 1_000_000)],
-        )
-        .unwrap();
+        let (_accs, lp_token_addr, pair_addr, contract_addr, asset_list, _) =
+            setup_pool_and_testing_contract(
+                &runner,
+                PairType::Xyk {},
+                vec![("uluna", 1_000_000), ("uatom", 1_000_000)],
+            )
+            .unwrap();
 
         let wasm = Wasm::new(&runner);
 

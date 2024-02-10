@@ -78,6 +78,8 @@ pub enum QueryMsg {
     SimulateSwap { offer: Asset, ask: AssetInfo },
     #[returns(cw_dex::Pool)]
     GetPoolForLpToken { lp_token: AssetInfo },
+    #[returns(AssetList)]
+    PendingRewards {},
 }
 
 #[cw_serde]

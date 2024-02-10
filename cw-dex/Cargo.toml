@@ -43,3 +43,4 @@ cw-dex-test-contract = { workspace = true }
 cw-dex-test-helpers = { workspace = true, features = ["osmosis", "astroport"] }
 proptest = "1.0.0"
 cw20-base = { workspace = true }
+cw20 = { workspace = true }

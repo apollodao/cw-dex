@@ -147,6 +147,10 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::GetPoolForLpToken { lp_token } => to_json_binary(
             &cw_dex::Pool::get_pool_for_lp_token(deps, &lp_token, Some(pool.liquidity_manager))?,
         ),
+        QueryMsg::PendingRewards {} => {
+            let staking = STAKING.load(deps.storage)?;
+            to_json_binary(&staking.query_pending_rewards(&deps.querier, &env.contract.address)?)
+        }
     }
 }
 

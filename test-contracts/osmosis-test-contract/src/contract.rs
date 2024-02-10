@@ -215,6 +215,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::GetPoolForLpToken { lp_token } => {
             to_json_binary(&cw_dex::Pool::get_pool_for_lp_token(deps, &lp_token, None)?)
         }
+        QueryMsg::PendingRewards {} => unimplemented!(),
     }
 }
 
