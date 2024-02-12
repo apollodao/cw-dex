@@ -142,6 +142,7 @@ toolchain = "${RUST_VERSION}"
 command = "cargo"
 args = [
     "test",
+    "--all-features",
     "--lib"
 ]
 
@@ -154,8 +155,7 @@ toolchain = "${RUST_VERSION}"
 command = "cargo"
 args = [
     "test",
-    "--features",
-    "osmosis-test-tube",
+    "--all-features",
     "--test",
     "*",
 ]
