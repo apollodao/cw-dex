@@ -310,7 +310,7 @@ pub fn instantiate_test_astroport_contract<'a, R: Runner<'a>>(
 
     let wasm = Wasm::new(runner);
     Ok(wasm
-        .instantiate(code_id, &init_msg, None, None, &[], signer)?
+        .instantiate(code_id, &init_msg, None, Some("test contract"), &[], signer)?
         .data
         .address)
 }

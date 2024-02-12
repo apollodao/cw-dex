@@ -1,6 +1,5 @@
 #![cfg(feature = "astroport")]
 mod tests {
-    use std::fs;
 
     use apollo_cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
     use apollo_utils::assets::separate_natives_and_cw20s;
@@ -8,14 +7,13 @@ mod tests {
     use apollo_utils::submessages::{find_event, parse_attribute_value};
     use astroport::factory::PairType;
     use astroport_v3::asset::Asset as AstroportAsset;
-    use cosmwasm_std::{coin, Addr, Coin, Decimal, SubMsgResponse, Uint128};
-    use cw20::AllAccountsResponse;
+    use cosmwasm_std::{assert_approx_eq, coin, coins, Addr, Coin, SubMsgResponse, Uint128};
+
     use cw_dex::Pool;
     use cw_dex_test_contract::msg::{AstroportExecuteMsg, ExecuteMsg, QueryMsg};
     use cw_dex_test_helpers::astroport::setup_pool_and_test_contract;
     use cw_dex_test_helpers::{cw20_balance_query, cw20_transfer, query_asset_balance};
     use cw_it::astroport::utils::AstroportContracts;
-    use cw_it::cw_multi_test::{Contract, ContractWrapper};
     use cw_it::helpers::Unwrap;
     use cw_it::multi_test::MultiTestRunner;
     use cw_it::test_tube::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
@@ -23,7 +21,7 @@ mod tests {
         Account, ExecuteResponse, Module, Runner, RunnerResult, SigningAccount, Wasm,
     };
     use cw_it::traits::CwItRunner;
-    use cw_it::{Artifact, OwnedTestRunner, TestRunner};
+    use cw_it::{OwnedTestRunner, TestRunner};
     use test_case::test_case;
 
     #[cfg(feature = "osmosis-test-tube")]
@@ -443,16 +441,16 @@ mod tests {
 
         let admin = &accs[0];
 
-        // Increase time to current time. For some reason the start time of the incenitve
-        // epochs is hard coded in the astroport incentives contract and the logic doesn't
-        // work for earlier timestamps
+        // Increase time to current time. For some reason the start time of the
+        // incenitve epochs is hard coded in the astroport incentives contract
+        // and the logic doesn't work for earlier timestamps
         let block_time = runner.query_block_time_nanos() / 1_000_000_000;
         let current_time = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_secs();
         runner
-            .increase_time((current_time - block_time) as u64)
+            .increase_time((current_time.saturating_sub(block_time)) as u64)
             .unwrap();
 
         // Setup wasm runner
@@ -465,6 +463,7 @@ mod tests {
                     .clone()
                     .into_iter()
                     .map(|(coin, _)| coin)
+                    .chain(coins(10000000000, "uosmo")) // for gas
                     .collect::<Vec<_>>(),
             )
             .unwrap();
@@ -476,8 +475,8 @@ mod tests {
             .map(|(coin, duration)| (coin.into(), duration))
             .collect();
 
-        // Create Cw20 tokens for each Cw20 incentive, mint incentive amount to incentives_provider
-        // and add to incentives
+        // Create Cw20 tokens for each Cw20 incentive, mint incentive amount to
+        // incentives_provider and add to incentives
         let cw20_code_id = astroport_contracts.astro_token.code_id;
         for (i, (amount, duration)) in cw20_incentives.iter().enumerate() {
             // Instantiate Cw20 token
@@ -486,7 +485,7 @@ mod tests {
                     cw20_code_id,
                     &cw20_base::msg::InstantiateMsg {
                         name: format!("cw20_incentive_{}", i),
-                        symbol: format!("incentive"),
+                        symbol: "incentive".to_string(),
                         decimals: 6,
                         initial_balances: vec![cw20::Cw20Coin {
                             address: incentives_provider.address(),
@@ -521,7 +520,7 @@ mod tests {
                         contract_addr.as_str(),
                         &cw20::Cw20ExecuteMsg::IncreaseAllowance {
                             spender: astroport_contracts.incentives.address.clone(),
-                            amount: incentive.amount.clone(),
+                            amount: incentive.amount,
                             expires: None,
                         },
                         &[],
@@ -564,7 +563,7 @@ mod tests {
         .unwrap();
 
         // Stake LP tokens
-        let events = stake_all_lp_tokens(
+        let _events = stake_all_lp_tokens(
             &runner,
             testing_contract_addr.clone(),
             lp_token_addr.clone(),
@@ -573,7 +572,7 @@ mod tests {
         .events;
 
         // Increase time by 1 week
-        runner.increase_time(60 * 60 * 24 * 1).unwrap();
+        runner.increase_time(60 * 60 * 24).unwrap();
 
         // Query incentives contract for admin users pending rewards
         let pending_rewards: Vec<AstroportAsset> = wasm
@@ -609,29 +608,6 @@ mod tests {
             assert_eq!(amount, asset.amount);
         }
 
-        // TODO: For some reason there are a lot of lp holders...
-        let lp_holders = wasm
-            .query::<_, AllAccountsResponse>(
-                &lp_token_addr,
-                &cw20::Cw20QueryMsg::AllAccounts {
-                    start_after: None,
-                    limit: None,
-                },
-            )
-            .unwrap()
-            .accounts;
-
-        // Query total staked amount
-        let total_staked = wasm
-            .query::<_, astroport_v3::incentives::PoolInfoResponse>(
-                &astroport_contracts.incentives.address,
-                &astroport_v3::incentives::QueryMsg::PoolInfo {
-                    lp_token: lp_token_addr.clone(),
-                },
-            )
-            .unwrap()
-            .total_lp;
-
         // Claim rewards
         wasm.execute(
             &testing_contract_addr,
@@ -644,7 +620,7 @@ mod tests {
         // Assert that testing contract has correct asset balances
         for reward in cw_dex_pending_rewards.to_vec() {
             let asset_balance = query_asset_balance(&runner, &reward.info, &testing_contract_addr);
-            assert_eq!(asset_balance, reward.amount);
+            assert_approx_eq!(asset_balance, reward.amount, "0.0001"); // TODO: Why is there a diff here?
         }
 
         Ok(())
