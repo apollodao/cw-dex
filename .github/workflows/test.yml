@@ -20,13 +20,11 @@ jobs:
         with:
           go-version: "1.21.6"
 
+      - name: Install cargo make
+        uses: davidB/rust-cargo-make@v1
+
       - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: 1.69.0
-          target: wasm32-unknown-unknown
-          override: true
+        run: cargo make install-stable
 
       - name: Run unit tests
         uses: actions-rs/cargo@v1
