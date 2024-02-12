@@ -476,20 +476,9 @@ mod tests {
             .map(|(coin, duration)| (coin.into(), duration))
             .collect();
 
-        // Upload cw20 code
-        let cw20_code_id = runner
-            .store_code(
-                cw_it::ContractType::MultiTestContract(Box::new(ContractWrapper::new_with_empty(
-                    cw20_base::contract::execute,
-                    cw20_base::contract::instantiate,
-                    cw20_base::contract::query,
-                ))),
-                admin,
-            )
-            .unwrap();
-
         // Create Cw20 tokens for each Cw20 incentive, mint incentive amount to incentives_provider
         // and add to incentives
+        let cw20_code_id = astroport_contracts.astro_token.code_id;
         for (i, (amount, duration)) in cw20_incentives.iter().enumerate() {
             // Instantiate Cw20 token
             let cw20_addr = wasm
@@ -620,10 +609,6 @@ mod tests {
             assert_eq!(amount, asset.amount);
         }
 
-        println!("{:?}", incentives);
-        println!("{:?}", pending_rewards);
-        println!("{:?}", cw_dex_pending_rewards);
-
         // TODO: For some reason there are a lot of lp holders...
         let lp_holders = wasm
             .query::<_, AllAccountsResponse>(
@@ -636,9 +621,6 @@ mod tests {
             .unwrap()
             .accounts;
 
-        println!("{:?}", lp_holders);
-        println!("{:?}", testing_contract_addr);
-
         // Query total staked amount
         let total_staked = wasm
             .query::<_, astroport_v3::incentives::PoolInfoResponse>(
@@ -649,24 +631,6 @@ mod tests {
             )
             .unwrap()
             .total_lp;
-
-        println!("{:?}", total_staked);
-        println!("{:?}", lp_token_balance);
-
-        // // Assert that pending rewards are correct
-        // for pending_reward in pending_rewards {
-        //     // Find corresponding incentive
-        //     let (incentive, duration) = incentives
-        //         .iter()
-        //         .find(|(incentive, _)| incentive.info == pending_reward.info)
-        //         .unwrap();
-
-        //     // Calculate expected reward based on incentive amount and total duration
-        //     let expected_reward = incentive.amount * Decimal::from_ratio(1u128, *duration);
-
-        //     // Assert that pending reward is correct
-        //     assert_eq!(pending_reward.amount, expected_reward);
-        // }
 
         // Claim rewards
         wasm.execute(
