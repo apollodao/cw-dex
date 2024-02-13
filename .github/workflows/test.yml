@@ -70,6 +70,6 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --locked --test osmosis_proptests
+          args: --locked --test osmosis_proptests --all-features
         env:
           RUST_BACKTRACE: 1
