@@ -10,9 +10,9 @@ readme = "README.md"
 
 [features]
 default = []
-osmosis = ["osmosis-std", "osmosis-test-tube", "cw-it/osmosis", "cw-dex-test-helpers/osmosis"]
-osmosis-test-tube = ["cw-it/osmosis-test-tube", "cw-dex-test-helpers/osmosis-test-tube"]
-astroport = ["dep:astroport", "dep:astroport_v3", "apollo-cw-asset/astroport", "dep:cw2", "cw-it/astroport", "cw-it/astroport-multi-test", "cw-dex-test-helpers/astroport"]
+osmosis = ["osmosis-std", "osmosis-test-tube", "cw-it/osmosis"]
+osmosis-test-tube = ["cw-it/osmosis-test-tube"]
+astroport = ["dep:astroport", "dep:astroport_v3", "apollo-cw-asset/astroport", "dep:cw2", "cw-it/astroport", "cw-it/astroport-multi-test"]
 # backtraces = ["cosmwasm-std/backtraces", "osmosis-std/backtraces"]
 
 [package.metadata.docs.rs]
@@ -40,7 +40,7 @@ cw2  = { workspace = true, optional = true }
 cw-it = { workspace = true, features = ["multi-test"] }
 test-case = { workspace = true }
 cw-dex-test-contract = { workspace = true }
-cw-dex-test-helpers = { workspace = true }
+cw-dex-test-helpers = { workspace = true, features = ["astroport", "osmosis", "osmosis-test-tube"] }
 proptest = { workspace = true }
 cw20-base = { workspace = true }
 cw20 = { workspace = true }
