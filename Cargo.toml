@@ -26,7 +26,7 @@ serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
 apollo-cw-asset = "0.1.1"
 osmosis-std = "0.22.0"
-cw-it = "0.3.0-rc.4"
+cw-it = "0.3.0"
 apollo-utils = "0.1.0"
 astroport = "2.9.0"
 astroport_v3 = { package = "astroport", version = "3.11.1" }
