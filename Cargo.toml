@@ -34,8 +34,8 @@ test-case = "3.0.0"
 proptest = "1.0.0"
 
 # Workspace packages
-cw-dex = { path = "cw-dex", version = "0.5.3-rc.1" }
-cw-dex-astroport = { path = "cw-dex-astroport", version = "0.1.0" }
+cw-dex = { path = "cw-dex", version = "0.5.3" }
+cw-dex-astroport = { path = "cw-dex-astroport", version = "0.2.0-rc.1" }
 cw-dex-osmosis = { path = "cw-dex-osmosis", version = "0.1.0" }
 cw-dex-test-contract = { path = "test-contracts/package" }
 astroport-test-contract = { path = "test-contracts/astroport-test-contract" }
