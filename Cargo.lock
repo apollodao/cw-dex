@@ -887,7 +887,7 @@ dependencies = [
 
 [[package]]
 name = "cw-dex"
-version = "0.5.2"
+version = "0.5.3-rc.1"
 dependencies = [
  "apollo-cw-asset",
  "apollo-utils",
