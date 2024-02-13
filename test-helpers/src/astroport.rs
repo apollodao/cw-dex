@@ -3,11 +3,13 @@ use apollo_utils::assets::separate_natives_and_cw20s;
 use astroport::asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo};
 use astroport::factory::PairType;
 use astroport::pair::{ExecuteMsg as PairExecuteMsg, StablePoolParams};
-use cosmwasm_std::{to_binary, Addr, Coin, Decimal, Uint128};
+use cosmwasm_std::{to_json_binary, Addr, Coin, Decimal, Uint128};
 use cw20::{Cw20ExecuteMsg, MinterResponse};
 use cw20_base::msg::InstantiateMsg as Cw20InstantiateMsg;
 use cw_dex_test_contract::msg::AstroportContractInstantiateMsg;
-use cw_it::astroport::utils::{create_astroport_pair, get_local_contracts, setup_astroport};
+use cw_it::astroport::utils::{
+    create_astroport_pair, get_local_contracts, setup_astroport, AstroportContracts,
+};
 use cw_it::cw_multi_test::ContractWrapper;
 use cw_it::helpers::upload_wasm_file;
 use cw_it::test_tube::{Account, Module, Runner, RunnerResult, SigningAccount, Wasm};
@@ -28,7 +30,14 @@ pub fn setup_pool_and_test_contract<'a>(
     initial_liquidity: Vec<(&str, u64)>,
     native_denom_count: usize,
     wasm_file_path: &str,
-) -> RunnerResult<(Vec<SigningAccount>, String, String, String, AssetList)> {
+) -> RunnerResult<(
+    Vec<SigningAccount>,
+    String,
+    String,
+    String,
+    AssetList,
+    AstroportContracts,
+)> {
     let wasm = Wasm::new(runner);
 
     // Initialize 10 accounts with max balance of each token
@@ -190,14 +199,14 @@ pub fn setup_pool_and_test_contract<'a>(
     // Create pool
     let init_params = match &pool_type {
         PairType::Stable {} => Some(
-            to_binary(&StablePoolParams {
+            to_json_binary(&StablePoolParams {
                 amp: 10u64,
                 owner: None,
             })
             .unwrap(),
         ),
         PairType::Custom(t) => match t.as_str() {
-            "concentrated" => Some(to_binary(&common_pcl_params()).unwrap()),
+            "concentrated" => Some(to_json_binary(&common_pcl_params()).unwrap()),
             _ => None,
         },
         _ => None,
@@ -261,14 +270,23 @@ pub fn setup_pool_and_test_contract<'a>(
         runner,
         code_id,
         pair_addr.clone(),
-        astroport_contracts.generator.address,
-        AssetInfo::cw20(Addr::unchecked(astroport_contracts.astro_token.address)),
+        astroport_contracts.incentives.address.clone(),
+        AssetInfo::cw20(Addr::unchecked(
+            astroport_contracts.astro_token.address.clone(),
+        )),
         lp_token_addr.clone(),
-        astroport_contracts.liquidity_manager.address,
+        astroport_contracts.liquidity_manager.address.clone(),
         &accs[0],
     )?;
 
-    Ok((accs, lp_token_addr, pair_addr, contract_addr, asset_list))
+    Ok((
+        accs,
+        lp_token_addr,
+        pair_addr,
+        contract_addr,
+        asset_list,
+        astroport_contracts,
+    ))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -276,7 +294,7 @@ pub fn instantiate_test_astroport_contract<'a, R: Runner<'a>>(
     runner: &'a R,
     code_id: u64,
     pair_addr: String,
-    generator_addr: String,
+    incentives_addr: String,
     astro_token: AssetInfo,
     lp_token_addr: String,
     liquidity_manager_addr: String,
@@ -285,14 +303,14 @@ pub fn instantiate_test_astroport_contract<'a, R: Runner<'a>>(
     let init_msg = AstroportContractInstantiateMsg {
         pair_addr,
         lp_token_addr,
-        generator_addr,
+        incentives_addr,
         astro_token,
         liquidity_manager_addr,
     };
 
     let wasm = Wasm::new(runner);
     Ok(wasm
-        .instantiate(code_id, &init_msg, None, None, &[], signer)?
+        .instantiate(code_id, &init_msg, None, Some("test contract"), &[], signer)?
         .data
         .address)
 }

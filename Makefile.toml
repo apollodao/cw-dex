@@ -4,10 +4,10 @@ skip_core_tasks = true
 
 [env]
 # If you bump this version, verify RUST_VERSION correctness
-RUST_OPTIMIZER_VERSION = "0.13.0"
+RUST_OPTIMIZER_VERSION = "0.15.0"
 # Use rust version from rust-optimizer Dockerfile (see https://github.com/CosmWasm/rust-optimizer/blob/main/Dockerfile#L1)
 # to be sure that we compile / test against the same version
-RUST_VERSION = "1.69.0"
+RUST_VERSION = "1.75.0"
 NIGHTLY_VERSION = "nightly-2023-08-29"
 
 [tasks.install-stable]
@@ -54,7 +54,7 @@ args = ["fmt", "--all", "--","--verbose", "--check"]
 
 [tasks.deny]
 command = "cargo"
-args = ["deny", "check"]
+args = ["deny", "--all-features", "check"]
 
 [tasks.check]
 toolchain = "${RUST_VERSION}"
@@ -142,6 +142,7 @@ toolchain = "${RUST_VERSION}"
 command = "cargo"
 args = [
     "test",
+    "--all-features",
     "--lib"
 ]
 
@@ -154,8 +155,7 @@ toolchain = "${RUST_VERSION}"
 command = "cargo"
 args = [
     "test",
-    "--features",
-    "osmosis-test-tube",
+    "--all-features",
     "--test",
     "*",
 ]

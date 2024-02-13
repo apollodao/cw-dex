@@ -1,5 +1,5 @@
 [workspace]
-members = ["cw-dex", "test-contracts/*", "test-helpers"]
+members = ["cw-dex", "cw-dex-astroport", "cw-dex-osmosis", "test-contracts/*", "test-helpers"]
 resolver = "2"
 
 [workspace.package]
@@ -14,7 +14,7 @@ rust-version  = "1.64.0"
 
 [workspace.dependencies]
 cosmwasm-schema = "1.2.1"
-cosmwasm-std = "1.2.1"
+cosmwasm-std = "1.5.3"
 cosmwasm-storage = "1.2.1"
 cw-storage-plus = "1.0"
 cw2 = "1.0"
@@ -25,14 +25,21 @@ schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
 apollo-cw-asset = "0.1.1"
-osmosis-std = "0.19.2"
-cw-it = "0.2.3"
-cw-dex = { path = "cw-dex" }
+osmosis-std = "0.22.0"
+cw-it = "0.3.0-rc.4"
+apollo-utils = "0.1.0"
+astroport = "2.9.0"
+astroport_v3 = { package = "astroport", version = "3.11.1" }
+test-case = "3.0.0"
+proptest = "1.0.0"
+
+# Workspace packages
+cw-dex = { path = "cw-dex", version = "0.5.2" }
+cw-dex-astroport = { path = "cw-dex-astroport", version = "0.1.0" }
+cw-dex-osmosis = { path = "cw-dex-osmosis", version = "0.1.0" }
 cw-dex-test-contract = { path = "test-contracts/package" }
 astroport-test-contract = { path = "test-contracts/astroport-test-contract" }
 cw-dex-test-helpers = { path = "test-helpers" }
-apollo-utils = "0.1.0"
-astroport = "=2.9.0"
 
 [profile.release]
 codegen-units    = 1

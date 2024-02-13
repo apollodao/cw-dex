@@ -13,8 +13,6 @@ use cosmwasm_std::{
 use cw20::Cw20ExecuteMsg;
 use cw_utils::Expiration;
 
-use crate::traits::Pool;
-use crate::CwDexError;
 use apollo_utils::assets::separate_natives_and_cw20s;
 use astroport::asset::{Asset as AstroAsset, PairInfo};
 use astroport::factory::PairType;
@@ -23,6 +21,8 @@ use astroport::pair::{
     QueryMsg as PairQueryMsg, SimulationResponse, MAX_ALLOWED_SLIPPAGE,
 };
 use astroport::querier::query_supply;
+use cw_dex::traits::Pool;
+use cw_dex::CwDexError;
 
 /// Represents an AMM pool on Astroport
 #[cw_serde]
@@ -66,6 +66,39 @@ impl AstroportPool {
             pair_type: pair_info.pair_type,
             liquidity_manager,
         })
+    }
+
+    /// Returns the matching pool given a LP token.
+    ///
+    /// Arguments:
+    /// - `lp_token`: Said LP token
+    /// - `astroport_liquidity_manager`: The Astroport liquidity manager
+    ///   address.
+    pub fn get_pool_for_lp_token(
+        deps: Deps,
+        lp_token: &AssetInfo,
+        astroport_liquidity_manager: Addr,
+    ) -> Result<Self, CwDexError> {
+        match lp_token {
+            AssetInfo::Cw20(address) => {
+                // To figure out if the CW20 is a LP token, we need to check which address
+                // instantiated the CW20 and check if that address is an Astroport pair
+                // contract.
+                let contract_info = deps.querier.query_wasm_contract_info(address)?;
+                let creator_addr = deps.api.addr_validate(&contract_info.creator)?;
+
+                // Try to create an `AstroportPool` object with the creator address. This will
+                // query the contract and assume that it is an Astroport pair
+                // contract. If it succeeds, the pool object will be returned.
+                //
+                // NB: This does NOT validate that the pool is registered with the Astroport
+                // factory, and that it is an "official" Astroport pool.
+                let pool = AstroportPool::new(deps, creator_addr, astroport_liquidity_manager)?;
+
+                Ok(pool)
+            }
+            _ => Err(CwDexError::NotLpToken {}),
+        }
     }
 
     /// Returns the total supply of the associated LP token

@@ -2,22 +2,15 @@ use apollo_cw_asset::{Asset, AssetInfo, AssetList};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
     Uint128,
 };
-use cw_dex::osmosis::{OsmosisPool, OsmosisStaking, OsmosisSuperfluidStaking};
 use cw_dex::traits::{ForceUnlock, Pool, Stake, Unlock};
-// use cw2::set_contract_version;
+use cw_dex_osmosis::{OsmosisPool, OsmosisStaking, OsmosisSuperfluidStaking};
 
 use crate::error::ContractError;
 use crate::state::{POOL, STAKING, SUPERFLUID};
 use cw_dex_test_contract::msg::{ExecuteMsg, OsmosisTestContractInstantiateMsg, QueryMsg};
-
-/*
-// version info for migration info
-const CONTRACT_NAME: &str = "crates.io:cw-dex-test-contract";
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-*/
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -204,23 +197,24 @@ pub fn execute_swap(
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     let pool = POOL.load(deps.storage)?;
     match msg {
-        QueryMsg::PoolLiquidity {} => to_binary(&pool.get_pool_liquidity(deps)?),
+        QueryMsg::PoolLiquidity {} => to_json_binary(&pool.get_pool_liquidity(deps)?),
         QueryMsg::SimulateProvideLiquidity { assets } => {
-            to_binary(&pool.simulate_provide_liquidity(deps, &env, assets)?.amount)
+            to_json_binary(&pool.simulate_provide_liquidity(deps, &env, assets)?.amount)
         }
-        QueryMsg::SimulateWithdrawLiquidty { amount } => to_binary(
+        QueryMsg::SimulateWithdrawLiquidty { amount } => to_json_binary(
             &pool.simulate_withdraw_liquidity(deps, &Asset::new(pool.lp_token(), amount))?,
         ),
         QueryMsg::SimulateSwap { offer, ask } => query_simulate_swap(deps, offer, ask),
         QueryMsg::GetPoolForLpToken { lp_token } => {
-            to_binary(&cw_dex::Pool::get_pool_for_lp_token(deps, &lp_token, None)?)
+            to_json_binary(&OsmosisPool::get_pool_for_lp_token(deps, &lp_token)?)
         }
+        QueryMsg::PendingRewards {} => unimplemented!(),
     }
 }
 
 pub fn query_simulate_swap(deps: Deps, offer: Asset, ask: AssetInfo) -> StdResult<Binary> {
     let pool = POOL.load(deps.storage)?;
-    to_binary(&pool.simulate_swap(deps, offer, ask)?)
+    to_json_binary(&pool.simulate_swap(deps, offer, ask)?)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

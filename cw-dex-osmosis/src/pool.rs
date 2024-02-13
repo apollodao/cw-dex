@@ -16,10 +16,12 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     Coin, CosmosMsg, Deps, Env, Event, QuerierWrapper, Response, StdResult, Uint128,
 };
-use osmosis_std::types::osmosis::poolmanager::v1beta1::{PoolmanagerQuerier, SwapAmountInRoute};
+use osmosis_std::types::osmosis::poolmanager::v1beta1::{
+    PoolmanagerQuerier, SwapAmountInRoute, TotalPoolLiquidityRequest,
+};
 
-use crate::traits::Pool;
-use crate::CwDexError;
+use cw_dex::traits::Pool;
+use cw_dex::CwDexError;
 
 /// Struct for interacting with Osmosis v1beta1 balancer pools. If `pool_id`
 /// maps to another type of pool this will fail.
@@ -43,6 +45,29 @@ impl OsmosisPool {
     /// Creates an unchecked pool for use in testing.
     pub fn unchecked(pool_id: u64) -> Self {
         Self { pool_id }
+    }
+
+    /// Returns the matching pool given a LP token.
+    ///
+    /// Arguments:
+    /// - `lp_token`: Said LP token
+    pub fn get_pool_for_lp_token(deps: Deps, lp_token: &AssetInfo) -> Result<Self, CwDexError> {
+        match lp_token {
+            AssetInfo::Native(lp_token_denom) => {
+                if !lp_token_denom.starts_with("gamm/pool/") {
+                    return Err(CwDexError::NotLpToken {});
+                }
+
+                let pool_id_str = lp_token_denom
+                    .strip_prefix("gamm/pool/")
+                    .ok_or(CwDexError::NotLpToken {})?;
+
+                let pool_id = u64::from_str(pool_id_str).map_err(|_| CwDexError::NotLpToken {})?;
+
+                Ok(OsmosisPool::new(pool_id, deps)?)
+            }
+            _ => Err(CwDexError::NotLpToken {}),
+        }
     }
 
     /// Returns the pool id of the pool
@@ -215,14 +240,11 @@ impl Pool for OsmosisPool {
         Ok(Response::new().add_message(swap_msg).add_event(event))
     }
 
-    /// Allowing deprecated functions here because
-    /// `osmosis.gamm.v1beta1.Query/TotalPoolLiquidity` has been deprecated,
-    /// but `osmosis.poolmanager.v1beta1.Query/TotalPoolLiquidity` has not yet
-    /// been whitelisted in the stargate queries whitelist.
-    /// See issue: <https://github.com/osmosis-labs/osmosis/issues/5812>
-    #[allow(deprecated)]
     fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {
-        let pool_assets = GammQuerier::new(&deps.querier).total_pool_liquidity(self.pool_id)?;
+        let pool_assets = TotalPoolLiquidityRequest {
+            pool_id: self.pool_id,
+        }
+        .query(&deps.querier)?;
 
         let asset_list: AssetList = pool_assets
             .liquidity
@@ -303,5 +325,26 @@ impl Pool for OsmosisPool {
 
     fn lp_token(&self) -> AssetInfo {
         AssetInfo::Native(format!("gamm/pool/{}", self.pool_id))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use apollo_cw_asset::AssetInfo;
+
+    use cw_dex::traits::Pool;
+
+    use super::OsmosisPool;
+
+    #[test]
+    fn test_lp_token() {
+        let pool = OsmosisPool::unchecked(1337u64);
+
+        let lp_token = pool.lp_token();
+
+        match lp_token {
+            AssetInfo::Native(denom) => assert_eq!(denom, format!("gamm/pool/{}", 1337u64)),
+            AssetInfo::Cw20(_) => panic!("Unexpected cw20 token"),
+        }
     }
 }

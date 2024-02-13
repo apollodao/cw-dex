@@ -4,10 +4,11 @@ use apollo_cw_asset::{Asset, AssetInfo, AssetList};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, Uint128,
+    to_json_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+    Uint128,
 };
-use cw_dex::astroport::{AstroportPool, AstroportStaking};
-use cw_dex::traits::{Pool, Stake, Unstake};
+use cw_dex::traits::{Pool, Rewards, Stake, Unstake};
+use cw_dex_astroport::{AstroportPool, AstroportStaking};
 use cw_dex_test_contract::msg::{
     AstroportContractInstantiateMsg as InstantiateMsg, AstroportExecuteMsg as ExecuteMsg, QueryMsg,
 };
@@ -29,9 +30,7 @@ pub fn instantiate(
         &AstroportStaking {
             lp_token_addr: Addr::unchecked(msg.lp_token_addr),
 
-            generator_addr: Addr::unchecked(msg.generator_addr),
-
-            astro_token: msg.astro_token,
+            incentives: Addr::unchecked(msg.incentives_addr),
         },
     )?;
 
@@ -54,6 +53,7 @@ pub fn execute(
         }
         ExecuteMsg::Stake { amount } => execute_stake(deps, env, info, amount),
         ExecuteMsg::Unstake { amount } => execute_unstake(deps, env, info, amount),
+        ExecuteMsg::ClaimRewards {} => execute_claim_rewards(deps, env, info),
         ExecuteMsg::Swap {
             offer,
             ask,
@@ -111,6 +111,15 @@ pub fn execute_unstake(
     Ok(staking.unstake(deps.as_ref(), &env, amount)?)
 }
 
+pub fn execute_claim_rewards(
+    deps: DepsMut,
+    env: Env,
+    _info: MessageInfo,
+) -> Result<Response, ContractError> {
+    let staking = STAKING.load(deps.storage)?;
+    Ok(staking.claim_rewards(deps.as_ref(), &env)?)
+}
+
 pub fn execute_swap(
     deps: DepsMut,
     env: Env,
@@ -127,23 +136,27 @@ pub fn execute_swap(
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     let pool = POOL.load(deps.storage)?;
     match msg {
-        QueryMsg::PoolLiquidity {} => to_binary(&pool.get_pool_liquidity(deps)?),
+        QueryMsg::PoolLiquidity {} => to_json_binary(&pool.get_pool_liquidity(deps)?),
         QueryMsg::SimulateProvideLiquidity { assets } => {
-            to_binary(&pool.simulate_provide_liquidity(deps, &env, assets)?.amount)
+            to_json_binary(&pool.simulate_provide_liquidity(deps, &env, assets)?.amount)
         }
-        QueryMsg::SimulateWithdrawLiquidty { amount } => to_binary(
+        QueryMsg::SimulateWithdrawLiquidty { amount } => to_json_binary(
             &pool.simulate_withdraw_liquidity(deps, &Asset::new(pool.lp_token(), amount))?,
         ),
         QueryMsg::SimulateSwap { offer, ask } => query_simulate_swap(deps, offer, ask),
-        QueryMsg::GetPoolForLpToken { lp_token } => to_binary(
-            &cw_dex::Pool::get_pool_for_lp_token(deps, &lp_token, Some(pool.liquidity_manager))?,
+        QueryMsg::GetPoolForLpToken { lp_token } => to_json_binary(
+            &AstroportPool::get_pool_for_lp_token(deps, &lp_token, pool.liquidity_manager)?,
         ),
+        QueryMsg::PendingRewards {} => {
+            let staking = STAKING.load(deps.storage)?;
+            to_json_binary(&staking.query_pending_rewards(&deps.querier, &env.contract.address)?)
+        }
     }
 }
 
 pub fn query_simulate_swap(deps: Deps, offer: Asset, ask: AssetInfo) -> StdResult<Binary> {
     let pool = POOL.load(deps.storage)?;
-    to_binary(&pool.simulate_swap(deps, offer, ask)?)
+    to_json_binary(&pool.simulate_swap(deps, offer, ask)?)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

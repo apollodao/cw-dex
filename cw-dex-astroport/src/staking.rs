@@ -15,8 +15,8 @@ use astroport_v3::incentives::{
     QueryMsg as IncentivesQueryMsg,
 };
 
-use crate::traits::{Rewards, Stake, Staking, Unstake};
-use crate::CwDexError;
+use cw_dex::traits::{Rewards, Stake, Staking, Unstake};
+use cw_dex::CwDexError;
 
 /// Represents staking of tokens on Astroport
 #[cw_serde]
