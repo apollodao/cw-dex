@@ -8,11 +8,11 @@ use cosmwasm_std::{
 };
 use cw20::Cw20ExecuteMsg;
 
-use apollo_cw_asset::AssetList;
+use apollo_cw_asset::{Asset, AssetInfo, AssetList};
 use astroport::asset::Asset as AstroAsset;
-use astroport_v3::incentives::{
-    Cw20Msg as IncentivesCw20Msg, ExecuteMsg as IncentivesExecuteMsg,
-    QueryMsg as IncentivesQueryMsg,
+use astroport::generator::{
+    Cw20HookMsg as GeneratorCw20HookMsg, ExecuteMsg as GeneratorExecuteMsg, PendingTokenResponse,
+    QueryMsg as GeneratorQueryMsg,
 };
 
 use crate::traits::{Rewards, Stake, Staking, Unstake};
@@ -23,8 +23,10 @@ use crate::CwDexError;
 pub struct AstroportStaking {
     /// The address of the associated LP token contract
     pub lp_token_addr: Addr,
-    /// The address of the astroport incentives contract
-    pub incentives: Addr,
+    /// The address of the associated generator contract
+    pub generator_addr: Addr,
+    /// The address of the ASTRO token contract
+    pub astro_token: AssetInfo,
 }
 
 impl Staking for AstroportStaking {}
@@ -34,9 +36,9 @@ impl Stake for AstroportStaking {
         let stake_msg = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.lp_token_addr.to_string(),
             msg: to_json_binary(&Cw20ExecuteMsg::Send {
-                contract: self.incentives.to_string(),
+                contract: self.generator_addr.to_string(),
                 amount,
-                msg: to_json_binary(&IncentivesCw20Msg::Deposit { recipient: None })?,
+                msg: to_json_binary(&GeneratorCw20HookMsg::Deposit {})?,
             })?,
             funds: vec![],
         });
@@ -44,7 +46,7 @@ impl Stake for AstroportStaking {
         let event = Event::new("apollo/cw-dex/stake")
             .add_attribute("type", "astroport_staking")
             .add_attribute("asset", self.lp_token_addr.to_string())
-            .add_attribute("incentives contract address", self.incentives.to_string());
+            .add_attribute("generator_address", self.generator_addr.to_string());
 
         Ok(Response::new().add_message(stake_msg).add_event(event))
     }
@@ -63,8 +65,8 @@ impl Rewards for AstroportStaking {
         }
 
         let claim_rewards_msg = CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: self.incentives.to_string(),
-            msg: to_json_binary(&IncentivesExecuteMsg::ClaimRewards {
+            contract_addr: self.generator_addr.to_string(),
+            msg: to_json_binary(&GeneratorExecuteMsg::ClaimRewards {
                 lp_tokens: vec![self.lp_token_addr.to_string()],
             })?,
             funds: vec![],
@@ -113,17 +115,25 @@ impl Rewards for AstroportStaking {
         querier: &QuerierWrapper,
         user: &Addr,
     ) -> Result<AssetList, CwDexError> {
-        let pending_rewards: Vec<AstroAsset> = querier
-            .query::<Vec<AstroAsset>>(&QueryRequest::Wasm(WasmQuery::Smart {
-                contract_addr: self.incentives.to_string(),
-                msg: to_json_binary(&IncentivesQueryMsg::PendingRewards {
-                    lp_token: self.lp_token_addr.to_string(),
-                    user: user.to_string(),
-                })?,
-            }))?
+        let PendingTokenResponse {
+            pending: pending_astro,
+            pending_on_proxy,
+        } = querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: self.generator_addr.to_string(),
+            msg: to_json_binary(&GeneratorQueryMsg::PendingToken {
+                lp_token: self.lp_token_addr.to_string(),
+                user: user.to_string(),
+            })?,
+        }))?;
+
+        let pending_rewards: Vec<AstroAsset> = pending_on_proxy
+            .unwrap_or_default()
             .into_iter()
-            .filter(|asset| !asset.amount.is_zero()) //TODO: Is this necessary?
-            .collect();
+            .chain(vec![
+                Asset::new(self.astro_token.clone(), pending_astro).into()
+            ])
+            .filter(|asset| !asset.amount.is_zero())
+            .collect::<Vec<_>>();
 
         Ok(pending_rewards.into())
     }
@@ -132,8 +142,8 @@ impl Rewards for AstroportStaking {
 impl Unstake for AstroportStaking {
     fn unstake(&self, _deps: Deps, _env: &Env, amount: Uint128) -> Result<Response, CwDexError> {
         let unstake_msg = CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: self.incentives.to_string(),
-            msg: to_json_binary(&IncentivesExecuteMsg::Withdraw {
+            contract_addr: self.generator_addr.to_string(),
+            msg: to_json_binary(&GeneratorExecuteMsg::Withdraw {
                 lp_token: self.lp_token_addr.to_string(),
                 amount,
             })?,

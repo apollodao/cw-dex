@@ -887,12 +887,11 @@ dependencies = [
 
 [[package]]
 name = "cw-dex"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "apollo-cw-asset",
  "apollo-utils",
  "astroport 2.9.0",
- "astroport 3.11.1",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-dex-test-contract",
@@ -910,7 +909,7 @@ dependencies = [
 
 [[package]]
 name = "cw-dex-astroport"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "apollo-cw-asset",
  "apollo-utils",
@@ -976,9 +975,9 @@ dependencies = [
 
 [[package]]
 name = "cw-it"
-version = "0.3.0-rc.4"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8323a657163a204179a9a7a4a418794aa71f9c789b58b8c91974e2691f7db408"
+checksum = "e1bd88c423ae22eefe99b1b008c8b2d7936def56cfb0c65f6ccf634a0988d7b0"
 dependencies = [
  "anyhow",
  "apollo-cw-multi-test",
@@ -1642,9 +1641,9 @@ checksum = "95505c38b4572b2d910cecb0281560f54b440a19336cbbcb27bf6ce6adc6f5a8"
 
 [[package]]
 name = "hermit-abi"
-version = "0.3.5"
+version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0c62115964e08cb8039170eb33c1d0e2388a256930279edca206fff675f82c3"
+checksum = "bd5256b483761cd23699d0da46cc6fd2ee3be420bbe6d020ae4a091e70b7e9fd"
 
 [[package]]
 name = "hex"
