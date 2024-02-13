@@ -945,7 +945,7 @@ dependencies = [
  "cw-utils 1.0.2",
  "cw20 1.1.2",
  "cw20-base 1.1.1",
- "osmosis-std 0.19.2",
+ "osmosis-std 0.22.0",
  "proptest",
  "test-case",
 ]

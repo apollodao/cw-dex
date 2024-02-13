@@ -7,17 +7,10 @@ use cosmwasm_std::{
 };
 use cw_dex::traits::{ForceUnlock, Pool, Stake, Unlock};
 use cw_dex_osmosis::{OsmosisPool, OsmosisStaking, OsmosisSuperfluidStaking};
-// use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::state::{POOL, STAKING, SUPERFLUID};
 use cw_dex_test_contract::msg::{ExecuteMsg, OsmosisTestContractInstantiateMsg, QueryMsg};
-
-/*
-// version info for migration info
-const CONTRACT_NAME: &str = "crates.io:cw-dex-test-contract";
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-*/
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(

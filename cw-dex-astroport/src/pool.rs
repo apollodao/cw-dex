@@ -74,8 +74,6 @@ impl AstroportPool {
     /// - `lp_token`: Said LP token
     /// - `astroport_liquidity_manager`: The Astroport liquidity manager
     ///   address.
-    #[allow(unused_variables)]
-    #[allow(unreachable_patterns)]
     pub fn get_pool_for_lp_token(
         deps: Deps,
         lp_token: &AssetInfo,

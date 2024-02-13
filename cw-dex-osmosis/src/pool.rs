@@ -16,7 +16,9 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     Coin, CosmosMsg, Deps, Env, Event, QuerierWrapper, Response, StdResult, Uint128,
 };
-use osmosis_std::types::osmosis::poolmanager::v1beta1::{PoolmanagerQuerier, SwapAmountInRoute};
+use osmosis_std::types::osmosis::poolmanager::v1beta1::{
+    PoolmanagerQuerier, SwapAmountInRoute, TotalPoolLiquidityRequest,
+};
 
 use cw_dex::traits::Pool;
 use cw_dex::CwDexError;
@@ -238,14 +240,11 @@ impl Pool for OsmosisPool {
         Ok(Response::new().add_message(swap_msg).add_event(event))
     }
 
-    /// Allowing deprecated functions here because
-    /// `osmosis.gamm.v1beta1.Query/TotalPoolLiquidity` has been deprecated,
-    /// but `osmosis.poolmanager.v1beta1.Query/TotalPoolLiquidity` has not yet
-    /// been whitelisted in the stargate queries whitelist.
-    /// See issue: <https://github.com/osmosis-labs/osmosis/issues/5812>
-    #[allow(deprecated)]
     fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {
-        let pool_assets = GammQuerier::new(&deps.querier).total_pool_liquidity(self.pool_id)?;
+        let pool_assets = TotalPoolLiquidityRequest {
+            pool_id: self.pool_id,
+        }
+        .query(&deps.querier)?;
 
         let asset_list: AssetList = pool_assets
             .liquidity
