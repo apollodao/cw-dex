@@ -35,5 +35,4 @@ confidence-threshold = 0.93
 allow = ["Apache-2.0", "MIT", "BSD-3-Clause", "MPL-2.0"]
 exceptions = [
     { allow = ["Unicode-DFS-2016"], name = "unicode-ident" },
-    { allow = ["GPL-3.0"], name = "cw-asset"}
 ]
