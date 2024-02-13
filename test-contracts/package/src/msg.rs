@@ -66,6 +66,12 @@ impl ExecuteMsg {
 }
 
 #[cw_serde]
+/// Represents an unknown type as the response of a query.
+/// This is due to the API being used by different contracts which will return
+/// different types.
+pub struct Unknown {}
+
+#[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     #[returns(AssetList)]
@@ -76,7 +82,7 @@ pub enum QueryMsg {
     SimulateWithdrawLiquidty { amount: Uint128 },
     #[returns(Uint128)]
     SimulateSwap { offer: Asset, ask: AssetInfo },
-    #[returns(cw_dex::Pool)]
+    #[returns(Unknown)]
     GetPoolForLpToken { lp_token: AssetInfo },
     #[returns(AssetList)]
     PendingRewards {},

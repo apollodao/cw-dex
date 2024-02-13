@@ -16,7 +16,7 @@ exclude = [
 [features]
 default = []
 osmosis = ["cw-it/osmosis"]
-astroport = ["cw-it/astroport", "cw-it/astroport-multi-test", "astroport-test-contract"]
+astroport = ["cw-it/astroport", "cw-it/astroport-multi-test", "astroport-test-contract", "apollo-cw-asset/astroport"]
 osmosis-test-tube = ["cw-it/osmosis-test-tube"]
 
 [lib]
@@ -31,7 +31,7 @@ optimize = """docker run --rm -v "$(pwd)":/code \
 
 [dependencies]
 cosmwasm-std = { workspace = true }
-apollo-cw-asset = { workspace = true, features = ["astroport"] }
+apollo-cw-asset = { workspace = true }
 apollo-utils = { workspace = true }
 cw-dex-test-contract = { workspace = true }
 astroport-test-contract = { workspace = true, optional = true }

@@ -346,12 +346,13 @@ dependencies = [
 
 [[package]]
 name = "astroport-test-contract"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "apollo-cw-asset",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-dex",
+ "cw-dex-astroport",
  "cw-dex-test-contract",
  "cw-storage-plus 1.2.0",
  "thiserror",
@@ -886,7 +887,7 @@ dependencies = [
 
 [[package]]
 name = "cw-dex"
-version = "0.6.0-rc.3"
+version = "0.5.2"
 dependencies = [
  "apollo-cw-asset",
  "apollo-utils",
@@ -908,13 +909,54 @@ dependencies = [
 ]
 
 [[package]]
-name = "cw-dex-test-contract"
+name = "cw-dex-astroport"
 version = "0.1.0"
+dependencies = [
+ "apollo-cw-asset",
+ "apollo-utils",
+ "astroport 2.9.0",
+ "astroport 3.11.1",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-dex",
+ "cw-dex-test-contract",
+ "cw-dex-test-helpers",
+ "cw-it",
+ "cw-utils 1.0.2",
+ "cw2 1.1.1",
+ "cw20 1.1.2",
+ "cw20-base 1.1.1",
+ "proptest",
+ "test-case",
+]
+
+[[package]]
+name = "cw-dex-osmosis"
+version = "0.1.0"
+dependencies = [
+ "apollo-cw-asset",
+ "apollo-utils",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-dex",
+ "cw-dex-test-contract",
+ "cw-dex-test-helpers",
+ "cw-it",
+ "cw-utils 1.0.2",
+ "cw20 1.1.2",
+ "cw20-base 1.1.1",
+ "osmosis-std 0.22.0",
+ "proptest",
+ "test-case",
+]
+
+[[package]]
+name = "cw-dex-test-contract"
+version = "0.2.0"
 dependencies = [
  "apollo-cw-asset",
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-dex",
 ]
 
 [[package]]
@@ -2027,12 +2069,13 @@ dependencies = [
 
 [[package]]
 name = "osmosis-test-contract"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "apollo-cw-asset",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-dex",
+ "cw-dex-osmosis",
  "cw-dex-test-contract",
  "cw-storage-plus 1.2.0",
  "thiserror",
