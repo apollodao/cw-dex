@@ -1,6 +1,4 @@
-#![cfg(feature = "astroport")]
 mod tests {
-
     use apollo_cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
     use apollo_utils::assets::separate_natives_and_cw20s;
     use apollo_utils::coins::coin_from_str;
@@ -9,7 +7,6 @@ mod tests {
     use astroport_v3::asset::Asset as AstroportAsset;
     use cosmwasm_std::{assert_approx_eq, coin, coins, Addr, Coin, SubMsgResponse, Uint128};
 
-    use cw_dex::Pool;
     use cw_dex_test_contract::msg::{AstroportExecuteMsg, ExecuteMsg, QueryMsg};
     use cw_dex_test_helpers::astroport::setup_pool_and_test_contract;
     use cw_dex_test_helpers::{cw20_balance_query, cw20_transfer, query_asset_balance};
@@ -23,6 +20,8 @@ mod tests {
     use cw_it::traits::CwItRunner;
     use cw_it::{OwnedTestRunner, TestRunner};
     use test_case::test_case;
+
+    use cw_dex_astroport::AstroportPool;
 
     #[cfg(feature = "osmosis-test-tube")]
     use cw_it::osmosis_test_tube::OsmosisTestApp;
@@ -643,21 +642,18 @@ mod tests {
         let query = QueryMsg::GetPoolForLpToken {
             lp_token: AssetInfo::Cw20(Addr::unchecked(lp_token_addr.clone())),
         };
-        let pool = wasm.query::<_, Pool>(&contract_addr, &query).unwrap();
+        let pool = wasm
+            .query::<_, AstroportPool>(&contract_addr, &query)
+            .unwrap();
 
-        match pool {
-            Pool::Astroport(pool) => {
-                assert_eq!(pool.lp_token_addr, Addr::unchecked(lp_token_addr));
-                assert_eq!(pool.pair_addr, Addr::unchecked(pair_addr));
-                assert_eq!(
-                    pool.pool_assets,
-                    asset_list
-                        .into_iter()
-                        .map(|x| x.info.clone())
-                        .collect::<Vec<AssetInfo>>()
-                );
-            }
-            _ => panic!("Wrong pool type"),
-        }
+        assert_eq!(pool.lp_token_addr, Addr::unchecked(lp_token_addr));
+        assert_eq!(pool.pair_addr, Addr::unchecked(pair_addr));
+        assert_eq!(
+            pool.pool_assets,
+            asset_list
+                .into_iter()
+                .map(|x| x.info.clone())
+                .collect::<Vec<AssetInfo>>()
+        );
     }
 }

@@ -5,8 +5,8 @@ use cosmwasm_std::{
     to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
     Uint128,
 };
-use cw_dex::osmosis::{OsmosisPool, OsmosisStaking, OsmosisSuperfluidStaking};
 use cw_dex::traits::{ForceUnlock, Pool, Stake, Unlock};
+use cw_dex_osmosis::{OsmosisPool, OsmosisStaking, OsmosisSuperfluidStaking};
 // use cw2::set_contract_version;
 
 use crate::error::ContractError;
@@ -213,7 +213,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         ),
         QueryMsg::SimulateSwap { offer, ask } => query_simulate_swap(deps, offer, ask),
         QueryMsg::GetPoolForLpToken { lp_token } => {
-            to_json_binary(&cw_dex::Pool::get_pool_for_lp_token(deps, &lp_token, None)?)
+            to_json_binary(&OsmosisPool::get_pool_for_lp_token(deps, &lp_token)?)
         }
         QueryMsg::PendingRewards {} => unimplemented!(),
     }

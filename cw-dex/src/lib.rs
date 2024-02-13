@@ -10,15 +10,20 @@
 //! interact with any of them.
 //!
 //! The currently supported decentralized exchanges are:
-//! - [Osmosis](crate::implementations::osmosis)
-//! - [Astroport](crate::implementations::astroport)
+//! - [Osmosis]
+//!    - Via crate `cw-dex-osmosis`
+//! - [Astroport]
+//!    - Via crate `cw-dex-astroport`
 
 pub mod error;
-pub mod implementations;
 pub mod traits;
 
-pub use error::*;
-pub use implementations::*;
+#[deprecated(
+    since = "0.5.2",
+    note = "Please use separate implementation crates such as `cw-dex-astroport`, and `cw-dex-osmosis` instead"
+)]
+pub mod implementations;
 
-// #[cfg(test)]
-// pub mod tests;
+pub use error::*;
+#[allow(deprecated)]
+pub use implementations::*;

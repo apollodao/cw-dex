@@ -7,8 +7,8 @@ use cosmwasm_std::{
     to_json_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
     Uint128,
 };
-use cw_dex::astroport::{AstroportPool, AstroportStaking};
 use cw_dex::traits::{Pool, Rewards, Stake, Unstake};
+use cw_dex_astroport::{AstroportPool, AstroportStaking};
 use cw_dex_test_contract::msg::{
     AstroportContractInstantiateMsg as InstantiateMsg, AstroportExecuteMsg as ExecuteMsg, QueryMsg,
 };
@@ -145,7 +145,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         ),
         QueryMsg::SimulateSwap { offer, ask } => query_simulate_swap(deps, offer, ask),
         QueryMsg::GetPoolForLpToken { lp_token } => to_json_binary(
-            &cw_dex::Pool::get_pool_for_lp_token(deps, &lp_token, Some(pool.liquidity_manager))?,
+            &AstroportPool::get_pool_for_lp_token(deps, &lp_token, pool.liquidity_manager)?,
         ),
         QueryMsg::PendingRewards {} => {
             let staking = STAKING.load(deps.storage)?;
