@@ -40,6 +40,8 @@ cw2  = { workspace = true, optional = true }
 cw-it = { workspace = true, features = ["multi-test"] }
 test-case = { workspace = true }
 cw-dex-test-contract = { workspace = true }
+# These features are needed here to run the tests. They cannot be put in the features section
+# because cw-dex-test-helpers is not a dependency, so then it can not be published.
 cw-dex-test-helpers = { workspace = true, features = ["astroport", "osmosis", "osmosis-test-tube"] }
 proptest = { workspace = true }
 cw20-base = { workspace = true }
