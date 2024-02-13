@@ -1,7 +1,7 @@
 [package]
 name = "cw-dex-test-contract"
 description = "Contract to test the cw-dex library"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Pacman <pacman@apollo.farm>"]
 edition = "2021"
 license = { workspace = true }

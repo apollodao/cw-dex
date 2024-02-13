@@ -47,6 +47,7 @@ pub trait Pool {
         deps: Deps,
         env: &Env,
         lp_token: Asset,
+        min_out: AssetList,
     ) -> Result<Response, CwDexError>;
 
     /// Swap assets in the pool.
@@ -102,16 +103,11 @@ pub trait Pool {
     /// Arguments:
     /// - `offer_asset`: The asset offered in the swap
     /// - `ask_asset_info`: The asset asked for in the swap
-    /// - `sender`: Sender address (required for Osmosis)
     fn simulate_swap(
         &self,
         deps: Deps,
         offer_asset: Asset,
         ask_asset_info: AssetInfo,
-        //For some reason Osmosis requires us to send a sender address for simulation.
-        //This obviously makes no sense and I guess we'll have to make a PR to
-        //Osmosis to fix this, or perhaps copy their math and perform the calculation here...
-        sender: Option<String>,
     ) -> StdResult<Uint128>;
 
     /// Returns the assets in the pool as a [`Vec<AssetInfo>`]

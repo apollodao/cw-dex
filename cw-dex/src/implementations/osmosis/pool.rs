@@ -6,17 +6,17 @@ use std::str::FromStr;
 use apollo_utils::assets::{
     assert_native_asset_info, assert_native_coin, assert_only_native_coins, merge_assets,
 };
-use apollo_utils::iterators::IntoElementwise;
+use apollo_utils::iterators::{IntoElementwise, TryIntoElementwise};
 use osmosis_std::types::osmosis::gamm::v1beta1::{
     GammQuerier, MsgExitPool, MsgJoinPool, MsgJoinSwapExternAmountIn, MsgSwapExactAmountIn,
-    SwapAmountInRoute,
 };
 
 use apollo_cw_asset::{Asset, AssetInfo, AssetList};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    Coin, CosmosMsg, Deps, Env, Event, QuerierWrapper, Response, StdError, StdResult, Uint128,
+    Coin, CosmosMsg, Deps, Env, Event, QuerierWrapper, Response, StdResult, Uint128,
 };
+use osmosis_std::types::osmosis::poolmanager::v1beta1::{PoolmanagerQuerier, SwapAmountInRoute};
 
 use crate::traits::Pool;
 use crate::CwDexError;
@@ -155,17 +155,25 @@ impl Pool for OsmosisPool {
         _deps: Deps,
         env: &Env,
         lp_token: Asset,
+        min_out: AssetList,
     ) -> Result<Response, CwDexError> {
+        let min_out_coins = assert_only_native_coins(&min_out)?.try_into_elementwise()?;
+
         let exit_msg = MsgExitPool {
             sender: env.contract.address.to_string(),
             pool_id: self.pool_id,
             share_in_amount: lp_token.amount.to_string(),
-            token_out_mins: vec![],
+            token_out_mins: min_out_coins,
         };
 
-        let event = Event::new("apollo/cw-dex/withdraw_liquidity")
+        let mut event = Event::new("apollo/cw-dex/withdraw_liquidity")
             .add_attribute("pool_id", self.pool_id.to_string())
             .add_attribute("shares_in", lp_token.to_string());
+
+        // We're not allowed to add empty values as attributes.
+        if !min_out.len() == 0 {
+            event = event.add_attribute("min_out", min_out.to_string());
+        }
 
         Ok(Response::new().add_message(exit_msg).add_event(event))
     }
@@ -207,6 +215,12 @@ impl Pool for OsmosisPool {
         Ok(Response::new().add_message(swap_msg).add_event(event))
     }
 
+    /// Allowing deprecated functions here because
+    /// `osmosis.gamm.v1beta1.Query/TotalPoolLiquidity` has been deprecated,
+    /// but `osmosis.poolmanager.v1beta1.Query/TotalPoolLiquidity` has not yet
+    /// been whitelisted in the stargate queries whitelist.
+    /// See issue: <https://github.com/osmosis-labs/osmosis/issues/5812>
+    #[allow(deprecated)]
     fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {
         let pool_assets = GammQuerier::new(&deps.querier).total_pool_liquidity(self.pool_id)?;
 
@@ -274,11 +288,9 @@ impl Pool for OsmosisPool {
         deps: Deps,
         offer: Asset,
         ask_asset_info: AssetInfo,
-        sender: Option<String>,
     ) -> StdResult<Uint128> {
         let offer: Coin = offer.try_into()?;
-        let swap_response = GammQuerier::new(&deps.querier).estimate_swap_exact_amount_in(
-            sender.ok_or_else(|| StdError::generic_err("sender is required for osmosis"))?,
+        let swap_response = PoolmanagerQuerier::new(&deps.querier).estimate_swap_exact_amount_in(
             self.pool_id,
             offer.to_string(),
             vec![SwapAmountInRoute {
@@ -291,26 +303,5 @@ impl Pool for OsmosisPool {
 
     fn lp_token(&self) -> AssetInfo {
         AssetInfo::Native(format!("gamm/pool/{}", self.pool_id))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use apollo_cw_asset::AssetInfo;
-
-    use crate::traits::Pool;
-
-    use super::OsmosisPool;
-
-    #[test]
-    fn test_lp_token() {
-        let pool = OsmosisPool::unchecked(1337u64);
-
-        let lp_token = pool.lp_token();
-
-        match lp_token {
-            AssetInfo::Native(denom) => assert_eq!(denom, format!("gamm/pool/{}", 1337u64)),
-            AssetInfo::Cw20(_) => panic!("Unexpected cw20 token"),
-        }
     }
 }

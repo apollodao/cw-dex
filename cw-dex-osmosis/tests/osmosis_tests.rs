@@ -1,8 +1,10 @@
+#![cfg(feature = "osmosis")]
 mod tests {
-    use apollo_cw_asset::{Asset, AssetInfo};
+    use apollo_cw_asset::{Asset, AssetInfo, AssetList};
     use apollo_utils::coins::coin_from_str;
     use apollo_utils::submessages::{find_event, parse_attribute_value};
     use cosmwasm_std::{Coin, SubMsgResponse, Uint128};
+    use cw_dex::Pool;
     use cw_dex_test_contract::msg::{ExecuteMsg, QueryMsg};
     use cw_dex_test_helpers::osmosis::setup_pool_and_test_contract;
     use cw_dex_test_helpers::provide_liquidity;
@@ -13,6 +15,7 @@ mod tests {
         Account, ExecuteResponse, Module, OsmosisTestApp, Runner, RunnerResult, SigningAccount,
         Wasm,
     };
+    use cw_it::WhitelistForceUnlock;
 
     use test_case::test_case;
 
@@ -59,15 +62,17 @@ mod tests {
     #[test_case(OsmosisPoolType::Basic, vec![1, 1], false, HUNDRED_TRILLION ; "basic pool adding small liquidity")]
     #[test_case(OsmosisPoolType::Basic, vec![1_000_000, 1_000_000], true, INITIAL_LIQUIDITY * HUNDRED_TRILLION ; "basic pool simulate min_out")]
     #[test_case(OsmosisPoolType::Basic, vec![1_000_000, 500_000], true, Uint128::new(500_000) * HUNDRED_TRILLION ; "basic pool uneven assets simulate min_out")]
-    #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1] },
+    #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1], pool_params: None },
                 vec![1_000_000, 1_000_000], false, INITIAL_LIQUIDITY * HUNDRED_TRILLION ; "stable swap pool")]
-    #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1] },
+    #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1000000], pool_params: None },
+                vec![1_000_000, 1_000_000], false, INITIAL_LIQUIDITY * HUNDRED_TRILLION ; "stable swap pool, uneven scaling factors")]
+    #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1], pool_params: None },
                 vec![1_000_000, 1_000_000], true, INITIAL_LIQUIDITY * HUNDRED_TRILLION ; "stable swap pool simulate min_out")]
-    #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1] }, vec![1_000_000, 500_000], true,
+    #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1], pool_params: None }, vec![1_000_000, 500_000], true,
                 Uint128::new(500_000) * HUNDRED_TRILLION; "stable swap pool uneven assets simulate min_out")]
-    #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1] },
+    #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1], pool_params: None },
                 vec![1, 1], false, HUNDRED_TRILLION ; "stable swap pool adding small liquidity")]
-    #[test_case(OsmosisPoolType::Balancer { pool_weights: vec![2, 1] }, vec![500_000, 1_000_000], false,
+    #[test_case(OsmosisPoolType::Balancer { pool_weights: vec![2, 1], pool_params: None }, vec![500_000, 1_000_000], false,
                 Uint128::new(500_000) * HUNDRED_TRILLION ; "balancer pool 2:1 weigths")]
     #[test_case(OsmosisPoolType::Basic, vec![1_000_000, 1_000_000, 1_000_000], false, Uint128::new(1_000_000) * HUNDRED_TRILLION ; "even tri pool")]
     #[test_case(OsmosisPoolType::Basic, vec![1, 1, 1], false, HUNDRED_TRILLION ; "even tri pool small liquidity")]
@@ -130,9 +135,15 @@ mod tests {
         assert_eq!(lp_token_after, expected_lps);
     }
 
-    #[test_case(OsmosisPoolType::Basic, vec![1_000_000, 1_000_000] ; "basic pool")]
-    #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1] }, vec![1_000_000, 1_000_000] ; "stable swap pool")]
-    fn test_withdraw_liquidity(pool_type: OsmosisPoolType, initial_liquidity: Vec<u64>) {
+    #[test_case(OsmosisPoolType::Basic, vec![1_000_000, 1_000_000], vec![989_999, 989_999]; "basic pool")]
+    #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1], pool_params: None }, vec![1_000_000, 1_000_000], vec![989999, 0]; "stable swap pool")]
+    #[test_case(OsmosisPoolType::Basic, vec![1_000_000, 1_000_000], vec![1_000_000, 0] => panics; "basic pool, min_out too high asset 1")]
+    #[test_case(OsmosisPoolType::Basic, vec![1_000_000, 1_000_000], vec![0, 1_000_000] => panics; "basic pool, min_out too high asset 2")]
+    fn test_withdraw_liquidity(
+        pool_type: OsmosisPoolType,
+        initial_liquidity: Vec<u64>,
+        min_out: Vec<u64>,
+    ) {
         let (runner, accs, pool_id, contract_addr) =
             setup_pool_and_contract(pool_type, initial_liquidity, None).unwrap();
         let admin = &accs[0];
@@ -154,9 +165,17 @@ mod tests {
         )
         .unwrap();
 
-        // Withdraw liquidity. We are not allowed to withdraw all liquidity on osmosis.
+        // Withdraw all liquidity except 1. We are not allowed to withdraw all liquidity
+        // on osmosis.
+        let min_out: AssetList = min_out
+            .into_iter()
+            .enumerate()
+            .map(|(i, amount)| Asset::from(Coin::new(amount as u128, format!("denom{}", i))))
+            .collect::<Vec<_>>()
+            .into();
         let withdraw_msg = ExecuteMsg::WithdrawLiquidity {
             amount: admin_lp_token_balance.checked_sub(Uint128::one()).unwrap(),
+            min_out,
         };
         runner
             .execute_cosmos_msgs::<MsgExecuteContractResponse>(
@@ -314,7 +333,9 @@ mod tests {
 
         // Whitlist contract_addr
         if whitelist {
-            runner.whitelist_address_for_force_unlock(&contract_addr);
+            runner
+                .whitelist_address_for_force_unlock(&contract_addr)
+                .unwrap();
         }
 
         // Force unlock LP tokens
@@ -341,12 +362,12 @@ mod tests {
     #[test_case(OsmosisPoolType::Basic, Uint128::new(1), false => panics ; "basic pool 1 unit amount")]
     #[test_case(OsmosisPoolType::Basic, Uint128::new(2), false ; "basic pool small amount")]
     #[test_case(OsmosisPoolType::Basic, Uint128::new(1000000), true ; "basic pool with min out")]
-    #[test_case(OsmosisPoolType::Balancer { pool_weights: vec![2, 1] }, Uint128::new(1000000), false ; "2:1 balancer pool")]
-    #[test_case(OsmosisPoolType::Balancer { pool_weights: vec![2, 1] }, Uint128::new(2), false ; "2:1 balancer pool small amount")]
-    #[test_case(OsmosisPoolType::Balancer { pool_weights: vec![2, 1] }, Uint128::new(1000000), true ; "2:1 balancer pool with min out")]
-    #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1] }, Uint128::new(1000000), false ; "stable swap pool")]
-    #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1] }, Uint128::new(2), false ; "stable swap pool small amount")]
-    #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1] }, Uint128::new(1000000), true ; "stable swap pool with min out")]
+    #[test_case(OsmosisPoolType::Balancer { pool_weights: vec![2, 1], pool_params: None }, Uint128::new(1000000), false ; "2:1 balancer pool")]
+    #[test_case(OsmosisPoolType::Balancer { pool_weights: vec![2, 1], pool_params: None }, Uint128::new(2), false ; "2:1 balancer pool small amount")]
+    #[test_case(OsmosisPoolType::Balancer { pool_weights: vec![2, 1], pool_params: None }, Uint128::new(1000000), true ; "2:1 balancer pool with min out")]
+    #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1], pool_params: None }, Uint128::new(1000000), false ; "stable swap pool")]
+    #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1], pool_params: None }, Uint128::new(2), false ; "stable swap pool small amount")]
+    #[test_case(OsmosisPoolType::StableSwap { scaling_factors: vec![1, 1], pool_params: None }, Uint128::new(1000000), true ; "stable swap pool with min out")]
     fn test_swap_and_simulate_swap(pool_type: OsmosisPoolType, amount: Uint128, min_out: bool) {
         let (runner, accs, _, contract_addr) =
             setup_pool_and_contract(pool_type, INITIAL_TWO_POOL_LIQUIDITY.to_vec(), None).unwrap();
@@ -363,7 +384,6 @@ mod tests {
         let simulate_query = QueryMsg::SimulateSwap {
             offer: offer.clone(),
             ask: ask.clone(),
-            sender: Some(contract_addr.clone()),
         };
         let expected_out = wasm.query(&contract_addr, &simulate_query).unwrap();
         let min_out = if min_out {
@@ -396,5 +416,30 @@ mod tests {
         // Assert that OSMO and ATOM balances are correct
         assert_eq!(ask_balance, expected_out);
         assert_eq!(offer_balance, Uint128::zero());
+    }
+
+    #[test]
+    fn test_get_pool_for_lp_token() {
+        let (runner, _accs, pool_id, contract_addr) = setup_pool_and_contract(
+            OsmosisPoolType::Basic,
+            INITIAL_TWO_POOL_LIQUIDITY.to_vec(),
+            None,
+        )
+        .unwrap();
+        let lp_token_denom = format!("gamm/pool/{}", pool_id);
+
+        let wasm = Wasm::new(&runner);
+
+        let query = QueryMsg::GetPoolForLpToken {
+            lp_token: AssetInfo::native(lp_token_denom),
+        };
+        let pool = wasm.query::<_, Pool>(&contract_addr, &query).unwrap();
+
+        match pool {
+            Pool::Osmosis(pool) => {
+                assert_eq!(pool.pool_id(), pool_id);
+            }
+            _ => panic!("Wrong pool type"),
+        }
     }
 }

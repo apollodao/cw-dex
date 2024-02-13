@@ -7,6 +7,9 @@ use apollo_cw_asset::Asset;
 use cosmwasm_std::{DivideByZeroError, OverflowError, StdError, Uint128};
 use thiserror::Error;
 
+#[cfg(feature = "backtraces")]
+use std::backtrace::Backtrace;
+
 /// ## Description
 /// This enum describes router-test contract errors!
 #[derive(Error, Debug, PartialEq)]
@@ -27,6 +30,10 @@ pub enum CwDexError {
     /// Converts from `cosmwasm_std::DivideByZeroError`
     #[error("{0}")]
     DivideByZero(#[from] DivideByZeroError),
+
+    /// Converts from `std::convert::Infallible`
+    #[error("Infallible")]
+    Infallible(#[from] std::convert::Infallible),
 
     /// Invalid Reply ID Error
     #[error("Invalid output asset")]
@@ -81,8 +88,6 @@ pub enum CwDexError {
 
 impl From<CwDexError> for StdError {
     fn from(x: CwDexError) -> Self {
-        Self::GenericErr {
-            msg: String::from("CwDexError: ") + &x.to_string(),
-        }
+        Self::generic_err(String::from("CwDexError: ") + &x.to_string())
     }
 }

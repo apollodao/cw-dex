@@ -1,7 +1,7 @@
 [package]
 name = "osmosis-test-contract"
 description = "Contract to test the cw-dex library"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Pacman <pacman@apollo.farm>"]
 edition = "2021"
 license = { workspace = true }
@@ -19,7 +19,7 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 # for more explicit tests, cargo test --features=backtraces
-# backtraces = ["cosmwasm-std/backtraces"]
+# backtraces = ["cosmwasm-std/backtraces", "osmosis-std/backtraces", "cw-dex/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
 
@@ -36,5 +36,6 @@ cosmwasm-std = { workspace = true }
 cw-storage-plus = { workspace = true }
 thiserror = { workspace = true }
 apollo-cw-asset = { workspace = true }
-cw-dex = { workspace = true, features = ["osmosis"] }
+cw-dex = { workspace = true }
+cw-dex-osmosis = { workspace = true }
 cw-dex-test-contract = { workspace = true }

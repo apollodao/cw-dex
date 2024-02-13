@@ -46,7 +46,7 @@ impl OsmosisStaking {
         lock_id: Option<u64>,
         lp_token_denom: String,
     ) -> StdResult<Self> {
-        if !(vec![86400u64, 604800u64, 1209600u64].contains(&lockup_duration)) {
+        if !([86400u64, 604800u64, 1209600u64].contains(&lockup_duration)) {
             return Err(StdError::generic_err(
                 "osmosis error: invalid lockup duration",
             ));

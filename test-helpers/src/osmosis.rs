@@ -3,9 +3,9 @@ use cosmwasm_std::{Addr, Coin, Uint128};
 use cw_dex_test_contract::msg::OsmosisTestContractInstantiateMsg;
 use cw_it::helpers::upload_wasm_file;
 use cw_it::osmosis::OsmosisTestPool;
-use cw_it::osmosis_test_tube::{
-    Module, OsmosisTestApp, Runner, RunnerResult, SigningAccount, Wasm,
-};
+use cw_it::osmosis_test_tube::OsmosisTestApp;
+use cw_it::test_tube::{Module, Runner, RunnerResult, SigningAccount, Wasm};
+use cw_it::{Artifact, ContractType};
 
 /// Setup a pool and test contract for testing.
 pub fn setup_pool_and_test_contract(
@@ -23,7 +23,7 @@ pub fn setup_pool_and_test_contract(
             &pool
                 .liquidity
                 .iter()
-                .chain(vec![Coin::new(u128::MAX, "uosmo".to_string())].iter())
+                .chain([Coin::new(u128::MAX, "uosmo".to_string())].iter())
                 .map(|c| Coin::new(u128::MAX, c.denom.clone()))
                 .collect::<Vec<_>>(),
             10,
@@ -34,7 +34,12 @@ pub fn setup_pool_and_test_contract(
     let pool_id = pool.create(&runner, &accs[0]);
 
     // Upload test contract wasm file
-    let code_id = upload_wasm_file(&runner, &accs[0], wasm_file_path).unwrap();
+    let code_id = upload_wasm_file(
+        &runner,
+        &accs[0],
+        ContractType::Artifact(Artifact::Local(wasm_file_path.to_string())),
+    )
+    .unwrap();
 
     // Instantiate the test contract
     let contract_addr = instantiate_test_contract(
@@ -81,7 +86,7 @@ pub fn instantiate_test_contract<'a, R: Runner<'a>>(
 
     let wasm = Wasm::new(runner);
     Ok(wasm
-        .instantiate(code_id, &init_msg, None, None, &[], signer)?
+        .instantiate(code_id, &init_msg, None, Some("test contract"), &[], signer)?
         .data
         .address)
 }
