@@ -14,7 +14,7 @@ rust-version  = "1.64.0"
 
 [workspace.dependencies]
 cosmwasm-schema = "1.2.1"
-cosmwasm-std = "1.5.3"
+cosmwasm-std = "1.5.4"
 cosmwasm-storage = "1.2.1"
 cw-storage-plus = "1.0"
 cw2 = "1.0"
