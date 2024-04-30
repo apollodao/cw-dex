@@ -1,30 +1,55 @@
 //! Staking/rewards traits implementations for Astroport
-
+use apollo_cw_asset::{AssetInfo, AssetList};
 use apollo_utils::assets::separate_natives_and_cw20s;
-use cosmwasm_schema::cw_serde;
+use astroport::asset::{Asset as AstroAsset};
+use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{
-    to_json_binary, Addr, CosmosMsg, Deps, Empty, Env, Event, QuerierWrapper, QueryRequest,
+    coins, to_json_binary, Addr, CosmosMsg, Deps, Empty, Env, Event, QuerierWrapper, QueryRequest,
     Response, Uint128, WasmMsg, WasmQuery,
 };
-use cw20::Cw20ExecuteMsg;
-
-use apollo_cw_asset::AssetList;
-use astroport::asset::Asset as AstroAsset;
-use astroport_v3::incentives::{
-    Cw20Msg as IncentivesCw20Msg, ExecuteMsg as IncentivesExecuteMsg,
-    QueryMsg as IncentivesQueryMsg,
-};
-
 use cw_dex::traits::{Rewards, Stake, Staking, Unstake};
 use cw_dex::CwDexError;
 
 /// Represents staking of tokens on Astroport
 #[cw_serde]
 pub struct AstroportStaking {
-    /// The address of the associated LP token contract
-    pub lp_token_addr: Addr,
+    /// The cw20 or token factory denom of the associated LP token
+    pub lp_token: AssetInfo,
     /// The address of the astroport incentives contract
     pub incentives: Addr,
+}
+
+#[cw_serde]
+pub enum AstroportV5IncentivesExecuteMsg {
+    /// Stake LP tokens in the Generator. LP tokens staked on behalf of
+    /// recipient if recipient is set. Otherwise LP tokens are staked on
+    /// behalf of message sender.
+    Deposit { recipient: Option<String> },
+    /// Withdraw LP tokens from the Generator
+    Withdraw {
+        /// The LP token cw20 address or token factory denom
+        lp_token: String,
+        /// The amount to withdraw. Must not exceed total staked amount.
+        amount: Uint128,
+    },
+    /// Update rewards and return it to user.
+    ClaimRewards {
+        /// The LP token cw20 address or token factory denom
+        lp_tokens: Vec<String>,
+    },
+}
+
+/// We copied this in because versioning on Astroport is a mess and it's easier to simply copy it in.
+/// These incentive related structs come from here: https://github.com/astroport-fi/hidden_astroport_core/blob/main/packages/astroport/src/incentives.rs#L92
+/// This will be released as Astroport V5 at some point in the future
+
+#[cw_serde]
+#[derive(QueryResponses)]
+pub enum AstroportV5IncentivesQueryMsg {
+    /// PendingToken returns the amount of rewards that can be claimed by an
+    /// account that deposited a specific LP token in a generator
+    #[returns(Vec<AstroAsset>)]
+    PendingRewards { lp_token: String, user: String },
 }
 
 impl Staking for AstroportStaking {}
@@ -32,18 +57,14 @@ impl Staking for AstroportStaking {}
 impl Stake for AstroportStaking {
     fn stake(&self, _deps: Deps, _env: &Env, amount: Uint128) -> Result<Response, CwDexError> {
         let stake_msg = CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: self.lp_token_addr.to_string(),
-            msg: to_json_binary(&Cw20ExecuteMsg::Send {
-                contract: self.incentives.to_string(),
-                amount,
-                msg: to_json_binary(&IncentivesCw20Msg::Deposit { recipient: None })?,
-            })?,
-            funds: vec![],
+            contract_addr: self.incentives.to_string(),
+            msg: to_json_binary(&AstroportV5IncentivesExecuteMsg::Deposit { recipient: None })?,
+            funds: coins(amount.into(), self.lp_token.to_string()),
         });
 
         let event = Event::new("apollo/cw-dex/stake")
             .add_attribute("type", "astroport_staking")
-            .add_attribute("asset", self.lp_token_addr.to_string())
+            .add_attribute("asset", self.lp_token.to_string())
             .add_attribute("incentives contract address", self.incentives.to_string());
 
         Ok(Response::new().add_message(stake_msg).add_event(event))
@@ -64,8 +85,8 @@ impl Rewards for AstroportStaking {
 
         let claim_rewards_msg = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.incentives.to_string(),
-            msg: to_json_binary(&IncentivesExecuteMsg::ClaimRewards {
-                lp_tokens: vec![self.lp_token_addr.to_string()],
+            msg: to_json_binary(&AstroportV5IncentivesExecuteMsg::ClaimRewards {
+                lp_tokens: vec![self.lp_token.to_string()],
             })?,
             funds: vec![],
         });
@@ -116,8 +137,8 @@ impl Rewards for AstroportStaking {
         let pending_rewards: Vec<AstroAsset> = querier
             .query::<Vec<AstroAsset>>(&QueryRequest::Wasm(WasmQuery::Smart {
                 contract_addr: self.incentives.to_string(),
-                msg: to_json_binary(&IncentivesQueryMsg::PendingRewards {
-                    lp_token: self.lp_token_addr.to_string(),
+                msg: to_json_binary(&AstroportV5IncentivesQueryMsg::PendingRewards {
+                    lp_token: self.lp_token.to_string(),
                     user: user.to_string(),
                 })?,
             }))?
@@ -133,8 +154,8 @@ impl Unstake for AstroportStaking {
     fn unstake(&self, _deps: Deps, _env: &Env, amount: Uint128) -> Result<Response, CwDexError> {
         let unstake_msg = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.incentives.to_string(),
-            msg: to_json_binary(&IncentivesExecuteMsg::Withdraw {
-                lp_token: self.lp_token_addr.to_string(),
+            msg: to_json_binary(&AstroportV5IncentivesExecuteMsg::Withdraw {
+                lp_token: self.lp_token.to_string(),
                 amount,
             })?,
             funds: vec![],

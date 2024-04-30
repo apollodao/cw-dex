@@ -13,7 +13,7 @@ pub struct OsmosisTestContractInstantiateMsg {
 #[cw_serde]
 pub struct AstroportContractInstantiateMsg {
     pub pair_addr: String,
-    pub lp_token_addr: String,
+    pub lp_token: String,
     pub incentives_addr: String,
     pub astro_token: AssetInfo,
     pub liquidity_manager_addr: String,

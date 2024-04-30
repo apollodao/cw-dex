@@ -28,7 +28,7 @@ pub fn instantiate(
     STAKING.save(
         deps.storage,
         &AstroportStaking {
-            lp_token_addr: Addr::unchecked(msg.lp_token_addr),
+            lp_token: AssetInfo::from_str(deps.api, &msg.lp_token),
             incentives: Addr::unchecked(msg.incentives_addr),
         },
     )?;
