@@ -14,7 +14,7 @@ use cw20::Cw20ExecuteMsg;
 use cw_utils::Expiration;
 
 use apollo_utils::assets::separate_natives_and_cw20s;
-use astroport::asset::{Asset as AstroAsset, PairInfo};
+use astroport::asset::Asset as AstroAsset;
 use astroport::factory::PairType;
 use astroport::pair::{
     Cw20HookMsg as PairCw20HookMsg, ExecuteMsg as PairExecuteMsg, PoolResponse,
@@ -30,7 +30,7 @@ pub struct AstroportPool {
     /// The address of the associated pair contract
     pub pair_addr: Addr,
     /// The address of the associated LP token contract
-    pub lp_token_addr: Addr,
+    pub lp_token: AssetInfo,
     /// The assets of the pool
     pub pool_assets: Vec<AssetInfo>,
     /// The type of pool represented: Constant product (*Xyk*) or *Stableswap*
@@ -47,11 +47,14 @@ impl AstroportPool {
     pub fn new(deps: Deps, pair_addr: Addr, liquidity_manager: Addr) -> StdResult<Self> {
         let pair_info = deps
             .querier
-            .query_wasm_smart::<PairInfo>(pair_addr.clone(), &PairQueryMsg::Pair {})?;
+            .query_wasm_smart::<astroport_v5::asset::PairInfo>(
+                pair_addr.clone(),
+                &PairQueryMsg::Pair {},
+            )?;
 
         // Validate pair type. We only support XYK, stable swap, and PCL pools
         match &pair_info.pair_type {
-            PairType::Custom(t) => match t.as_str() {
+            astroport_v5::factory::PairType::Custom(t) => match t.as_str() {
                 "concentrated" => Ok(()),
                 "astroport-pair-xyk-sale-tax" => Ok(()),
                 _ => Err(StdError::generic_err("Custom pair type is not supported")),
@@ -61,9 +64,13 @@ impl AstroportPool {
 
         Ok(Self {
             pair_addr,
-            lp_token_addr: pair_info.liquidity_token,
-            pool_assets: pair_info.asset_infos.into_elementwise(),
-            pair_type: pair_info.pair_type,
+            lp_token: AssetInfo::from_str(deps.api, &pair_info.liquidity_token),
+            pool_assets: pair_info
+                .asset_infos
+                .into_iter()
+                .map(|x| astroport_v5_assetinfo_to_assetinfo(x))
+                .collect(),
+            pair_type: astroport_v5_pairtype_to_astroport_v3_pairtype(pair_info.pair_type),
             liquidity_manager,
         })
     }
@@ -103,7 +110,10 @@ impl AstroportPool {
 
     /// Returns the total supply of the associated LP token
     pub fn query_lp_token_supply(&self, querier: &QuerierWrapper) -> StdResult<Uint128> {
-        query_supply(querier, self.lp_token_addr.to_owned())
+        match &self.lp_token {
+            AssetInfo::Native(denom) => Ok(querier.query_supply(denom)?.amount),
+            AssetInfo::Cw20(token_addr) => query_supply(querier, token_addr),
+        }
     }
 
     /// Queries the pair contract for the current pool state
@@ -296,7 +306,7 @@ impl Pool for AstroportPool {
         )?;
 
         let lp_token = Asset {
-            info: AssetInfo::Cw20(self.lp_token_addr.clone()),
+            info: self.lp_token.clone(),
             amount,
         };
 
@@ -338,10 +348,27 @@ impl Pool for AstroportPool {
     }
 
     fn lp_token(&self) -> AssetInfo {
-        AssetInfoBase::Cw20(self.lp_token_addr.clone())
+        self.lp_token.clone()
     }
 
     fn pool_assets(&self, _deps: Deps) -> StdResult<Vec<AssetInfo>> {
         Ok(self.pool_assets.clone())
+    }
+}
+
+pub fn astroport_v5_assetinfo_to_assetinfo(asset: astroport_v5::asset::AssetInfo) -> AssetInfo {
+    match asset {
+        astroport_v5::asset::AssetInfo::NativeToken { denom } => AssetInfo::native(denom),
+        astroport_v5::asset::AssetInfo::Token { contract_addr } => AssetInfo::cw20(contract_addr),
+    }
+}
+
+pub fn astroport_v5_pairtype_to_astroport_v3_pairtype(
+    pair_type: astroport_v5::factory::PairType,
+) -> PairType {
+    match pair_type {
+        astroport_v5::factory::PairType::Xyk {} => PairType::Xyk {},
+        astroport_v5::factory::PairType::Stable {} => PairType::Stable {},
+        astroport_v5::factory::PairType::Custom(pair_type) => PairType::Custom(pair_type),
     }
 }
