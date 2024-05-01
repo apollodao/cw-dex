@@ -7,6 +7,7 @@ use cosmwasm_std::{
     coins, to_json_binary, Addr, CosmosMsg, Deps, Empty, Env, Event, QuerierWrapper, QueryRequest,
     Response, Uint128, WasmMsg, WasmQuery,
 };
+use cw20::Cw20ExecuteMsg;
 use cw_dex::traits::{Rewards, Stake, Staking, Unstake};
 use cw_dex::CwDexError;
 
@@ -23,13 +24,26 @@ impl Staking for AstroportStaking {}
 
 impl Stake for AstroportStaking {
     fn stake(&self, _deps: Deps, _env: &Env, amount: Uint128) -> Result<Response, CwDexError> {
-        let stake_msg = CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: self.incentives.to_string(),
-            msg: to_json_binary(&astroport_v3::incentives::ExecuteMsg::Deposit {
-                recipient: None,
-            })?,
-            funds: coins(amount.into(), self.lp_token.to_string()),
-        });
+        let stake_msg = match &self.lp_token {
+            AssetInfo::Cw20(cw20_addr) => CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: cw20_addr.to_string(),
+                msg: to_json_binary(&Cw20ExecuteMsg::Send {
+                    contract: self.incentives.to_string(),
+                    amount,
+                    msg: to_json_binary(&astroport_v3::incentives::Cw20Msg::Deposit {
+                        recipient: None,
+                    })?,
+                })?,
+                funds: vec![],
+            }),
+            AssetInfo::Native(denom) => CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: self.incentives.to_string(),
+                msg: to_json_binary(&astroport_v3::incentives::ExecuteMsg::Deposit {
+                    recipient: None,
+                })?,
+                funds: coins(amount.into(), denom),
+            }),
+        };
 
         let event = Event::new("apollo/cw-dex/stake")
             .add_attribute("type", "astroport_staking")
