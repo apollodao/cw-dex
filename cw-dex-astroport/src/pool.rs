@@ -68,7 +68,7 @@ impl AstroportPool {
             pool_assets: pair_info
                 .asset_infos
                 .into_iter()
-                .map(|x| astroport_v5_assetinfo_to_assetinfo(x))
+                .map(astroport_v5_assetinfo_to_assetinfo)
                 .collect(),
             pair_type: astroport_v5_pairtype_to_astroport_v3_pairtype(pair_info.pair_type),
             liquidity_manager,
