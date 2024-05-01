@@ -296,13 +296,13 @@ pub fn instantiate_test_astroport_contract<'a, R: Runner<'a>>(
     pair_addr: String,
     incentives_addr: String,
     astro_token: AssetInfo,
-    lp_token_denom: String,
+    lp_token: String,
     liquidity_manager_addr: String,
     signer: &SigningAccount,
 ) -> RunnerResult<String> {
     let init_msg = AstroportContractInstantiateMsg {
         pair_addr,
-        lp_token: lp_token_denom,
+        lp_token,
         incentives_addr,
         astro_token,
         liquidity_manager_addr,
