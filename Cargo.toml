@@ -29,7 +29,7 @@ osmosis-std = "0.22.0"
 cw-it = "0.3.0"
 apollo-utils = "0.1.0"
 astroport = "2.9.0"
-astroport_v5 = { package = "astroport", version = "5.0.0-rc.1-tokenfactory" }
+astroport_v5 = { package = "astroport", version = "5.1.0" }
 test-case = "3.0.0"
 proptest = "1.0.0"
 

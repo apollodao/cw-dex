@@ -7,8 +7,8 @@ use apollo_utils::iterators::IntoElementwise;
 use astroport::liquidity_manager;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_json_binary, wasm_execute, Addr, CosmosMsg, Decimal, Deps, Env, Event, QuerierWrapper,
-    QueryRequest, Response, StdError, StdResult, Uint128, WasmMsg, WasmQuery,
+    coins, to_json_binary, wasm_execute, Addr, CosmosMsg, Decimal, Deps, Env, Event,
+    QuerierWrapper, QueryRequest, Response, StdError, StdResult, Uint128, WasmMsg, WasmQuery,
 };
 use cw20::Cw20ExecuteMsg;
 use cw_utils::Expiration;
@@ -226,6 +226,39 @@ impl Pool for AstroportPool {
             Ok(Response::new()
                 .add_message(withdraw_liquidity)
                 .add_event(event))
+        } else if let AssetInfoBase::Native(token_denom) = &asset.info {
+            // Liquidity manager requires min_out to contain all assets in the pool
+            for asset in &self.pool_assets {
+                if min_out.find(asset).is_none() {
+                    // Add one unit as AssetList does not allow zero amounts (calls self.purge on
+                    // add)
+                    min_out.add(&Asset::new(asset.clone(), Uint128::one()))?;
+                }
+            }
+
+            let withdraw_liquidity = CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: self.pair_addr.to_string(),
+                msg: to_json_binary(&astroport_v5::pair::ExecuteMsg::WithdrawLiquidity {
+                    assets: vec![asset_to_astroport_v5_asset(asset.clone())],
+                    min_assets_to_receive: Some(
+                        min_out
+                            .to_vec()
+                            .into_iter()
+                            .map(asset_to_astroport_v5_asset)
+                            .collect(),
+                    ),
+                })?,
+                funds: coins(asset.amount.u128(), token_denom),
+            });
+
+            let event = Event::new("apollo/cw-dex/withdraw_liquidity")
+                .add_attribute("pair_addr", &self.pair_addr)
+                .add_attribute("asset", format!("{:?}", asset))
+                .add_attribute("token_amount", asset.amount);
+
+            Ok(Response::new()
+                .add_message(withdraw_liquidity)
+                .add_event(event))
         } else {
             Err(CwDexError::InvalidInAsset { a: asset })
         }
@@ -360,6 +393,15 @@ pub fn astroport_v5_assetinfo_to_assetinfo(asset: astroport_v5::asset::AssetInfo
     match asset {
         astroport_v5::asset::AssetInfo::NativeToken { denom } => AssetInfo::native(denom),
         astroport_v5::asset::AssetInfo::Token { contract_addr } => AssetInfo::cw20(contract_addr),
+    }
+}
+
+pub fn asset_to_astroport_v5_asset(asset: Asset) -> astroport_v5::asset::Asset {
+    match asset.info {
+        AssetInfoBase::Native(denom) => astroport_v5::asset::Asset::native(denom, asset.amount),
+        AssetInfo::Cw20(contract_addr) => {
+            astroport_v5::asset::Asset::cw20(contract_addr, asset.amount)
+        }
     }
 }
 
