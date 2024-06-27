@@ -1033,6 +1033,7 @@ dependencies = [
  "apollo-cw-asset",
  "apollo-utils",
  "astroport 2.9.0",
+ "astroport 5.1.0",
  "astroport-test-contract",
  "cosmwasm-std",
  "cw-dex-test-contract",

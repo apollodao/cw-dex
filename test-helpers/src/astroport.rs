@@ -3,6 +3,7 @@ use apollo_utils::assets::separate_natives_and_cw20s;
 use astroport::asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo};
 use astroport::factory::PairType;
 use astroport::pair::{ExecuteMsg as PairExecuteMsg, StablePoolParams};
+use astroport_v5::factory::PairType as AstroportV5PairType;
 use cosmwasm_std::{to_json_binary, Addr, Coin, Decimal, Uint128};
 use cw20::{Cw20ExecuteMsg, MinterResponse};
 use cw20_base::msg::InstantiateMsg as Cw20InstantiateMsg;
@@ -211,10 +212,16 @@ pub fn setup_pool_and_test_contract<'a>(
         },
         _ => None,
     };
-    let (pair_addr, lp_token_addr) = create_astroport_pair(
+    let astroport_v5_pair_type = match &pool_type {
+        PairType::Xyk {} => AstroportV5PairType::Xyk {},
+        PairType::Stable {} => AstroportV5PairType::Stable {},
+        PairType::Custom(t) => AstroportV5PairType::Custom(t.to_string()),
+    };
+
+    let (pair_addr, lp_token_addr, lp_token_denom) = create_astroport_pair(
         runner,
         &astroport_contracts.factory.address,
-        pool_type,
+        astroport_v5_pair_type,
         [astro_asset_infos[0].clone(), astro_asset_infos[1].clone()],
         init_params,
         admin,
@@ -274,13 +281,13 @@ pub fn setup_pool_and_test_contract<'a>(
         AssetInfo::cw20(Addr::unchecked(
             astroport_contracts.astro_token.address.clone(),
         )),
-        lp_token_addr.clone(),
+        lp_token_denom.clone(),
         &accs[0],
     )?;
 
     Ok((
         accs,
-        lp_token_addr,
+        lp_token_denom,
         pair_addr,
         contract_addr,
         asset_list,

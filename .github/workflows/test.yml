@@ -5,7 +5,6 @@ on:
 
 env:
   RUSTFLAGS: -D warnings
-  TEST_RUNNER: osmosis-test-tube
 
 jobs:
   test:
@@ -15,16 +14,13 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v3
 
-      - name: Set up Go 1.21.6
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.21.6"
-
-      - name: Install cargo make
-        uses: davidB/rust-cargo-make@v1
-
       - name: Install stable toolchain
-        run: cargo make install-stable
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: 1.79.0
+          target: wasm32-unknown-unknown
+          override: true
 
       - name: Run unit tests
         uses: actions-rs/cargo@v1
@@ -54,7 +50,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --locked --test osmosis_tests --all-features
+          args: --locked --test osmosis_tests
         env:
           RUST_BACKTRACE: 1
 
@@ -62,7 +58,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --locked --test astroport_tests --all-features
+          args: --locked --test astroport_tests -- --test-threads=1
         env:
           RUST_BACKTRACE: 1
 
@@ -70,6 +66,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --locked --test osmosis_proptests --all-features
+          args: --locked --test osmosis_proptests -- --test-threads=1
         env:
           RUST_BACKTRACE: 1
+

@@ -6,12 +6,13 @@ mod tests {
     use astroport::factory::PairType;
     use astroport_v5::asset::Asset as AstroportAsset;
     use cosmwasm_std::{assert_approx_eq, coin, coins, Addr, Coin, SubMsgResponse, Uint128};
-
+    use cw_it::cw_multi_test::{StargateKeeper, StargateMessageHandler};
     use cw_dex_test_contract::msg::{AstroportExecuteMsg, ExecuteMsg, QueryMsg};
     use cw_dex_test_helpers::astroport::setup_pool_and_test_contract;
     use cw_dex_test_helpers::{cw20_balance_query, cw20_transfer, query_asset_balance};
     use cw_it::astroport::utils::AstroportContracts;
     use cw_it::helpers::Unwrap;
+    use cw_it::multi_test::modules::TokenFactory;
     use cw_it::multi_test::MultiTestRunner;
     use cw_it::test_tube::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
     use cw_it::test_tube::{
@@ -26,9 +27,19 @@ mod tests {
     #[cfg(feature = "osmosis-test-tube")]
     use cw_it::osmosis_test_tube::OsmosisTestApp;
 
+    pub const DENOM_CREATION_FEE: &str = "0uosmo";
+    const TOKEN_FACTORY: &TokenFactory =
+        &TokenFactory::new("factory", 32, 16, 59 + 16, DENOM_CREATION_FEE);
     pub fn get_test_runner<'a>() -> OwnedTestRunner<'a> {
         match option_env!("TEST_RUNNER").unwrap_or("multi-test") {
-            "multi-test" => OwnedTestRunner::MultiTest(MultiTestRunner::new("osmo")),
+            "multi-test" => {
+                let mut stargate_keeper = StargateKeeper::new();
+                TOKEN_FACTORY.register_msgs(&mut stargate_keeper);
+                OwnedTestRunner::MultiTest(MultiTestRunner::new_with_stargate(
+                    "osmo",
+                    stargate_keeper,
+                ))
+            }
             #[cfg(feature = "osmosis-test-tube")]
             "osmosis-test-tube" => OwnedTestRunner::OsmosisTestApp(OsmosisTestApp::new()),
             _ => panic!("Unsupported test runner type"),
@@ -660,3 +671,4 @@ mod tests {
         );
     }
 }
+

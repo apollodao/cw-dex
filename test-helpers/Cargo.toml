@@ -37,5 +37,7 @@ cw-dex-test-contract = { workspace = true }
 astroport-test-contract = { workspace = true, optional = true }
 cw-it = { workspace = true }
 astroport = { workspace = true }
+astroport_v5 = { workspace = true }
 cw20 = { workspace = true }
 cw20-base = { workspace = true }
+
