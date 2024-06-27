@@ -36,7 +36,7 @@ pub struct AstroportPool {
     /// The type of pool represented: Constant product (*Xyk*) or *Stableswap*
     pub pair_type: PairType,
     /// The address of the Astroport liquidity manager contract
-    pub liquidity_manager: Addr,
+    pub liquidity_manager: Option<Addr>,
 }
 
 impl AstroportPool {
@@ -44,7 +44,7 @@ impl AstroportPool {
     ///
     /// Arguments:
     /// - `pair_addr`: The address of the pair contract associated with the pool
-    pub fn new(deps: Deps, pair_addr: Addr, liquidity_manager: Addr) -> StdResult<Self> {
+    pub fn new(deps: Deps, pair_addr: Addr, liquidity_manager: Option<Addr>) -> StdResult<Self> {
         let pair_info = deps
             .querier
             .query_wasm_smart::<astroport_v5::asset::PairInfo>(
@@ -84,7 +84,7 @@ impl AstroportPool {
     pub fn get_pool_for_lp_token(
         deps: Deps,
         lp_token: &AssetInfo,
-        astroport_liquidity_manager: Addr,
+        astroport_liquidity_manager: Option<Addr>,
     ) -> Result<Self, CwDexError> {
         match lp_token {
             AssetInfo::Cw20(address) => {
@@ -131,7 +131,7 @@ impl Pool for AstroportPool {
         _deps: Deps,
         env: &Env,
         assets: AssetList,
-        min_out: Uint128,
+        _min_out: Uint128,
     ) -> Result<Response, CwDexError> {
         let (funds, cw20s) = separate_natives_and_cw20s(&assets);
 
@@ -142,7 +142,7 @@ impl Pool for AstroportPool {
                 Ok(CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr: asset.address,
                     msg: to_json_binary(&Cw20ExecuteMsg::IncreaseAllowance {
-                        spender: self.liquidity_manager.to_string(),
+                        spender: self.pair_addr.to_string(),
                         amount: asset.amount,
                         expires: Some(Expiration::AtHeight(env.block.height + 1)),
                     })?,
@@ -161,16 +161,12 @@ impl Pool for AstroportPool {
 
         // Create the provide liquidity message
         let provide_liquidity_msg = CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: self.liquidity_manager.to_string(),
-            msg: to_json_binary(&liquidity_manager::ExecuteMsg::ProvideLiquidity {
-                pair_addr: self.pair_addr.to_string(),
-                min_lp_to_receive: Some(min_out),
-                pair_msg: astroport::pair::ExecuteMsg::ProvideLiquidity {
-                    assets: assets_vec.into_elementwise(),
-                    slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
-                    auto_stake: Some(false),
-                    receiver: None,
-                },
+            contract_addr: self.pair_addr.to_string(),
+            msg: to_json_binary(&astroport::pair::ExecuteMsg::ProvideLiquidity {
+                assets: assets_vec.into_elementwise(),
+                slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
+                auto_stake: Some(false),
+                receiver: None,
             })?,
             funds,
         });
@@ -205,7 +201,13 @@ impl Pool for AstroportPool {
             let withdraw_liquidity = CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: token_addr.to_string(),
                 msg: to_json_binary(&Cw20ExecuteMsg::Send {
-                    contract: self.liquidity_manager.to_string(),
+                    contract: self
+                        .liquidity_manager
+                        .clone()
+                        .ok_or(CwDexError::Std(StdError::generic_err(
+                            "Custom pair type is not supported",
+                        )))?
+                        .to_string(),
                     amount: asset.amount,
                     msg: to_json_binary(&liquidity_manager::Cw20HookMsg::WithdrawLiquidity {
                         pair_msg: astroport::pair::Cw20HookMsg::WithdrawLiquidity {
@@ -239,11 +241,11 @@ impl Pool for AstroportPool {
             let withdraw_liquidity = CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: self.pair_addr.to_string(),
                 msg: to_json_binary(&astroport_v5::pair::ExecuteMsg::WithdrawLiquidity {
-                    assets: vec![asset_to_astroport_v5_asset(asset.clone())],
+                    assets: vec![asset_to_astroport_v5_asset(&asset.clone())],
                     min_assets_to_receive: Some(
                         min_out
                             .to_vec()
-                            .into_iter()
+                            .iter()
                             .map(asset_to_astroport_v5_asset)
                             .collect(),
                     ),
@@ -326,15 +328,10 @@ impl Pool for AstroportPool {
         assets: AssetList,
     ) -> Result<Asset, CwDexError> {
         let amount: Uint128 = deps.querier.query_wasm_smart(
-            self.liquidity_manager.to_string(),
-            &liquidity_manager::QueryMsg::SimulateProvide {
-                pair_addr: self.pair_addr.to_string(),
-                pair_msg: astroport::pair::ExecuteMsg::ProvideLiquidity {
-                    assets: assets.into(),
-                    slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
-                    auto_stake: Some(false),
-                    receiver: None,
-                },
+            self.pair_addr.to_string(),
+            &astroport_v5::pair::QueryMsg::SimulateProvide {
+                assets: assets.iter().map(asset_to_astroport_v5_asset).collect(),
+                slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
             },
         )?;
 
@@ -352,10 +349,9 @@ impl Pool for AstroportPool {
         lp_token: &Asset,
     ) -> Result<AssetList, CwDexError> {
         let assets: Vec<AstroAsset> = deps.querier.query_wasm_smart(
-            self.liquidity_manager.to_string(),
-            &liquidity_manager::QueryMsg::SimulateWithdraw {
-                pair_addr: self.pair_addr.to_string(),
-                lp_tokens: lp_token.amount,
+            self.pair_addr.to_string(),
+            &astroport_v5::pair::QueryMsg::SimulateWithdraw {
+                lp_amount: lp_token.amount,
             },
         )?;
 
@@ -396,11 +392,11 @@ pub fn astroport_v5_assetinfo_to_assetinfo(asset: astroport_v5::asset::AssetInfo
     }
 }
 
-pub fn asset_to_astroport_v5_asset(asset: Asset) -> astroport_v5::asset::Asset {
-    match asset.info {
+pub fn asset_to_astroport_v5_asset(asset: &Asset) -> astroport_v5::asset::Asset {
+    match &asset.info {
         AssetInfoBase::Native(denom) => astroport_v5::asset::Asset::native(denom, asset.amount),
         AssetInfo::Cw20(contract_addr) => {
-            astroport_v5::asset::Asset::cw20(contract_addr, asset.amount)
+            astroport_v5::asset::Asset::cw20(contract_addr.clone(), asset.amount)
         }
     }
 }

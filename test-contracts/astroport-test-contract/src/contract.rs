@@ -21,8 +21,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     let pair_addr = deps.api.addr_validate(&msg.pair_addr)?;
-    let liquidity_manager = deps.api.addr_validate(&msg.liquidity_manager_addr)?;
-    let pool = AstroportPool::new(deps.as_ref(), pair_addr, liquidity_manager)?;
+    let pool = AstroportPool::new(deps.as_ref(), pair_addr, None)?;
     POOL.save(deps.storage, &pool)?;
 
     STAKING.save(

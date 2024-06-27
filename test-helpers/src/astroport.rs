@@ -275,7 +275,6 @@ pub fn setup_pool_and_test_contract<'a>(
             astroport_contracts.astro_token.address.clone(),
         )),
         lp_token_addr.clone(),
-        astroport_contracts.liquidity_manager.address.clone(),
         &accs[0],
     )?;
 
@@ -297,7 +296,6 @@ pub fn instantiate_test_astroport_contract<'a, R: Runner<'a>>(
     incentives_addr: String,
     astro_token: AssetInfo,
     lp_token: String,
-    liquidity_manager_addr: String,
     signer: &SigningAccount,
 ) -> RunnerResult<String> {
     let init_msg = AstroportContractInstantiateMsg {
@@ -305,7 +303,6 @@ pub fn instantiate_test_astroport_contract<'a, R: Runner<'a>>(
         lp_token,
         incentives_addr,
         astro_token,
-        liquidity_manager_addr,
     };
 
     let wasm = Wasm::new(runner);
