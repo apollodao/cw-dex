@@ -1,4 +1,6 @@
 mod tests {
+    use std::str::FromStr;
+
     use apollo_cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
     use apollo_utils::assets::separate_natives_and_cw20s;
     use apollo_utils::coins::coin_from_str;
@@ -6,12 +8,12 @@ mod tests {
     use astroport::factory::PairType;
     use astroport_v5::asset::Asset as AstroportAsset;
     use cosmwasm_std::{assert_approx_eq, coin, coins, Addr, Coin, SubMsgResponse, Uint128};
-    use cw_it::cw_multi_test::{StargateKeeper, StargateMessageHandler};
     use cw_dex_test_contract::msg::{AstroportExecuteMsg, ExecuteMsg, QueryMsg};
     use cw_dex_test_helpers::astroport::setup_pool_and_test_contract;
-    use cw_dex_test_helpers::{cw20_balance_query, cw20_transfer, query_asset_balance};
+    use cw_dex_test_helpers::{cw20_transfer, query_asset_balance};
     use cw_it::astroport::utils::AstroportContracts;
-    use cw_it::helpers::Unwrap;
+    use cw_it::cw_multi_test::{StargateKeeper, StargateMessageHandler};
+    use cw_it::helpers::{bank_balance_query, bank_send, Unwrap};
     use cw_it::multi_test::modules::TokenFactory;
     use cw_it::multi_test::MultiTestRunner;
     use cw_it::test_tube::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
@@ -27,7 +29,7 @@ mod tests {
     #[cfg(feature = "osmosis-test-tube")]
     use cw_it::osmosis_test_tube::OsmosisTestApp;
 
-    pub const DENOM_CREATION_FEE: &str = "0uosmo";
+    pub const DENOM_CREATION_FEE: &str = "10000000uosmo";
     const TOKEN_FACTORY: &TokenFactory =
         &TokenFactory::new("factory", 32, 16, 59 + 16, DENOM_CREATION_FEE);
     pub fn get_test_runner<'a>() -> OwnedTestRunner<'a> {
@@ -66,6 +68,7 @@ mod tests {
             initial_liquidity,
             2,
             TEST_CONTRACT_WASM_FILE_PATH,
+            &[Coin::from_str(DENOM_CREATION_FEE).unwrap()],
         )
     }
 
@@ -80,14 +83,14 @@ mod tests {
     pub fn test_provide_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str, u64)>) {
         let owned_runner = get_test_runner();
         let runner = owned_runner.as_ref();
-        let (accs, lp_token_addr, _pair_addr, contract_addr, asset_list, _) =
+        let (accs, lp_token_denom, _pair_addr, contract_addr, asset_list, _) =
             setup_pool_and_testing_contract(&runner, pool_type.clone(), initial_liquidity).unwrap();
         let admin = &accs[0];
         let wasm = Wasm::new(&runner);
 
         // Check contract's LP token balance before providing liquidity
         let lp_token_before =
-            cw20_balance_query(&runner, lp_token_addr.clone(), contract_addr.clone()).unwrap();
+            bank_balance_query(&runner, contract_addr.clone(), lp_token_denom.clone()).unwrap();
         assert_eq!(lp_token_before, Uint128::zero());
 
         // Simulate Provide Liquidity. Not supported for concentrated liquidity, so we
@@ -142,7 +145,7 @@ mod tests {
 
         // Query LP token balance after
         let lp_token_after =
-            cw20_balance_query(&runner, lp_token_addr, contract_addr.clone()).unwrap();
+            bank_balance_query(&runner, contract_addr.clone(), lp_token_denom).unwrap();
         assert_eq!(lp_token_after, expected_out);
 
         // Query asset balances in contract, assert that all were used
@@ -163,27 +166,27 @@ mod tests {
     fn test_withdraw_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str, u64)>) {
         let owned_runner = get_test_runner();
         let runner = owned_runner.as_ref();
-        let (accs, lp_token_addr, _pair_addr, contract_addr, asset_list, _) =
+        let (accs, lp_token_denom, _pair_addr, contract_addr, asset_list, _) =
             setup_pool_and_testing_contract(&runner, pool_type, initial_liquidity).unwrap();
         let admin = &accs[0];
         let wasm = Wasm::new(&runner);
 
         //Query admin LP token balance
         let admin_lp_token_balance =
-            cw20_balance_query(&runner, lp_token_addr.clone(), admin.address()).unwrap();
+            bank_balance_query(&runner, contract_addr.clone(), lp_token_denom.clone()).unwrap();
         let amount_to_send = admin_lp_token_balance / Uint128::from(2u128);
 
         // Send LP tokens to contract
-        cw20_transfer(
+        bank_send(
             &runner,
-            lp_token_addr.clone(),
-            contract_addr.clone(),
-            amount_to_send,
             admin,
+            &contract_addr.clone(),
+            coins(amount_to_send.u128(), lp_token_denom.clone()),
         )
         .unwrap();
+
         let contract_lp_token_balance =
-            cw20_balance_query(&runner, lp_token_addr.clone(), contract_addr.clone()).unwrap();
+            bank_balance_query(&runner, contract_addr.clone(), lp_token_denom.clone()).unwrap();
         assert_eq!(contract_lp_token_balance, amount_to_send);
 
         // Simulate withdraw liquidity to get expected out assets
@@ -226,7 +229,7 @@ mod tests {
 
         // Query LP token balance after
         let lp_token_balance_after =
-            cw20_balance_query(&runner, lp_token_addr, contract_addr.clone()).unwrap();
+            bank_balance_query(&runner, contract_addr.clone(), lp_token_denom).unwrap();
 
         // Assert that LP token balance is zero after withdrawing all liquidity
         assert_eq!(lp_token_balance_after, Uint128::zero());
@@ -242,12 +245,12 @@ mod tests {
     fn stake_all_lp_tokens<'a, R: Runner<'a>>(
         runner: &'a R,
         contract_addr: String,
-        lp_token_addr: String,
+        lp_token_denom: String,
         signer: &SigningAccount,
     ) -> ExecuteResponse<MsgExecuteContractResponse> {
         // Query LP token balance
         let lp_token_balance =
-            cw20_balance_query(runner, lp_token_addr, contract_addr.clone()).unwrap();
+            bank_balance_query(runner, contract_addr.clone(), lp_token_denom.clone()).unwrap();
 
         // Stake LP tokens
         let stake_msg = ExecuteMsg::Stake {
@@ -256,7 +259,10 @@ mod tests {
 
         runner
             .execute_cosmos_msgs::<MsgExecuteContractResponse>(
-                &[stake_msg.into_cosmos_msg(contract_addr, vec![])],
+                &[stake_msg.into_cosmos_msg(
+                    contract_addr,
+                    coins(lp_token_balance.u128(), lp_token_denom),
+                )],
                 signer,
             )
             .unwrap()
@@ -277,28 +283,27 @@ mod tests {
     ) -> RunnerResult<()> {
         let owned_runner = get_test_runner();
         let runner = owned_runner.as_ref();
-        let (accs, lp_token_addr, _pair_addr, contract_addr, _asset_list, _) =
+        let (accs, lp_token_denom, _pair_addr, contract_addr, _asset_list, _) =
             setup_pool_and_testing_contract(&runner, pool_type, initial_liquidity).unwrap();
 
         let admin = &accs[0];
 
         // Query LP token balance
         let lp_token_balance =
-            cw20_balance_query(&runner, lp_token_addr.clone(), admin.address()).unwrap();
+            bank_balance_query(&runner, contract_addr.clone(), lp_token_denom.clone()).unwrap();
 
         // Send LP tokens to the test contract
-        cw20_transfer(
+        bank_send(
             &runner,
-            lp_token_addr.clone(),
-            contract_addr.clone(),
-            lp_token_balance,
             admin,
+            &contract_addr.clone(),
+            coins(lp_token_balance.u128(), lp_token_denom.clone()),
         )
         .unwrap();
 
         // Stake LP tokens
         let events =
-            stake_all_lp_tokens(&runner, contract_addr.clone(), lp_token_addr.clone(), admin)
+            stake_all_lp_tokens(&runner, contract_addr.clone(), lp_token_denom.clone(), admin)
                 .events;
 
         // Parse the event data
@@ -312,7 +317,7 @@ mod tests {
 
         // Query LP token balance after
         let lp_token_balance_after =
-            cw20_balance_query(&runner, lp_token_addr.clone(), contract_addr.to_string()).unwrap();
+            bank_balance_query(&runner, contract_addr.clone(), lp_token_denom.clone()).unwrap();
 
         // Assert that LP token balance is 0
         assert_eq!(lp_token_balance_after, Uint128::zero());
@@ -330,7 +335,7 @@ mod tests {
 
         // Query LP token balance
         let lp_token_balance_after_unstake =
-            cw20_balance_query(&runner, lp_token_addr, contract_addr).unwrap();
+            bank_balance_query(&runner, contract_addr.clone(), lp_token_denom).unwrap();
 
         // Assert that LP tokens have been unstakeed
         assert_eq!(lp_token_balance_after_unstake, lp_token_balance);
@@ -442,7 +447,7 @@ mod tests {
         let runner = owned_runner.as_ref();
         let (
             accs,
-            lp_token_addr,
+            lp_token_denom,
             _pair_addr,
             testing_contract_addr,
             _asset_list,
@@ -546,7 +551,7 @@ mod tests {
             wasm.execute(
                 &astroport_contracts.incentives.address,
                 &astroport_v5::incentives::ExecuteMsg::Incentivize {
-                    lp_token: lp_token_addr.clone(),
+                    lp_token: lp_token_denom.clone(),
                     schedule: astroport_v5::incentives::InputSchedule {
                         reward: incentive,
                         duration_periods: periods,
@@ -560,15 +565,14 @@ mod tests {
 
         // Query LP token balance
         let lp_token_balance =
-            cw20_balance_query(&runner, lp_token_addr.clone(), admin.address()).unwrap();
+            bank_balance_query(&runner, admin.address().clone(), lp_token_denom.clone()).unwrap();
 
         // Send LP tokens to the test contract
-        cw20_transfer(
+        bank_send(
             &runner,
-            lp_token_addr.clone(),
-            testing_contract_addr.clone(),
-            lp_token_balance,
             admin,
+            &testing_contract_addr.clone(),
+            coins(lp_token_balance.u128(), lp_token_denom.clone()),
         )
         .unwrap();
 
@@ -576,7 +580,7 @@ mod tests {
         let _events = stake_all_lp_tokens(
             &runner,
             testing_contract_addr.clone(),
-            lp_token_addr.clone(),
+            lp_token_denom.clone(),
             admin,
         )
         .events;
@@ -589,7 +593,7 @@ mod tests {
             .query(
                 &astroport_contracts.incentives.address,
                 &astroport_v5::incentives::QueryMsg::PendingRewards {
-                    lp_token: lp_token_addr.clone(),
+                    lp_token: lp_token_denom.clone(),
                     user: testing_contract_addr.clone(),
                 },
             )

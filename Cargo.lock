@@ -1045,8 +1045,7 @@ dependencies = [
 [[package]]
 name = "cw-it"
 version = "0.4.0-rc.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee449baa2583685117ee79e3de561475c1bbf759f9bbda6142d8fc5496bb91f5"
+source = "git+https://github.com/apollodao/cw-it.git?branch=dev/astroport-native-lp-tokens#2559858567434c63cd71ca3c5a6821cb2b9c027b"
 dependencies = [
  "anyhow",
  "apollo-cw-multi-test",

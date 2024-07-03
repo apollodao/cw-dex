@@ -31,6 +31,7 @@ pub fn setup_pool_and_test_contract<'a>(
     initial_liquidity: Vec<(&str, u64)>,
     native_denom_count: usize,
     wasm_file_path: &str,
+    denom_creation_fee: &[Coin],
 ) -> RunnerResult<(
     Vec<SigningAccount>,
     String,
@@ -226,6 +227,7 @@ pub fn setup_pool_and_test_contract<'a>(
         init_params,
         admin,
         None,
+        denom_creation_fee,
     );
 
     // Increase allowance of CW20's for Pair contract
@@ -318,3 +320,4 @@ pub fn instantiate_test_astroport_contract<'a, R: Runner<'a>>(
         .data
         .address)
 }
+
