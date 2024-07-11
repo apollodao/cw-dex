@@ -32,6 +32,9 @@ astroport = "2.9.0"
 astroport_v5 = { package = "astroport", version = "5.1.0" }
 test-case = "3.0.0"
 proptest = "1.0.0"
+cw-multi-test = "=1.2.0"
+apollo-cw-multi-test = "0.18.1"
+getrandom = { version = "0.2", features = ["js"] }
 
 # Workspace packages
 cw-dex = { path = "cw-dex", version = "0.5.3" }

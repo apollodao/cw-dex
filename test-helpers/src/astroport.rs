@@ -62,6 +62,7 @@ pub fn setup_pool_and_test_contract<'a>(
         amount: Uint128::MAX,
     });
 
+
     let accs = runner.init_accounts(&initial_balances, 10).unwrap();
 
     let admin = &accs[0];
@@ -252,9 +253,11 @@ pub fn setup_pool_and_test_contract<'a>(
         receiver: None,
     };
     let (native_coins, _) = separate_natives_and_cw20s(&asset_list);
-    let _res = wasm
+    let res = wasm
         .execute(&pair_addr, &provide_liq_msg, &native_coins, admin)
         .unwrap();
+
+    println!("provide liquidity res: {:?}", res);
 
     // Upload test contract wasm file
     let contract = match &runner {

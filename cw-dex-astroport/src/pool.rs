@@ -12,6 +12,7 @@ use cosmwasm_std::{
 };
 use cw20::Cw20ExecuteMsg;
 use cw_utils::Expiration;
+use osmosis_std::types::osmosis::tokenfactory::v1beta1::TokenfactoryQuerier;
 
 use apollo_utils::assets::separate_natives_and_cw20s;
 use astroport::asset::Asset as AstroAsset;
@@ -56,6 +57,7 @@ impl AstroportPool {
         match &pair_info.pair_type {
             astroport_v5::factory::PairType::Custom(t) => match t.as_str() {
                 "concentrated" => Ok(()),
+
                 "astroport-pair-xyk-sale-tax" => Ok(()),
                 _ => Err(StdError::generic_err("Custom pair type is not supported")),
             },
@@ -104,7 +106,31 @@ impl AstroportPool {
 
                 Ok(pool)
             }
-            _ => Err(CwDexError::NotLpToken {}),
+            AssetInfo::Native(native_denom) => {
+                // To figure out if the native denom is a LP token, we need to check which address
+                // created the native denom and check if that address is an Astroport pair
+                // contract.
+                let denom_authority_metadata = TokenfactoryQuerier::new(&deps.querier)
+                    .denom_authority_metadata(native_denom.to_string())?
+                    .authority_metadata
+                    .ok_or(CwDexError::NotLpToken {})?;
+
+                println!("denom_authority_metadata: {:?}", denom_authority_metadata);
+
+                // Try to create an `AstroportPool` object with the creator address. This will
+                // query the contract and assume that it is an Astroport pair
+                // contract. If it succeeds, the pool object will be returned.
+                //
+                // NB: This does NOT validate that the pool is registered with the Astroport
+                // factory, and that it is an "official" Astroport pool.
+                let pool = AstroportPool::new(
+                    deps,
+                    Addr::unchecked(denom_authority_metadata.admin),
+                    astroport_liquidity_manager,
+                )?;
+
+                Ok(pool)
+            }
         }
     }
 
@@ -173,7 +199,8 @@ impl Pool for AstroportPool {
 
         let event = Event::new("apollo/cw-dex/provide_liquidity")
             .add_attribute("pair_addr", &self.pair_addr)
-            .add_attribute("assets", format!("{:?}", assets));
+            .add_attribute("assets", format!("{:?}", assets))
+            .add_attribute("lp_token", format!("{:?}", &self.lp_token()));
 
         Ok(Response::new()
             .add_messages(allowance_msgs)
@@ -410,3 +437,4 @@ pub fn astroport_v5_pairtype_to_astroport_v3_pairtype(
         astroport_v5::factory::PairType::Custom(pair_type) => PairType::Custom(pair_type),
     }
 }
+

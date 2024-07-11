@@ -1,13 +1,17 @@
 mod tests {
-    use std::str::FromStr;
-
     use apollo_cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
+    use apollo_cw_multi_test::BasicAppBuilder;
+    use apollo_cw_multi_test::{
+        BankKeeper, DistributionKeeper, FailingModule, StakeKeeper, WasmKeeper,
+    };
     use apollo_utils::assets::separate_natives_and_cw20s;
     use apollo_utils::coins::coin_from_str;
     use apollo_utils::submessages::{find_event, parse_attribute_value};
     use astroport::factory::PairType;
     use astroport_v5::asset::Asset as AstroportAsset;
+    use cosmwasm_std::testing::{mock_env, MockStorage};
     use cosmwasm_std::{assert_approx_eq, coin, coins, Addr, Coin, SubMsgResponse, Uint128};
+    use cw_dex_astroport::AstroportPool;
     use cw_dex_test_contract::msg::{AstroportExecuteMsg, ExecuteMsg, QueryMsg};
     use cw_dex_test_helpers::astroport::setup_pool_and_test_contract;
     use cw_dex_test_helpers::{cw20_transfer, query_asset_balance};
@@ -22,9 +26,10 @@ mod tests {
     };
     use cw_it::traits::CwItRunner;
     use cw_it::{OwnedTestRunner, TestRunner};
+    use cw_multi_test::MockApiBech32;
+    use std::str::FromStr;
     use test_case::test_case;
-
-    use cw_dex_astroport::AstroportPool;
+    // use cw_multi_test::BasicAppBuilder;
 
     #[cfg(feature = "osmosis-test-tube")]
     use cw_it::osmosis_test_tube::OsmosisTestApp;
@@ -37,10 +42,30 @@ mod tests {
             "multi-test" => {
                 let mut stargate_keeper = StargateKeeper::new();
                 TOKEN_FACTORY.register_msgs(&mut stargate_keeper);
-                OwnedTestRunner::MultiTest(MultiTestRunner::new_with_stargate(
-                    "osmo",
+                // let app = BasicAppBuilder::<Empty, Empty>::new()
+                //     .with_stargate(stargate_keeper)
+                //     .with_api(MockApiBech32::new("osmo"))
+                //     .build(|_, _, _| {});
+                // BasicAppBuilder::construct(api, block, storage, bank, wasm, custom, staking, distribution, ibc, gov, stargate)
+                let app = BasicAppBuilder::construct(
+                    MockApiBech32::new("osmo"),
+                    mock_env().block,
+                    MockStorage::new(),
+                    BankKeeper::new(),
+                    WasmKeeper::new(),
+                    FailingModule::new(),
+                    StakeKeeper::new(),
+                    DistributionKeeper::new(),
+                    FailingModule::new(),
+                    FailingModule::new(),
                     stargate_keeper,
-                ))
+                )
+                .build(|_, _, _| {});
+                let multi_test_runner = MultiTestRunner {
+                    app,
+                    address_prefix: "osmo",
+                };
+                OwnedTestRunner::MultiTest(multi_test_runner)
             }
             #[cfg(feature = "osmosis-test-tube")]
             "osmosis-test-tube" => OwnedTestRunner::OsmosisTestApp(OsmosisTestApp::new()),
@@ -170,10 +195,13 @@ mod tests {
             setup_pool_and_testing_contract(&runner, pool_type, initial_liquidity).unwrap();
         let admin = &accs[0];
         let wasm = Wasm::new(&runner);
-
-        //Query admin LP token balance
+        println!("lp_token_denom: {:?}", lp_token_denom);
+        let admin_lp_token_balance =
+            bank_balance_query(&runner, admin.address(), lp_token_denom.clone()).unwrap();
+        println!("admin_lp_token_balance: {:?}", admin_lp_token_balance);
         let admin_lp_token_balance =
             bank_balance_query(&runner, contract_addr.clone(), lp_token_denom.clone()).unwrap();
+        println!("admin_lp_token_balance: {:?}", admin_lp_token_balance);
         let amount_to_send = admin_lp_token_balance / Uint128::from(2u128);
 
         // Send LP tokens to contract
@@ -302,9 +330,13 @@ mod tests {
         .unwrap();
 
         // Stake LP tokens
-        let events =
-            stake_all_lp_tokens(&runner, contract_addr.clone(), lp_token_denom.clone(), admin)
-                .events;
+        let events = stake_all_lp_tokens(
+            &runner,
+            contract_addr.clone(),
+            lp_token_denom.clone(),
+            admin,
+        )
+        .events;
 
         // Parse the event data
         let response = SubMsgResponse { events, data: None };
@@ -644,7 +676,7 @@ mod tests {
     fn test_get_pool_for_lp_token() {
         let owned_runner = get_test_runner();
         let runner = owned_runner.as_ref();
-        let (_accs, lp_token_addr, pair_addr, contract_addr, asset_list, _) =
+        let (_accs, lp_token_denom, pair_addr, contract_addr, asset_list, _) =
             setup_pool_and_testing_contract(
                 &runner,
                 PairType::Xyk {},
@@ -655,16 +687,13 @@ mod tests {
         let wasm = Wasm::new(&runner);
 
         let query = QueryMsg::GetPoolForLpToken {
-            lp_token: AssetInfo::Cw20(Addr::unchecked(lp_token_addr.clone())),
+            lp_token: AssetInfo::Native(lp_token_denom.clone()),
         };
         let pool = wasm
             .query::<_, AstroportPool>(&contract_addr, &query)
             .unwrap();
 
-        assert_eq!(
-            pool.lp_token,
-            AssetInfo::cw20(Addr::unchecked(lp_token_addr))
-        );
+        assert_eq!(pool.lp_token, AssetInfo::native(lp_token_denom));
         assert_eq!(pool.pair_addr, Addr::unchecked(pair_addr));
         assert_eq!(
             pool.pool_assets,
