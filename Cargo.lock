@@ -1055,7 +1055,7 @@ dependencies = [
 [[package]]
 name = "cw-it"
 version = "0.4.0-rc.1"
-source = "git+https://github.com/apollodao/cw-it.git?branch=dev/astroport-native-lp-tokens#2559858567434c63cd71ca3c5a6821cb2b9c027b"
+source = "git+https://github.com/apollodao/cw-it.git?rev=aa46a97c9fb7768842453a045a8eb44d381fc09b#aa46a97c9fb7768842453a045a8eb44d381fc09b"
 dependencies = [
  "anyhow",
  "apollo-cw-multi-test",

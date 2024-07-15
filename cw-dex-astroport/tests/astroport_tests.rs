@@ -1,6 +1,6 @@
 mod tests {
     use apollo_cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
-    use apollo_cw_multi_test::BasicAppBuilder;
+    use apollo_cw_multi_test::{AppBuilder, BasicAppBuilder};
     use apollo_cw_multi_test::{
         BankKeeper, DistributionKeeper, FailingModule, StakeKeeper, WasmKeeper,
     };
@@ -47,7 +47,8 @@ mod tests {
                 //     .with_api(MockApiBech32::new("osmo"))
                 //     .build(|_, _, _| {});
                 // BasicAppBuilder::construct(api, block, storage, bank, wasm, custom, staking, distribution, ibc, gov, stargate)
-                let app = BasicAppBuilder::construct(
+                // Construct the App using the AppBuilder
+                let app = AppBuilder::construct(
                     MockApiBech32::new("osmo"),
                     mock_env().block,
                     MockStorage::new(),
@@ -61,10 +62,13 @@ mod tests {
                     stargate_keeper,
                 )
                 .build(|_, _, _| {});
-                let multi_test_runner = MultiTestRunner {
+
+                // Instantiate MultiTestRunner with the constructed app
+                let multi_test_runner = MultiTestRunner::<BankKeeper, MockApiBech32> {
                     app,
                     address_prefix: "osmo",
                 };
+                
                 OwnedTestRunner::MultiTest(multi_test_runner)
             }
             #[cfg(feature = "osmosis-test-tube")]

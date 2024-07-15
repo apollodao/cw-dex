@@ -26,7 +26,7 @@ serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
 apollo-cw-asset = "0.1.1"
 osmosis-std = "0.22.0"
-cw-it = { git = "https://github.com/apollodao/cw-it.git", branch = "dev/astroport-native-lp-tokens"}
+cw-it = { git = "https://github.com/apollodao/cw-it.git", rev = "aa46a97c9fb7768842453a045a8eb44d381fc09b"}
 apollo-utils = "0.1.0"
 astroport = "2.9.0"
 astroport_v5 = { package = "astroport", version = "5.1.0" }
