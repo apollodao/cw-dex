@@ -26,7 +26,7 @@ serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
 apollo-cw-asset = "0.1.1"
 osmosis-std = "0.22.0"
-cw-it = { git = "https://github.com/apollodao/cw-it.git", rev = "5bcc131991e3d80ba33be71129eab887dfc4c246", features = ["multi-test"]}
+cw-it = { git = "https://github.com/apollodao/cw-it.git", rev = "331de15256f955584f5ef1cd1bac339f87657ef2", features = ["multi-test"]}
 apollo-utils = "0.1.0"
 astroport = "2.9.0"
 astroport_v5 = { package = "astroport", version = "5.1.0" }
@@ -53,4 +53,3 @@ lto              = true
 opt-level        = 3
 overflow-checks  = true
 rpath            = false
-

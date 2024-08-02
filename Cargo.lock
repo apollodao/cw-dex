@@ -1055,7 +1055,7 @@ dependencies = [
 [[package]]
 name = "cw-it"
 version = "0.4.0-rc.2"
-source = "git+https://github.com/apollodao/cw-it.git?rev=5bcc131991e3d80ba33be71129eab887dfc4c246#5bcc131991e3d80ba33be71129eab887dfc4c246"
+source = "git+https://github.com/apollodao/cw-it.git?rev=331de15256f955584f5ef1cd1bac339f87657ef2#331de15256f955584f5ef1cd1bac339f87657ef2"
 dependencies = [
  "anyhow",
  "apollo-cw-multi-test",
