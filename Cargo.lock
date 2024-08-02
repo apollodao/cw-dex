@@ -60,8 +60,7 @@ dependencies = [
 [[package]]
 name = "apollo-cw-multi-test"
 version = "0.18.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "302ade9b31bee51ac98dceaa0818fdf28d92794150b84460a8edf4053a3339b1"
+source = "git+https://github.com/apollodao/cw-multi-test.git?rev=7e7bc2b91a8199c47815b45ef23b3ab07390ae3a#7e7bc2b91a8199c47815b45ef23b3ab07390ae3a"
 dependencies = [
  "anyhow",
  "cosmwasm-std",
@@ -75,6 +74,7 @@ dependencies = [
  "regex",
  "schemars",
  "serde",
+ "sha2 0.10.8",
  "thiserror",
 ]
 
@@ -1054,8 +1054,8 @@ dependencies = [
 
 [[package]]
 name = "cw-it"
-version = "0.4.0-rc.1"
-source = "git+https://github.com/apollodao/cw-it.git?rev=aa46a97c9fb7768842453a045a8eb44d381fc09b#aa46a97c9fb7768842453a045a8eb44d381fc09b"
+version = "0.4.0-rc.2"
+source = "git+https://github.com/apollodao/cw-it.git?rev=5bcc131991e3d80ba33be71129eab887dfc4c246#5bcc131991e3d80ba33be71129eab887dfc4c246"
 dependencies = [
  "anyhow",
  "apollo-cw-multi-test",
@@ -1074,6 +1074,7 @@ dependencies = [
  "astroport-token",
  "astroport-vesting",
  "astroport-whitelist",
+ "bech32 0.11.0",
  "config",
  "cosmrs",
  "cosmwasm-schema",
@@ -1086,6 +1087,7 @@ dependencies = [
  "prost 0.12.6",
  "regex",
  "serde",
+ "sha2 0.10.8",
  "strum 0.24.1",
  "test-tube",
  "thiserror",

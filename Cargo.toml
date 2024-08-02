@@ -26,14 +26,14 @@ serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
 apollo-cw-asset = "0.1.1"
 osmosis-std = "0.22.0"
-cw-it = { git = "https://github.com/apollodao/cw-it.git", rev = "aa46a97c9fb7768842453a045a8eb44d381fc09b"}
+cw-it = { git = "https://github.com/apollodao/cw-it.git", rev = "5bcc131991e3d80ba33be71129eab887dfc4c246", features = ["multi-test"]}
 apollo-utils = "0.1.0"
 astroport = "2.9.0"
 astroport_v5 = { package = "astroport", version = "5.1.0" }
 test-case = "3.0.0"
 proptest = "1.0.0"
 cw-multi-test = "=1.2.0"
-apollo-cw-multi-test = "0.18.1"
+apollo-cw-multi-test = { git = "https://github.com/apollodao/cw-multi-test.git", rev = "7e7bc2b91a8199c47815b45ef23b3ab07390ae3a",features = ["stargate"] }
 getrandom = { version = "0.2", features = ["js"] }
 
 # Workspace packages
