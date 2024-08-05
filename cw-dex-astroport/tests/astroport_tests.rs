@@ -1,39 +1,31 @@
 mod tests {
     use apollo_cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
-    use apollo_cw_multi_test::{AppBuilder, BasicAppBuilder};
-    use apollo_cw_multi_test::{
-        BankKeeper, DistributionKeeper, FailingModule, StakeKeeper, WasmKeeper,
-    };
+    use apollo_cw_multi_test::BasicAppBuilder;
+    use apollo_cw_multi_test::WasmKeeper;
     use apollo_utils::assets::separate_natives_and_cw20s;
     use apollo_utils::coins::coin_from_str;
     use apollo_utils::submessages::{find_event, parse_attribute_value};
     use astroport::factory::PairType;
     use astroport_v5::asset::{Asset as AstroportAsset, PairInfo};
-    use astroport_v5::pair::QueryMsg as PairQueryMsg;
-    use cosmwasm_std::testing::{mock_env, MockStorage};
+    use astroport_v5::pair::{PoolResponse, QueryMsg as PairQueryMsg};
     use cosmwasm_std::{assert_approx_eq, coin, coins, Addr, Coin, Empty, SubMsgResponse, Uint128};
     use cw_dex_astroport::AstroportPool;
     use cw_dex_test_contract::msg::{AstroportExecuteMsg, ExecuteMsg, QueryMsg};
     use cw_dex_test_helpers::astroport::setup_pool_and_test_contract;
     use cw_dex_test_helpers::{cw20_transfer, query_asset_balance};
     use cw_it::astroport::utils::AstroportContracts;
-    use cw_it::cosmrs::proto::cosmos::tx::signing::v1beta1::signature_descriptor::data::Multi;
     use cw_it::cw_multi_test::{StargateKeeper, StargateMessageHandler};
-    use cw_it::helpers::{bank_all_balances_query, bank_balance_query, bank_send, Unwrap};
+    use cw_it::helpers::{bank_balance_query, bank_send, Unwrap};
     use cw_it::multi_test::api::MockApiBech32;
     use cw_it::multi_test::modules::TokenFactory;
     use cw_it::multi_test::test_addresses::MockAddressGenerator;
     use cw_it::multi_test::MultiTestRunner;
-    use cw_it::osmosis_std::types::cosmos::bank::v1beta1::QueryBalanceRequest;
     use cw_it::test_tube::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
     use cw_it::test_tube::{
         Account, ExecuteResponse, Module, Runner, RunnerResult, SigningAccount, Wasm,
     };
     use cw_it::traits::CwItRunner;
     use cw_it::{OwnedTestRunner, TestRunner};
-    use osmosis_std::types::cosmos::bank::v1beta1::{
-        QueryAllBalancesRequest, QueryAllBalancesResponse,
-    };
     use std::str::FromStr;
     use test_case::test_case;
     // use cw_multi_test::BasicAppBuilder;
@@ -111,12 +103,12 @@ mod tests {
             setup_pool_and_testing_contract(&runner, pool_type.clone(), initial_liquidity).unwrap();
         let admin = &accs[0];
         let wasm = Wasm::new(&runner);
-        let pair_config_res: PairInfo = wasm.query(&pair_addr, &PairQueryMsg::Pair {}).unwrap();
-        println!("pair_config_res: {:?}", pair_config_res);
+        let _pair_config_res: PairInfo = wasm.query(&pair_addr, &PairQueryMsg::Pair {}).unwrap();
+
         // Check contract's LP token balance before providing liquidity
         let lp_token_before =
             bank_balance_query(&runner, contract_addr.clone(), lp_token_denom.clone()).unwrap();
-        println!("lp_token_before {:?}", lp_token_before);
+
         assert_eq!(lp_token_before, Uint128::zero());
 
         // Simulate Provide Liquidity. Not supported for concentrated liquidity, so we
@@ -131,12 +123,7 @@ mod tests {
             }
         };
 
-        println!("expected_out: {:?}", expected_out);
-
         let (funds, cw20s) = separate_natives_and_cw20s(&asset_list);
-
-        println!("funds: {:?}", funds);
-        println!("cw20s: {:?}", cw20s);
 
         // Send cw20 tokens to the contract
         for cw20 in cw20s {
@@ -152,7 +139,7 @@ mod tests {
 
         // Provide liquidity with min_out one more than expected_out. Should fail.
         let unwrap = Unwrap::Err("Slippage is more than expected");
-        let min_out = expected_out + Uint128::new(10);
+        let min_out = expected_out + Uint128::new(1);
         println!("min_out: {:?}", min_out);
         let provide_msg = ExecuteMsg::ProvideLiquidity {
             assets: asset_list.clone(),
@@ -162,7 +149,6 @@ mod tests {
             &[provide_msg.into_cosmos_msg(contract_addr.clone(), funds.clone())],
             admin,
         ));
-        println!("after unwrap");
 
         // Provide liquidity with expected_out as min_out. Should succeed.
         let provide_msg = ExecuteMsg::ProvideLiquidity {
@@ -199,17 +185,13 @@ mod tests {
     fn test_withdraw_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str, u64)>) {
         let owned_runner = get_test_runner();
         let runner = owned_runner.as_ref();
-        let (accs, lp_token_denom, _pair_addr, contract_addr, asset_list, _) =
+        let (accs, lp_token_denom, pair_addr, contract_addr, asset_list, _) =
             setup_pool_and_testing_contract(&runner, pool_type, initial_liquidity).unwrap();
         let admin = &accs[0];
 
-        println!("lp_token_denom: {:?}", lp_token_denom);
         let admin_lp_token_balance =
             bank_balance_query(&runner, admin.address(), lp_token_denom.clone()).unwrap();
-        println!("admin_lp_token_balance: {:?}", admin_lp_token_balance);
-        let admin_lp_token_balance =
-            bank_balance_query(&runner, contract_addr.clone(), lp_token_denom.clone()).unwrap();
-        println!("admin_lp_token_balance: {:?}", admin_lp_token_balance);
+
         let amount_to_send = admin_lp_token_balance / Uint128::from(2u128);
         let wasm = Wasm::new(&runner);
         // Send LP tokens to contract
@@ -251,6 +233,8 @@ mod tests {
             admin,
         ));
 
+        let _pool_res: PoolResponse = wasm.query(&pair_addr, &PairQueryMsg::Pool {}).unwrap();
+
         // Withdraw liquidity with expected_out as min_out. Should succeed.
         let withdraw_msg = ExecuteMsg::WithdrawLiquidity {
             amount: contract_lp_token_balance,
@@ -286,7 +270,7 @@ mod tests {
     ) -> ExecuteResponse<MsgExecuteContractResponse> {
         // Query LP token balance
         let lp_token_balance =
-            bank_balance_query(runner, contract_addr.clone(), lp_token_denom.clone()).unwrap();
+            bank_balance_query(runner, signer.address().clone(), lp_token_denom.clone()).unwrap();
 
         // Stake LP tokens
         let stake_msg = ExecuteMsg::Stake {
@@ -326,25 +310,17 @@ mod tests {
 
         // Query LP token balance
         let lp_token_balance =
-            bank_balance_query(&runner, contract_addr.clone(), lp_token_denom.clone()).unwrap();
+            bank_balance_query(&runner, admin.address().clone(), lp_token_denom.clone()).unwrap();
 
-        let all_balances_res =
-            bank_all_balances_query(&runner, admin.address().clone(), None).unwrap();
-
-        println!("all_balances_res : {:?}", all_balances_res);
-
-        let all_balances_res =
-            bank_all_balances_query(&runner, contract_addr.clone(), None).unwrap();
-
-        println!("all_balances_res : {:?}", all_balances_res);
-        // Send LP tokens to the test contract
-        bank_send(
-            &runner,
-            admin,
-            &contract_addr.clone(),
-            coins(lp_token_balance.u128(), lp_token_denom.clone()),
-        )
-        .unwrap();
+        // println!("admin_lp_token_balance: {:?}", lp_token_balance);
+        // // Send LP tokens to the test contract
+        // bank_send(
+        //     &runner,
+        //     admin,
+        //     &contract_addr.clone(),
+        //     coins(lp_token_balance.u128(), lp_token_denom.clone()),
+        // )
+        // .unwrap();
 
         // Stake LP tokens
         let events = stake_all_lp_tokens(
@@ -617,13 +593,13 @@ mod tests {
             bank_balance_query(&runner, admin.address().clone(), lp_token_denom.clone()).unwrap();
 
         // Send LP tokens to the test contract
-        bank_send(
-            &runner,
-            admin,
-            &testing_contract_addr.clone(),
-            coins(lp_token_balance.u128(), lp_token_denom.clone()),
-        )
-        .unwrap();
+        // bank_send(
+        //     &runner,
+        //     admin,
+        //     &testing_contract_addr.clone(),
+        //     coins(lp_token_balance.u128(), lp_token_denom.clone()),
+        // )
+        // .unwrap();
 
         // Stake LP tokens
         let _events = stake_all_lp_tokens(
@@ -721,4 +697,3 @@ mod tests {
         );
     }
 }
-

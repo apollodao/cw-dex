@@ -29,7 +29,7 @@ osmosis-std = "0.22.0"
 cw-it = { git = "https://github.com/apollodao/cw-it.git", rev = "331de15256f955584f5ef1cd1bac339f87657ef2", features = ["multi-test"]}
 apollo-utils = "0.1.0"
 astroport = "2.9.0"
-astroport_v5 = { package = "astroport", version = "5.1.0" }
+astroport_v5 = { package = "astroport", version = "5.2.0" }
 test-case = "3.0.0"
 proptest = "1.0.0"
 cw-multi-test = "=1.2.0"

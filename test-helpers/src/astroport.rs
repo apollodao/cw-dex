@@ -323,4 +323,3 @@ pub fn instantiate_test_astroport_contract<'a, R: Runner<'a>>(
         .data
         .address)
 }
-

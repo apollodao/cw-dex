@@ -12,7 +12,6 @@ use cosmwasm_std::{
 };
 use cw20::Cw20ExecuteMsg;
 use cw_utils::Expiration;
-use osmosis_std::types::osmosis::tokenfactory::v1beta1::TokenfactoryQuerier;
 
 use apollo_utils::assets::separate_natives_and_cw20s;
 use astroport::asset::Asset as AstroAsset;
@@ -110,12 +109,7 @@ impl AstroportPool {
                 // To figure out if the native denom is a LP token, we need to check which address
                 // created the native denom and check if that address is an Astroport pair
                 // contract.
-                let denom_authority_metadata = TokenfactoryQuerier::new(&deps.querier)
-                    .denom_authority_metadata(native_denom.to_string())?
-                    .authority_metadata
-                    .ok_or(CwDexError::NotLpToken {})?;
-
-                println!("denom_authority_metadata: {:?}", denom_authority_metadata);
+                let denom_authority_metadata = parse_address(native_denom)?;
 
                 // Try to create an `AstroportPool` object with the creator address. This will
                 // query the contract and assume that it is an Astroport pair
@@ -125,7 +119,7 @@ impl AstroportPool {
                 // factory, and that it is an "official" Astroport pool.
                 let pool = AstroportPool::new(
                     deps,
-                    Addr::unchecked(denom_authority_metadata.admin),
+                    Addr::unchecked(denom_authority_metadata),
                     astroport_liquidity_manager,
                 )?;
 
@@ -157,7 +151,7 @@ impl Pool for AstroportPool {
         _deps: Deps,
         env: &Env,
         assets: AssetList,
-        _min_out: Uint128,
+        min_out: Uint128,
     ) -> Result<Response, CwDexError> {
         let (funds, cw20s) = separate_natives_and_cw20s(&assets);
 
@@ -188,11 +182,12 @@ impl Pool for AstroportPool {
         // Create the provide liquidity message
         let provide_liquidity_msg = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.pair_addr.to_string(),
-            msg: to_json_binary(&astroport::pair::ExecuteMsg::ProvideLiquidity {
-                assets: assets_vec.into_elementwise(),
+            msg: to_json_binary(&astroport_v5::pair::ExecuteMsg::ProvideLiquidity {
+                assets: assets_vec.iter().map(asset_to_astroport_v5_asset).collect(),
                 slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
                 auto_stake: Some(false),
                 receiver: None,
+                min_lp_to_receive: Some(min_out),
             })?,
             funds,
         });
@@ -268,7 +263,7 @@ impl Pool for AstroportPool {
             let withdraw_liquidity = CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: self.pair_addr.to_string(),
                 msg: to_json_binary(&astroport_v5::pair::ExecuteMsg::WithdrawLiquidity {
-                    assets: vec![asset_to_astroport_v5_asset(&asset.clone())],
+                    assets: vec![],
                     min_assets_to_receive: Some(
                         min_out
                             .to_vec()
@@ -438,3 +433,14 @@ pub fn astroport_v5_pairtype_to_astroport_v3_pairtype(
     }
 }
 
+fn parse_address(input_string: &str) -> Result<String, CwDexError> {
+    let parts: Vec<&str> = input_string.split('/').collect();
+
+    if parts.len() < 3 {
+        return Err(CwDexError::AddressParsingErrors {
+            token_denom: input_string.to_string(),
+        });
+    }
+
+    Ok(parts[1].to_string())
+}
