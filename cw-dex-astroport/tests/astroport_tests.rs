@@ -588,10 +588,6 @@ mod tests {
             .unwrap();
         }
 
-        // Query LP token balance
-        let lp_token_balance =
-            bank_balance_query(&runner, admin.address().clone(), lp_token_denom.clone()).unwrap();
-
         // Send LP tokens to the test contract
         // bank_send(
         //     &runner,
