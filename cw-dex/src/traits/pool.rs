@@ -28,7 +28,6 @@ pub trait Pool {
         env: &Env,
         assets: AssetList,
         min_out: Uint128,
-        recipient: Option<String>,
     ) -> Result<Response, CwDexError>;
 
     /// Get the LP token for this pool

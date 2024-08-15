@@ -127,7 +127,6 @@ impl Pool for OsmosisPool {
         env: &Env,
         assets: AssetList,
         min_out: Uint128,
-        _recipient: Option<String>,
     ) -> Result<Response, CwDexError> {
         let mut assets = assets;
 

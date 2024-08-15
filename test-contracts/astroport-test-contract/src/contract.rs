@@ -44,7 +44,7 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::ProvideLiquidity { assets, min_out } => {
-            execute_provide_liquidity(deps, env, info, assets, min_out, None)
+            execute_provide_liquidity(deps, env, info, assets, min_out)
         }
         ExecuteMsg::WithdrawLiquidity { amount, min_out } => {
             execute_withdraw_liquidity(deps, env, info, amount, min_out)
@@ -66,11 +66,10 @@ pub fn execute_provide_liquidity(
     _info: MessageInfo,
     assets: AssetList,
     min_out: Uint128,
-    recipient: Option<String>,
 ) -> Result<Response, ContractError> {
     let pool = POOL.load(deps.storage)?;
 
-    Ok(pool.provide_liquidity(deps.as_ref(), &env, assets, min_out, recipient)?)
+    Ok(pool.provide_liquidity(deps.as_ref(), &env, assets, min_out)?)
 }
 
 pub fn execute_withdraw_liquidity(

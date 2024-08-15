@@ -152,7 +152,6 @@ impl Pool for AstroportPool {
         env: &Env,
         assets: AssetList,
         min_out: Uint128,
-        recipient: Option<String>,
     ) -> Result<Response, CwDexError> {
         let (funds, cw20s) = separate_natives_and_cw20s(&assets);
 
@@ -187,7 +186,7 @@ impl Pool for AstroportPool {
                 assets: assets_vec.iter().map(asset_to_astroport_v5_asset).collect(),
                 slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
                 auto_stake: Some(false),
-                receiver: recipient,
+                receiver: None,
                 min_lp_to_receive: Some(min_out),
             })?,
             funds,
