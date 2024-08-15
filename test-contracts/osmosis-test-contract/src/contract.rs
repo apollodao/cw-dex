@@ -91,7 +91,7 @@ pub fn execute_provide_liquidity(
 ) -> Result<Response, ContractError> {
     let pool = POOL.load(deps.storage)?;
 
-    Ok(pool.provide_liquidity(deps.as_ref(), &env, assets, min_out)?)
+    Ok(pool.provide_liquidity(deps.as_ref(), &env, assets, min_out, None)?)
 }
 
 pub fn execute_withdraw_liquidity(

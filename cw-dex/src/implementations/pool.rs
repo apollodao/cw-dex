@@ -115,9 +115,10 @@ impl PoolTrait for Pool {
         env: &Env,
         assets: AssetList,
         min_out: Uint128,
+        recipient: Option<String>,
     ) -> Result<Response, CwDexError> {
         self.as_trait()
-            .provide_liquidity(deps, env, assets, min_out)
+            .provide_liquidity(deps, env, assets, min_out, recipient)
     }
 
     fn withdraw_liquidity(
