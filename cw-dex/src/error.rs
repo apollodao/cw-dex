@@ -91,6 +91,11 @@ pub enum CwDexError {
         /// The token_denom that couldn't be parsed
         token_denom: String,
     },
+
+    /// For when min_out is set for concentrated liquidity pools, as they do not
+    /// support min_out
+    #[error("Min out is not supported for concentrated liquidity pools")]
+    MinOutNotSupported {},
 }
 
 impl From<CwDexError> for StdError {

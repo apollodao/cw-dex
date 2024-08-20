@@ -109,17 +109,14 @@ mod tests {
 
         assert_eq!(lp_token_before, Uint128::zero());
 
-        // Simulate Provide Liquidity. Not supported for concentrated liquidity, so we
-        // just make sure to use the right amounts of input assets
-        let expected_out = match &pool_type {
-            PairType::Custom(_) => Uint128::new(1000000),
-            _ => {
-                let simulate_query = QueryMsg::SimulateProvideLiquidity {
+        let expected_out = wasm
+            .query(
+                &contract_addr,
+                &QueryMsg::SimulateProvideLiquidity {
                     assets: asset_list.clone(),
-                };
-                wasm.query(&contract_addr, &simulate_query).unwrap()
-            }
-        };
+                },
+            )
+            .unwrap();
 
         let (funds, cw20s) = separate_natives_and_cw20s(&asset_list);
 
@@ -135,8 +132,15 @@ mod tests {
             .unwrap();
         }
 
+        let error_msg = match &pool_type {
+            PairType::Custom(t) if t == "concentrated" => {
+                "Min out is not supported for concentrated liquidity pools"
+            }
+            _ => "Slippage is more than expected",
+        };
+
         // Provide liquidity with min_out one more than expected_out. Should fail.
-        let unwrap = Unwrap::Err("Slippage is more than expected");
+        let unwrap = Unwrap::Err(error_msg);
         let min_out = expected_out + Uint128::new(1);
         println!("min_out: {:?}", min_out);
         let provide_msg = ExecuteMsg::ProvideLiquidity {
@@ -148,10 +152,15 @@ mod tests {
             admin,
         ));
 
+        let min_out = match &pool_type {
+            PairType::Custom(t) if t == "concentrated" => Uint128::zero(),
+            _ => expected_out,
+        };
+
         // Provide liquidity with expected_out as min_out. Should succeed.
         let provide_msg = ExecuteMsg::ProvideLiquidity {
             assets: asset_list.clone(),
-            min_out: expected_out,
+            min_out,
         };
         let _res = runner
             .execute_cosmos_msgs::<MsgExecuteContractResponse>(
@@ -184,7 +193,7 @@ mod tests {
         let owned_runner = get_test_runner();
         let runner = owned_runner.as_ref();
         let (accs, lp_token_denom, pair_addr, contract_addr, asset_list, _) =
-            setup_pool_and_testing_contract(&runner, pool_type, initial_liquidity).unwrap();
+            setup_pool_and_testing_contract(&runner, pool_type.clone(), initial_liquidity).unwrap();
         let admin = &accs[0];
 
         let admin_lp_token_balance =
@@ -205,14 +214,22 @@ mod tests {
             bank_balance_query(&runner, contract_addr.clone(), lp_token_denom.clone()).unwrap();
         assert_eq!(contract_lp_token_balance, amount_to_send);
 
+        let withdraw_amount = contract_lp_token_balance / Uint128::from(2u128);
+
         // Simulate withdraw liquidity to get expected out assets
         let simulate_query = QueryMsg::SimulateWithdrawLiquidty {
-            amount: contract_lp_token_balance,
+            amount: withdraw_amount,
         };
         let expected_out: AssetList = wasm.query(&contract_addr, &simulate_query).unwrap();
 
         // Withdraw liquidity with min_out one more than expected_out. Should fail.
-        let unwrap = Unwrap::Err("but expected");
+        let error_msg = match &pool_type {
+            PairType::Custom(t) if t == "concentrated" => {
+                "Min out is not supported for concentrated liquidity pools"
+            }
+            _ => "but expected",
+        };
+        let unwrap = Unwrap::Err(error_msg);
         let min_out: AssetList = expected_out
             .to_vec()
             .into_iter()
@@ -223,7 +240,7 @@ mod tests {
             .collect::<Vec<_>>()
             .into();
         let withdraw_msg = ExecuteMsg::WithdrawLiquidity {
-            amount: contract_lp_token_balance,
+            amount: withdraw_amount,
             min_out,
         };
         unwrap.unwrap(runner.execute_cosmos_msgs::<MsgExecuteContractResponse>(
@@ -233,10 +250,44 @@ mod tests {
 
         let _pool_res: PoolResponse = wasm.query(&pair_addr, &PairQueryMsg::Pool {}).unwrap();
 
+        let min_out = match &pool_type {
+            PairType::Custom(t) if t == "concentrated" => AssetList::new(),
+            _ => expected_out.clone(),
+        };
+
         // Withdraw liquidity with expected_out as min_out. Should succeed.
         let withdraw_msg = ExecuteMsg::WithdrawLiquidity {
-            amount: contract_lp_token_balance,
-            min_out: expected_out.clone(),
+            amount: withdraw_amount,
+            min_out,
+        };
+        runner
+            .execute_cosmos_msgs::<MsgExecuteContractResponse>(
+                &[withdraw_msg.into_cosmos_msg(contract_addr.clone(), vec![])],
+                admin,
+            )
+            .unwrap();
+
+        // Query LP token balance after
+        let lp_token_balance_after =
+            bank_balance_query(&runner, contract_addr.clone(), lp_token_denom.clone()).unwrap();
+
+        // Assert that LP token balance is correct
+        assert_eq!(
+            lp_token_balance_after,
+            contract_lp_token_balance - withdraw_amount
+        );
+
+        // Query contract asset balances, assert that all were returned
+        for asset in asset_list.into_iter() {
+            let asset_balance = query_asset_balance(&runner, &asset.info, &contract_addr);
+            let expected_balance = expected_out.find(&asset.info).unwrap().amount;
+            assert_eq!(asset_balance, expected_balance);
+        }
+
+        // Withdraw liquidity with min_out equal to zero. Should succeed.
+        let withdraw_msg = ExecuteMsg::WithdrawLiquidity {
+            amount: withdraw_amount,
+            min_out: AssetList::new(),
         };
         runner
             .execute_cosmos_msgs::<MsgExecuteContractResponse>(
@@ -251,13 +302,6 @@ mod tests {
 
         // Assert that LP token balance is zero after withdrawing all liquidity
         assert_eq!(lp_token_balance_after, Uint128::zero());
-
-        // Query contract asset balances, assert that all were returned
-        for asset in asset_list.into_iter() {
-            let asset_balance = query_asset_balance(&runner, &asset.info, &contract_addr);
-            let expected_balance = expected_out.find(&asset.info).unwrap().amount;
-            assert_eq!(asset_balance, expected_balance);
-        }
     }
 
     fn stake_all_lp_tokens<'a, R: Runner<'a>>(

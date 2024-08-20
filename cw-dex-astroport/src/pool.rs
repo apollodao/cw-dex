@@ -155,6 +155,17 @@ impl Pool for AstroportPool {
     ) -> Result<Response, CwDexError> {
         let (funds, cw20s) = separate_natives_and_cw20s(&assets);
 
+        // Ensure min_out is not set for concentrated liquidity pools, as they
+        // do not support min_out
+        match &self.pair_type {
+            PairType::Custom(custom) if custom == "concentrated" => {
+                if min_out != Uint128::zero() {
+                    return Err(CwDexError::MinOutNotSupported {});
+                }
+            }
+            _ => {}
+        }
+
         // Increase allowance on all Cw20s
         let allowance_msgs: Vec<CosmosMsg> = cw20s
             .into_iter()
@@ -251,26 +262,42 @@ impl Pool for AstroportPool {
                 .add_message(withdraw_liquidity)
                 .add_event(event))
         } else if let AssetInfoBase::Native(token_denom) = &asset.info {
-            // Liquidity manager requires min_out to contain all assets in the pool
-            for asset in &self.pool_assets {
-                if min_out.find(asset).is_none() {
-                    // Add one unit as AssetList does not allow zero amounts (calls self.purge on
-                    // add)
-                    min_out.add(&Asset::new(asset.clone(), Uint128::one()))?;
+            // Ensure min_out is not set for concentrated liquidity pools, as they
+            // do not support min_out
+            match &self.pair_type {
+                PairType::Custom(custom) if custom == "concentrated" => {
+                    if min_out.len() > 0 || min_out.into_iter().any(|x| x.amount > Uint128::zero())
+                    {
+                        return Err(CwDexError::MinOutNotSupported {});
+                    }
                 }
+                _ => {}
             }
+
+            let min_assets_to_receive = if min_out.len() > 0 {
+                let mut min_assets: Vec<astroport_v5::asset::Asset> = vec![];
+                // Astroport requires min_assets_to_receive to contain all assets in the pool
+                for asset_info in &self.pool_assets {
+                    match min_out.find(asset_info) {
+                        Some(asset) => {
+                            min_assets.push(asset_to_astroport_v5_asset(asset));
+                        }
+                        None => {
+                            let asset = Asset::new(asset_info.clone(), Uint128::zero());
+                            min_assets.push(asset_to_astroport_v5_asset(&asset));
+                        }
+                    }
+                }
+                Some(min_assets)
+            } else {
+                None
+            };
 
             let withdraw_liquidity = CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: self.pair_addr.to_string(),
                 msg: to_json_binary(&astroport_v5::pair::ExecuteMsg::WithdrawLiquidity {
                     assets: vec![],
-                    min_assets_to_receive: Some(
-                        min_out
-                            .to_vec()
-                            .iter()
-                            .map(asset_to_astroport_v5_asset)
-                            .collect(),
-                    ),
+                    min_assets_to_receive,
                 })?,
                 funds: coins(asset.amount.u128(), token_denom),
             });
