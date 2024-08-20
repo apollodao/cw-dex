@@ -34,7 +34,6 @@ test-case = "3.0.0"
 proptest = "1.0.0"
 cw-multi-test = "=1.2.0"
 apollo-cw-multi-test = { git = "https://github.com/apollodao/cw-multi-test.git", rev = "7e7bc2b91a8199c47815b45ef23b3ab07390ae3a",features = ["stargate"] }
-getrandom = { version = "0.2", features = ["js"] }
 
 # Workspace packages
 cw-dex = { path = "cw-dex", version = "0.5.3" }

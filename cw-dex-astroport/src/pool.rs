@@ -106,9 +106,9 @@ impl AstroportPool {
                 Ok(pool)
             }
             AssetInfo::Native(native_denom) => {
-                // To figure out if the native denom is a LP token, we need to check which address
-                // created the native denom and check if that address is an Astroport pair
-                // contract.
+                // To figure out if the native denom is a LP token, we need to check which
+                // address created the native denom and check if that address is
+                // an Astroport pair contract.
                 let denom_authority_metadata = parse_address(native_denom)?;
 
                 // Try to create an `AstroportPool` object with the creator address. This will

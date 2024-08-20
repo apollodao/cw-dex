@@ -1,7 +1,6 @@
 mod tests {
     use apollo_cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
-    use apollo_cw_multi_test::BasicAppBuilder;
-    use apollo_cw_multi_test::WasmKeeper;
+    use apollo_cw_multi_test::{BasicAppBuilder, WasmKeeper};
     use apollo_utils::assets::separate_natives_and_cw20s;
     use apollo_utils::coins::coin_from_str;
     use apollo_utils::submessages::{find_event, parse_attribute_value};
