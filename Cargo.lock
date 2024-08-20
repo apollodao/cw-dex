@@ -243,6 +243,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "astroport-liquidity-manager"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "add163cbe65b61f57c427c57bbfaef5a0848ac5dd822835c94b76587584c36ca"
+dependencies = [
+ "astroport 3.11.1",
+ "astroport-factory",
+ "astroport-pair 1.5.1",
+ "astroport-pair-stable 3.4.0",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 1.2.0",
+ "cw20 0.15.1",
+ "cw20-base 0.15.1",
+ "thiserror",
+]
+
+[[package]]
 name = "astroport-maker"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -270,6 +288,24 @@ dependencies = [
  "cosmwasm-storage",
  "cw-storage-plus 0.15.1",
  "cw2 0.15.1",
+ "thiserror",
+]
+
+[[package]]
+name = "astroport-pair"
+version = "1.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4336db82506bc3aaf52e194711ed0785896ad92825eb18d870d535023e33b666"
+dependencies = [
+ "astroport 3.11.1",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 0.15.1",
+ "cw-utils 1.0.3",
+ "cw2 0.15.1",
+ "cw20 0.15.1",
+ "integer-sqrt",
+ "protobuf 2.28.0",
  "thiserror",
 ]
 
@@ -307,6 +343,24 @@ dependencies = [
  "cw2 1.1.2",
  "cw20 1.1.2",
  "itertools 0.12.1",
+ "thiserror",
+]
+
+[[package]]
+name = "astroport-pair-stable"
+version = "3.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "45c0557efba343a120a68209770e4ee4caa28f74283828eb01089d4080bd4384"
+dependencies = [
+ "astroport 3.11.1",
+ "astroport-circular-buffer 0.1.0",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 0.15.1",
+ "cw-utils 1.0.3",
+ "cw2 0.15.1",
+ "cw20 0.15.1",
+ "itertools 0.10.5",
  "thiserror",
 ]
 
@@ -1053,9 +1107,9 @@ dependencies = [
 
 [[package]]
 name = "cw-it"
-version = "0.4.0-rc.3"
+version = "0.4.0-rc.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e076bfe2110e64d68d71c43845984ecd0b3214dcf853f57d39d978494da68968"
+checksum = "7c27fe9fad53aebcf8c956226eb744568caafc29f696ec353204d4ea515a8a9e"
 dependencies = [
  "anyhow",
  "apollo-cw-multi-test",
@@ -1064,11 +1118,12 @@ dependencies = [
  "astroport 5.2.0",
  "astroport-factory",
  "astroport-incentives",
+ "astroport-liquidity-manager",
  "astroport-maker",
  "astroport-native-coin-registry",
- "astroport-pair",
+ "astroport-pair 2.0.1",
  "astroport-pair-concentrated",
- "astroport-pair-stable",
+ "astroport-pair-stable 4.0.0",
  "astroport-router",
  "astroport-staking",
  "astroport-token",
@@ -2070,7 +2125,7 @@ dependencies = [
  "cosmwasm-std",
  "prost 0.12.6",
  "prost-types 0.12.3",
- "protobuf",
+ "protobuf 3.5.0",
  "schemars",
  "serde",
  "serde-json-wasm 1.0.1",
@@ -2563,6 +2618,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "193898f59edcf43c26227dcd4c8427f00d99d61e95dcde58dabd49fa291d470e"
 dependencies = [
  "prost 0.12.6",
+]
+
+[[package]]
+name = "protobuf"
+version = "2.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "106dd99e98437432fed6519dedecfade6a06a73bb7b2a1e019fdd2bee5778d94"
+dependencies = [
+ "bytes",
 ]
 
 [[package]]

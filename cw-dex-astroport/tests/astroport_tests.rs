@@ -67,6 +67,7 @@ mod tests {
     fn setup_pool_and_testing_contract<'a>(
         runner: &'a TestRunner<'a>,
         pool_type: PairType,
+        use_liquidity_manager: bool,
         initial_liquidity: Vec<(&str, u64)>,
     ) -> RunnerResult<(
         Vec<SigningAccount>,
@@ -79,6 +80,7 @@ mod tests {
         setup_pool_and_test_contract(
             runner,
             pool_type,
+            use_liquidity_manager,
             initial_liquidity,
             2,
             TEST_CONTRACT_WASM_FILE_PATH,
@@ -86,19 +88,30 @@ mod tests {
         )
     }
 
-    #[test_case(PairType::Xyk { }, vec![("uluna",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: native-cw20")]
-    #[test_case(PairType::Xyk { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: cw20-cw20")]
-    #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: stableswap native-cw20")]
-    #[test_case(PairType::Stable { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: stableswap cw20-cw20")]
-    #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "provide_liquidity: stableswap native-native")]
-    #[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: concentrated native-cw20")]
-    #[test_case(PairType::Custom("concentrated".to_string()), vec![("apollo",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: concentrated cw20-cw20")]
-    #[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "provide_liquidity: concentrated native-native")]
-    pub fn test_provide_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str, u64)>) {
+    #[test_case(PairType::Xyk { }, vec![("uluna",1_000_000), ("astro", 1_000_000)], false; "provide_liquidity: native-cw20, no liq manager")]
+    #[test_case(PairType::Xyk { }, vec![("apollo",1_000_000), ("astro", 1_000_000)], false; "provide_liquidity: cw20-cw20, no liq manager")]
+    #[test_case(PairType::Xyk { }, vec![("uluna",1_000_000), ("uatom", 1_000_000)], false; "provide_liquidity: native-native, no liq manager")]
+    #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("astro", 1_000_000)], false; "provide_liquidity: stableswap native-cw20, no liq manager")]
+    #[test_case(PairType::Stable { }, vec![("apollo",1_000_000), ("astro", 1_000_000)], false; "provide_liquidity: stableswap cw20-cw20, no liq manager")]
+    #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("uatom", 1_000_000)], false; "provide_liquidity: stableswap native-native, no liq manager")]
+    #[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("astro", 1_000_000)], false; "provide_liquidity: concentrated native-cw20, no liq manager")]
+    #[test_case(PairType::Custom("concentrated".to_string()), vec![("apollo",1_000_000), ("astro", 1_000_000)], false; "provide_liquidity: concentrated cw20-cw20, no liq manager")]
+    #[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("uatom", 1_000_000)], false; "provide_liquidity: concentrated native-native, no liq manager")]
+    pub fn test_provide_liquidity(
+        pool_type: PairType,
+        initial_liquidity: Vec<(&str, u64)>,
+        use_liquidity_manager: bool,
+    ) {
         let owned_runner = get_test_runner();
         let runner = owned_runner.as_ref();
         let (accs, lp_token_denom, pair_addr, contract_addr, asset_list, _) =
-            setup_pool_and_testing_contract(&runner, pool_type.clone(), initial_liquidity).unwrap();
+            setup_pool_and_testing_contract(
+                &runner,
+                pool_type.clone(),
+                use_liquidity_manager,
+                initial_liquidity,
+            )
+            .unwrap();
         let admin = &accs[0];
         let wasm = Wasm::new(&runner);
         let _pair_config_res: PairInfo = wasm.query(&pair_addr, &PairQueryMsg::Pair {}).unwrap();
@@ -193,7 +206,8 @@ mod tests {
         let owned_runner = get_test_runner();
         let runner = owned_runner.as_ref();
         let (accs, lp_token_denom, pair_addr, contract_addr, asset_list, _) =
-            setup_pool_and_testing_contract(&runner, pool_type.clone(), initial_liquidity).unwrap();
+            setup_pool_and_testing_contract(&runner, pool_type.clone(), false, initial_liquidity)
+                .unwrap();
         let admin = &accs[0];
 
         let admin_lp_token_balance =
@@ -346,7 +360,7 @@ mod tests {
         let owned_runner = get_test_runner();
         let runner = owned_runner.as_ref();
         let (accs, lp_token_denom, _pair_addr, contract_addr, _asset_list, _) =
-            setup_pool_and_testing_contract(&runner, pool_type, initial_liquidity).unwrap();
+            setup_pool_and_testing_contract(&runner, pool_type, false, initial_liquidity).unwrap();
 
         let admin = &accs[0];
 
@@ -437,7 +451,7 @@ mod tests {
         let owned_runner = get_test_runner();
         let runner = owned_runner.as_ref();
         let (accs, _lp_token_addr, _pair_addr, contract_addr, asset_list, _) =
-            setup_pool_and_testing_contract(&runner, pool_type, initial_liquidity).unwrap();
+            setup_pool_and_testing_contract(&runner, pool_type, false, initial_liquidity).unwrap();
 
         let admin = &accs[0];
         let wasm = Wasm::new(&runner);
@@ -519,7 +533,7 @@ mod tests {
             testing_contract_addr,
             _asset_list,
             astroport_contracts,
-        ) = setup_pool_and_testing_contract(&runner, pool_type, initial_liquidity).unwrap();
+        ) = setup_pool_and_testing_contract(&runner, pool_type, false, initial_liquidity).unwrap();
 
         let admin = &accs[0];
 
@@ -711,6 +725,7 @@ mod tests {
             setup_pool_and_testing_contract(
                 &runner,
                 PairType::Xyk {},
+                false,
                 vec![("uluna", 1_000_000), ("uatom", 1_000_000)],
             )
             .unwrap();

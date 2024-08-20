@@ -28,6 +28,7 @@ use crate::{common_pcl_params, cw20_mint, instantiate_cw20};
 pub fn setup_pool_and_test_contract<'a>(
     runner: &'a TestRunner<'a>,
     pool_type: PairType,
+    use_liquidity_manager: bool,
     initial_liquidity: Vec<(&str, u64)>,
     native_denom_count: usize,
     wasm_file_path: &str,
@@ -277,6 +278,12 @@ pub fn setup_pool_and_test_contract<'a>(
     };
     let code_id = upload_wasm_file(runner, &accs[0], contract).unwrap();
 
+    let liquidity_manager = if use_liquidity_manager {
+        Some(astroport_contracts.liquidity_manager.address.clone())
+    } else {
+        None
+    };
+
     // Instantiate the test contract
     let contract_addr = instantiate_test_astroport_contract(
         runner,
@@ -287,6 +294,7 @@ pub fn setup_pool_and_test_contract<'a>(
             astroport_contracts.astro_token.address.clone(),
         )),
         lp_token_denom.clone(),
+        liquidity_manager,
         &accs[0],
     )?;
 
@@ -308,6 +316,7 @@ pub fn instantiate_test_astroport_contract<'a, R: Runner<'a>>(
     incentives_addr: String,
     astro_token: AssetInfo,
     lp_token: String,
+    liquidity_manager_addr: Option<String>,
     signer: &SigningAccount,
 ) -> RunnerResult<String> {
     let init_msg = AstroportContractInstantiateMsg {
@@ -315,6 +324,7 @@ pub fn instantiate_test_astroport_contract<'a, R: Runner<'a>>(
         lp_token,
         incentives_addr,
         astro_token,
+        liquidity_manager_addr,
     };
 
     let wasm = Wasm::new(runner);

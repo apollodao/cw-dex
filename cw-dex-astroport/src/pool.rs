@@ -63,9 +63,25 @@ impl AstroportPool {
             _ => Ok(()),
         }?;
 
+        let lp_token = AssetInfo::from_str(deps.api, &pair_info.liquidity_token);
+
+        // Only allow using liquidity manager if LP token is a CW20 token
+        if lp_token.is_native() && liquidity_manager.is_some() {
+            return Err(StdError::generic_err(
+                "Liquidity manager is not supported for native LP tokens",
+            )
+            .into());
+        }
+        // Require liquidity manager to be set if LP token is a CW20 token
+        if !lp_token.is_native() && liquidity_manager.is_none() {
+            return Err(
+                StdError::generic_err("Liquidity manager must be set for CW20 LP tokens").into(),
+            );
+        }
+
         Ok(Self {
             pair_addr,
-            lp_token: AssetInfo::from_str(deps.api, &pair_info.liquidity_token),
+            lp_token,
             pool_assets: pair_info
                 .asset_infos
                 .into_iter()
@@ -155,16 +171,22 @@ impl Pool for AstroportPool {
     ) -> Result<Response, CwDexError> {
         let (funds, cw20s) = separate_natives_and_cw20s(&assets);
 
-        // Ensure min_out is not set for concentrated liquidity pools, as they
-        // do not support min_out
-        match &self.pair_type {
-            PairType::Custom(custom) if custom == "concentrated" => {
-                if min_out != Uint128::zero() {
-                    return Err(CwDexError::MinOutNotSupported {});
+        let contract_address = if let Some(liquidity_manager) = &self.liquidity_manager {
+            liquidity_manager
+        } else {
+            // Ensure min_out is not set for concentrated liquidity pools, as they
+            // do not support min_out
+            match &self.pair_type {
+                PairType::Custom(custom) if custom == "concentrated" => {
+                    if min_out != Uint128::zero() {
+                        return Err(CwDexError::MinOutNotSupported {});
+                    }
                 }
+                _ => {}
             }
-            _ => {}
-        }
+
+            &self.pair_addr
+        };
 
         // Increase allowance on all Cw20s
         let allowance_msgs: Vec<CosmosMsg> = cw20s
@@ -173,7 +195,7 @@ impl Pool for AstroportPool {
                 Ok(CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr: asset.address,
                     msg: to_json_binary(&Cw20ExecuteMsg::IncreaseAllowance {
-                        spender: self.pair_addr.to_string(),
+                        spender: contract_address.to_string(),
                         amount: asset.amount,
                         expires: Some(Expiration::AtHeight(env.block.height + 1)),
                     })?,
@@ -191,17 +213,33 @@ impl Pool for AstroportPool {
         }
 
         // Create the provide liquidity message
-        let provide_liquidity_msg = CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: self.pair_addr.to_string(),
-            msg: to_json_binary(&astroport_v5::pair::ExecuteMsg::ProvideLiquidity {
-                assets: assets_vec.iter().map(asset_to_astroport_v5_asset).collect(),
-                slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
-                auto_stake: Some(false),
-                receiver: None,
-                min_lp_to_receive: Some(min_out),
-            })?,
-            funds,
-        });
+        let provide_liquidity_msg = match &self.liquidity_manager {
+            Some(liquidity_manager) => CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: liquidity_manager.to_string(),
+                msg: to_json_binary(&liquidity_manager::ExecuteMsg::ProvideLiquidity {
+                    pair_addr: self.pair_addr.to_string(),
+                    min_lp_to_receive: Some(min_out),
+                    pair_msg: astroport::pair::ExecuteMsg::ProvideLiquidity {
+                        assets: assets_vec.into_elementwise(),
+                        slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
+                        auto_stake: Some(false),
+                        receiver: None,
+                    },
+                })?,
+                funds,
+            }),
+            None => CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: self.pair_addr.to_string(),
+                msg: to_json_binary(&astroport_v5::pair::ExecuteMsg::ProvideLiquidity {
+                    assets: assets_vec.iter().map(asset_to_astroport_v5_asset).collect(),
+                    slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
+                    auto_stake: Some(false),
+                    receiver: None,
+                    min_lp_to_receive: Some(min_out),
+                })?,
+                funds,
+            }),
+        };
 
         let event = Event::new("apollo/cw-dex/provide_liquidity")
             .add_attribute("pair_addr", &self.pair_addr)
@@ -221,7 +259,7 @@ impl Pool for AstroportPool {
         asset: Asset,
         mut min_out: AssetList,
     ) -> Result<Response, CwDexError> {
-        if let AssetInfoBase::Cw20(token_addr) = &asset.info {
+        if let Some(liquidity_manager) = &self.liquidity_manager {
             // Liquidity manager requires min_out to contain all assets in the pool
             for asset in &self.pool_assets {
                 if min_out.find(asset).is_none() {
@@ -232,15 +270,9 @@ impl Pool for AstroportPool {
             }
 
             let withdraw_liquidity = CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: token_addr.to_string(),
+                contract_addr: self.lp_token.to_string(),
                 msg: to_json_binary(&Cw20ExecuteMsg::Send {
-                    contract: self
-                        .liquidity_manager
-                        .clone()
-                        .ok_or(CwDexError::Std(StdError::generic_err(
-                            "Custom pair type is not supported",
-                        )))?
-                        .to_string(),
+                    contract: liquidity_manager.to_string(),
                     amount: asset.amount,
                     msg: to_json_binary(&liquidity_manager::Cw20HookMsg::WithdrawLiquidity {
                         pair_msg: astroport::pair::Cw20HookMsg::WithdrawLiquidity {
