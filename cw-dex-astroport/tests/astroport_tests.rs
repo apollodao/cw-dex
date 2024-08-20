@@ -1,6 +1,6 @@
 mod tests {
     use apollo_cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
-    use apollo_cw_multi_test::{BasicAppBuilder, WasmKeeper};
+    use apollo_cw_multi_test::{BasicAppBuilder, MockAddressGenerator, WasmKeeper};
     use apollo_utils::assets::separate_natives_and_cw20s;
     use apollo_utils::coins::coin_from_str;
     use apollo_utils::submessages::{find_event, parse_attribute_value};
@@ -17,7 +17,6 @@ mod tests {
     use cw_it::helpers::{bank_balance_query, bank_send, Unwrap};
     use cw_it::multi_test::api::MockApiBech32;
     use cw_it::multi_test::modules::TokenFactory;
-    use cw_it::multi_test::test_addresses::MockAddressGenerator;
     use cw_it::multi_test::MultiTestRunner;
     use cw_it::test_tube::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
     use cw_it::test_tube::{
@@ -42,7 +41,7 @@ mod tests {
                 TOKEN_FACTORY.register_msgs(&mut stargate_keeper);
 
                 let wasm_keeper: WasmKeeper<Empty, Empty> =
-                    WasmKeeper::new().with_address_generator(MockAddressGenerator);
+                    WasmKeeper::new_with_custom_address_generator(MockAddressGenerator);
 
                 let app = BasicAppBuilder::<Empty, Empty>::new()
                     .with_api(MockApiBech32::new("osmo"))
