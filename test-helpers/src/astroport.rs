@@ -256,9 +256,6 @@ pub fn setup_pool_and_test_contract<'a>(
     let res = wasm
         .execute(&pair_addr, &provide_liq_msg, &native_coins, admin)
         .unwrap();
-    println!("pair_addr: {}", pair_addr);
-    println!("admin: {}", admin.address());
-    println!("provide liquidity res: {:?}", res);
 
     // Upload test contract wasm file
     let contract = match &runner {

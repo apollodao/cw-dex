@@ -159,7 +159,6 @@ mod tests {
         // Provide liquidity with min_out one more than expected_out. Should fail.
         let unwrap = Unwrap::Err(error_msg);
         let min_out = expected_out + Uint128::new(1);
-        println!("min_out: {:?}", min_out);
         let provide_msg = ExecuteMsg::ProvideLiquidity {
             assets: asset_list.clone(),
             min_out,
@@ -188,7 +187,6 @@ mod tests {
 
         // Query LP token balance after
         let lp_token_after = query_asset_balance(&runner, &lp_token, &contract_addr);
-        // bank_balance_query(&runner, contract_addr.clone(), lp_token_denom).unwrap();
         assert_eq!(lp_token_after, expected_out);
 
         // Query asset balances in contract, assert that all were used
@@ -381,16 +379,6 @@ mod tests {
         // Query LP token balance
         let lp_token_balance =
             bank_balance_query(&runner, admin.address().clone(), lp_token_denom.clone()).unwrap();
-
-        // println!("admin_lp_token_balance: {:?}", lp_token_balance);
-        // // Send LP tokens to the test contract
-        // bank_send(
-        //     &runner,
-        //     admin,
-        //     &contract_addr.clone(),
-        //     coins(lp_token_balance.u128(), lp_token_denom.clone()),
-        // )
-        // .unwrap();
 
         // Stake LP tokens
         let events = stake_all_lp_tokens(
@@ -657,15 +645,6 @@ mod tests {
             )
             .unwrap();
         }
-
-        // Send LP tokens to the test contract
-        // bank_send(
-        //     &runner,
-        //     admin,
-        //     &testing_contract_addr.clone(),
-        //     coins(lp_token_balance.u128(), lp_token_denom.clone()),
-        // )
-        // .unwrap();
 
         // Stake LP tokens
         let _events = stake_all_lp_tokens(

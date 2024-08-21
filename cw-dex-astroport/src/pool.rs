@@ -86,7 +86,7 @@ impl AstroportPool {
                 .into_iter()
                 .map(astroport_v5_assetinfo_to_assetinfo)
                 .collect(),
-            pair_type: astroport_v5_pairtype_to_astroport_v3_pairtype(pair_info.pair_type),
+            pair_type: astroport_v5_pairtype_to_astroport_v2_pairtype(pair_info.pair_type),
             liquidity_manager,
         })
     }
@@ -513,7 +513,7 @@ pub fn asset_to_astroport_v5_asset(asset: &Asset) -> astroport_v5::asset::Asset 
     }
 }
 
-pub fn astroport_v5_pairtype_to_astroport_v3_pairtype(
+pub fn astroport_v5_pairtype_to_astroport_v2_pairtype(
     pair_type: astroport_v5::factory::PairType,
 ) -> PairType {
     match pair_type {
