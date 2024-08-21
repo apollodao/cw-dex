@@ -1038,7 +1038,7 @@ dependencies = [
 
 [[package]]
 name = "cw-dex-astroport"
-version = "0.2.0-rc.1"
+version = "0.2.0-rc.2"
 dependencies = [
  "apollo-cw-asset",
  "apollo-cw-multi-test",
