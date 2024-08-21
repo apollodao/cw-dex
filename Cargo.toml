@@ -36,8 +36,8 @@ cw-multi-test = "=1.2.0"
 apollo-cw-multi-test = { version = "0.19.0-rc.1" ,features = ["stargate"] }
 
 # Workspace packages
-cw-dex = { path = "cw-dex", version = "0.5.3" }
-cw-dex-astroport = { path = "cw-dex-astroport", version = "0.2.0-rc.1" }
+cw-dex = { path = "cw-dex", version = "0.5.4-rc.1" }
+cw-dex-astroport = { path = "cw-dex-astroport", version = "0.2.0-rc.2" }
 cw-dex-osmosis = { path = "cw-dex-osmosis", version = "0.1.0" }
 cw-dex-test-contract = { path = "test-contracts/package" }
 astroport-test-contract = { path = "test-contracts/astroport-test-contract" }
