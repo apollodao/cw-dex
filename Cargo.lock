@@ -1062,7 +1062,7 @@ dependencies = [
 
 [[package]]
 name = "cw-dex-osmosis"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "apollo-cw-asset",
  "apollo-utils",
