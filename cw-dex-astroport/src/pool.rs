@@ -69,14 +69,13 @@ impl AstroportPool {
         if lp_token.is_native() && liquidity_manager.is_some() {
             return Err(StdError::generic_err(
                 "Liquidity manager is not supported for native LP tokens",
-            )
-            .into());
+            ));
         }
         // Require liquidity manager to be set if LP token is a CW20 token
         if !lp_token.is_native() && liquidity_manager.is_none() {
-            return Err(
-                StdError::generic_err("Liquidity manager must be set for CW20 LP tokens").into(),
-            );
+            return Err(StdError::generic_err(
+                "Liquidity manager must be set for CW20 LP tokens",
+            ));
         }
 
         Ok(Self {
@@ -408,20 +407,42 @@ impl Pool for AstroportPool {
         _env: &Env,
         assets: AssetList,
     ) -> Result<Asset, CwDexError> {
-        let amount: Uint128 = deps.querier.query_wasm_smart(
-            self.pair_addr.to_string(),
-            &astroport_v5::pair::QueryMsg::SimulateProvide {
-                assets: assets.iter().map(asset_to_astroport_v5_asset).collect(),
-                slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
-            },
-        )?;
+        if let Some(liquidity_manager) = &self.liquidity_manager {
+            let amount: Uint128 = deps.querier.query_wasm_smart(
+                liquidity_manager.to_string(),
+                &liquidity_manager::QueryMsg::SimulateProvide {
+                    pair_addr: self.pair_addr.to_string(),
+                    pair_msg: astroport::pair::ExecuteMsg::ProvideLiquidity {
+                        assets: assets.into(),
+                        slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
+                        auto_stake: Some(false),
+                        receiver: None,
+                    },
+                },
+            )?;
 
-        let lp_token = Asset {
-            info: self.lp_token.clone(),
-            amount,
-        };
+            let lp_token = Asset {
+                info: self.lp_token.clone(),
+                amount,
+            };
 
-        Ok(lp_token)
+            Ok(lp_token)
+        } else {
+            let amount: Uint128 = deps.querier.query_wasm_smart(
+                self.pair_addr.to_string(),
+                &astroport_v5::pair::QueryMsg::SimulateProvide {
+                    assets: assets.iter().map(asset_to_astroport_v5_asset).collect(),
+                    slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
+                },
+            )?;
+
+            let lp_token = Asset {
+                info: self.lp_token.clone(),
+                amount,
+            };
+
+            Ok(lp_token)
+        }
     }
 
     fn simulate_withdraw_liquidity(
@@ -429,12 +450,22 @@ impl Pool for AstroportPool {
         deps: Deps,
         lp_token: &Asset,
     ) -> Result<AssetList, CwDexError> {
-        let assets: Vec<AstroAsset> = deps.querier.query_wasm_smart(
-            self.pair_addr.to_string(),
-            &astroport_v5::pair::QueryMsg::SimulateWithdraw {
-                lp_amount: lp_token.amount,
-            },
-        )?;
+        let assets: Vec<AstroAsset> = if let Some(liquidity_manager) = &self.liquidity_manager {
+            deps.querier.query_wasm_smart(
+                liquidity_manager.to_string(),
+                &liquidity_manager::QueryMsg::SimulateWithdraw {
+                    pair_addr: self.pair_addr.to_string(),
+                    lp_tokens: lp_token.amount,
+                },
+            )?
+        } else {
+            deps.querier.query_wasm_smart(
+                self.pair_addr.to_string(),
+                &astroport_v5::pair::QueryMsg::SimulateWithdraw {
+                    lp_amount: lp_token.amount,
+                },
+            )?
+        };
 
         Ok(assets.into())
     }

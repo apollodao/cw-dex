@@ -220,7 +220,7 @@ pub fn setup_pool_and_test_contract<'a>(
         PairType::Custom(t) => AstroportV5PairType::Custom(t.to_string()),
     };
 
-    let (pair_addr, lp_token_addr, lp_token_denom) = create_astroport_pair(
+    let (pair_addr, lp_token) = create_astroport_pair(
         runner,
         &astroport_contracts.factory.address,
         astroport_v5_pair_type,
@@ -293,14 +293,14 @@ pub fn setup_pool_and_test_contract<'a>(
         AssetInfo::cw20(Addr::unchecked(
             astroport_contracts.astro_token.address.clone(),
         )),
-        lp_token_denom.clone(),
+        lp_token.clone(),
         liquidity_manager,
         &accs[0],
     )?;
 
     Ok((
         accs,
-        lp_token_denom,
+        lp_token,
         pair_addr,
         contract_addr,
         asset_list,

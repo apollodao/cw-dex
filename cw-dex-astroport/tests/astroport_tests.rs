@@ -1,6 +1,5 @@
 mod tests {
     use apollo_cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
-    use apollo_cw_multi_test::{BasicAppBuilder, MockAddressGenerator, WasmKeeper};
     use apollo_utils::assets::separate_natives_and_cw20s;
     use apollo_utils::coins::coin_from_str;
     use apollo_utils::submessages::{find_event, parse_attribute_value};
@@ -11,10 +10,12 @@ mod tests {
     use cw_dex_astroport::AstroportPool;
     use cw_dex_test_contract::msg::{AstroportExecuteMsg, ExecuteMsg, QueryMsg};
     use cw_dex_test_helpers::astroport::setup_pool_and_test_contract;
-    use cw_dex_test_helpers::{cw20_transfer, query_asset_balance};
+    use cw_dex_test_helpers::{cw20_transfer, query_asset_balance, send_asset};
     use cw_it::astroport::utils::AstroportContracts;
-    use cw_it::cw_multi_test::{StargateKeeper, StargateMessageHandler};
-    use cw_it::helpers::{bank_balance_query, bank_send, Unwrap};
+    use cw_it::cw_multi_test::{
+        BasicAppBuilder, MockAddressGenerator, StargateKeeper, StargateMessageHandler, WasmKeeper,
+    };
+    use cw_it::helpers::{bank_balance_query, Unwrap};
     use cw_it::multi_test::api::MockApiBech32;
     use cw_it::multi_test::modules::TokenFactory;
     use cw_it::multi_test::MultiTestRunner;
@@ -26,7 +27,6 @@ mod tests {
     use cw_it::{OwnedTestRunner, TestRunner};
     use std::str::FromStr;
     use test_case::test_case;
-    // use cw_multi_test::BasicAppBuilder;
 
     #[cfg(feature = "osmosis-test-tube")]
     use cw_it::osmosis_test_tube::OsmosisTestApp;
@@ -104,7 +104,7 @@ mod tests {
     ) {
         let owned_runner = get_test_runner();
         let runner = owned_runner.as_ref();
-        let (accs, lp_token_denom, pair_addr, contract_addr, asset_list, _) =
+        let (accs, lp_token, pair_addr, contract_addr, asset_list, _) =
             setup_pool_and_testing_contract(
                 &runner,
                 pool_type.clone(),
@@ -116,9 +116,13 @@ mod tests {
         let wasm = Wasm::new(&runner);
         let _pair_config_res: PairInfo = wasm.query(&pair_addr, &PairQueryMsg::Pair {}).unwrap();
 
+        let lp_token = if lp_token.starts_with(admin.prefix()) || lp_token.starts_with("contract") {
+            AssetInfo::cw20(Addr::unchecked(&lp_token))
+        } else {
+            AssetInfo::native(lp_token.clone())
+        };
         // Check contract's LP token balance before providing liquidity
-        let lp_token_before =
-            bank_balance_query(&runner, contract_addr.clone(), lp_token_denom.clone()).unwrap();
+        let lp_token_before = query_asset_balance(&runner, &lp_token, &contract_addr);
 
         assert_eq!(lp_token_before, Uint128::zero());
 
@@ -183,8 +187,8 @@ mod tests {
             .unwrap();
 
         // Query LP token balance after
-        let lp_token_after =
-            bank_balance_query(&runner, contract_addr.clone(), lp_token_denom).unwrap();
+        let lp_token_after = query_asset_balance(&runner, &lp_token, &contract_addr);
+        // bank_balance_query(&runner, contract_addr.clone(), lp_token_denom).unwrap();
         assert_eq!(lp_token_after, expected_out);
 
         // Query asset balances in contract, assert that all were used
@@ -194,38 +198,50 @@ mod tests {
         }
     }
 
-    #[test_case(PairType::Xyk { }, vec![("uluna",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: xyk native-cw20")]
-    #[test_case(PairType::Xyk { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: xyk cw20-cw20")]
-    #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: stableswap native-cw20")]
-    #[test_case(PairType::Stable { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: stableswap cw20-cw20")]
-    #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "withdraw_liquidity: stableswap native-native")]
-    #[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: concentrated native-cw20")]
-    #[test_case(PairType::Custom("concentrated".to_string()), vec![("apollo",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: concentrated cw20-cw20")]
-    #[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "withdraw_liquidity: concentrated native-native")]
-    fn test_withdraw_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str, u64)>) {
+    #[test_case(PairType::Xyk { }, vec![("uluna",1_000_000), ("astro", 1_000_000)], false; "withdraw_liquidity: xyk native-cw20")]
+    #[test_case(PairType::Xyk { }, vec![("apollo",1_000_000), ("astro", 1_000_000)], false; "withdraw_liquidity: xyk cw20-cw20")]
+    #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("astro", 1_000_000)], false; "withdraw_liquidity: stableswap native-cw20")]
+    #[test_case(PairType::Stable { }, vec![("apollo",1_000_000), ("astro", 1_000_000)], false; "withdraw_liquidity: stableswap cw20-cw20")]
+    #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("uatom", 1_000_000)], false; "withdraw_liquidity: stableswap native-native")]
+    #[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("astro", 1_000_000)], false; "withdraw_liquidity: concentrated native-cw20")]
+    #[test_case(PairType::Custom("concentrated".to_string()), vec![("apollo",1_000_000), ("astro", 1_000_000)], false; "withdraw_liquidity: concentrated cw20-cw20")]
+    #[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("uatom", 1_000_000)], false; "withdraw_liquidity: concentrated native-native")]
+    fn test_withdraw_liquidity(
+        pool_type: PairType,
+        initial_liquidity: Vec<(&str, u64)>,
+        use_liquidity_manager: bool,
+    ) {
         let owned_runner = get_test_runner();
         let runner = owned_runner.as_ref();
-        let (accs, lp_token_denom, pair_addr, contract_addr, asset_list, _) =
-            setup_pool_and_testing_contract(&runner, pool_type.clone(), false, initial_liquidity)
-                .unwrap();
+        let (accs, lp_token, pair_addr, contract_addr, asset_list, _) =
+            setup_pool_and_testing_contract(
+                &runner,
+                pool_type.clone(),
+                use_liquidity_manager,
+                initial_liquidity,
+            )
+            .unwrap();
         let admin = &accs[0];
+        let wasm = Wasm::new(&runner);
 
-        let admin_lp_token_balance =
-            bank_balance_query(&runner, admin.address(), lp_token_denom.clone()).unwrap();
+        let lp_token = if lp_token.starts_with(admin.prefix()) || lp_token.starts_with("contract") {
+            AssetInfo::cw20(Addr::unchecked(&lp_token))
+        } else {
+            AssetInfo::native(lp_token.clone())
+        };
+
+        let admin_lp_token_balance = query_asset_balance(&runner, &lp_token, &admin.address());
 
         let amount_to_send = admin_lp_token_balance / Uint128::from(2u128);
-        let wasm = Wasm::new(&runner);
         // Send LP tokens to contract
-        bank_send(
+        send_asset(
             &runner,
+            Asset::new(lp_token.clone(), amount_to_send),
+            contract_addr.clone(),
             admin,
-            &contract_addr.clone(),
-            coins(amount_to_send.u128(), lp_token_denom.clone()),
-        )
-        .unwrap();
+        );
 
-        let contract_lp_token_balance =
-            bank_balance_query(&runner, contract_addr.clone(), lp_token_denom.clone()).unwrap();
+        let contract_lp_token_balance = query_asset_balance(&runner, &lp_token, &contract_addr);
         assert_eq!(contract_lp_token_balance, amount_to_send);
 
         let withdraw_amount = contract_lp_token_balance / Uint128::from(2u128);
@@ -282,8 +298,7 @@ mod tests {
             .unwrap();
 
         // Query LP token balance after
-        let lp_token_balance_after =
-            bank_balance_query(&runner, contract_addr.clone(), lp_token_denom.clone()).unwrap();
+        let lp_token_balance_after = query_asset_balance(&runner, &lp_token, &contract_addr);
 
         // Assert that LP token balance is correct
         assert_eq!(
@@ -311,8 +326,7 @@ mod tests {
             .unwrap();
 
         // Query LP token balance after
-        let lp_token_balance_after =
-            bank_balance_query(&runner, contract_addr.clone(), lp_token_denom).unwrap();
+        let lp_token_balance_after = query_asset_balance(&runner, &lp_token, &contract_addr);
 
         // Assert that LP token balance is zero after withdrawing all liquidity
         assert_eq!(lp_token_balance_after, Uint128::zero());

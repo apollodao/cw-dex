@@ -1,14 +1,14 @@
 use std::error::Error;
 use std::str::FromStr;
 
-use apollo_cw_asset::{AssetInfo, AssetList};
+use apollo_cw_asset::{Asset, AssetInfo, AssetList};
 use apollo_utils::assets::separate_natives_and_cw20s;
 use astroport::pair_concentrated::ConcentratedPoolParams;
-use cosmwasm_std::{Decimal, StdResult, Uint128};
+use cosmwasm_std::{coins, Decimal, StdResult, Uint128};
 use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 use cw20_base::msg::InstantiateMsg as Cw20InstantiateMsg;
 use cw_dex_test_contract::msg::ExecuteMsg;
-use cw_it::helpers::bank_balance_query;
+use cw_it::helpers::{bank_balance_query, bank_send};
 use cw_it::osmosis_std::types::cosmwasm::wasm::v1::MsgExecuteContractResponse;
 use cw_it::test_tube::{Account, Module, Runner, RunnerExecuteResult, SigningAccount, Wasm};
 
@@ -73,6 +73,36 @@ pub fn cw20_transfer<'a, R: Runner<'a>>(
         &[],
         signer,
     )
+}
+
+/// Sen a cw_asset::Asset to a recipient
+pub fn send_asset<'a, R: Runner<'a>>(
+    runner: &'a R,
+    asset: Asset,
+    recipient: String,
+    signer: &SigningAccount,
+) {
+    match asset.info {
+        AssetInfo::Cw20(cw20_addr) => {
+            cw20_transfer(
+                runner,
+                cw20_addr.to_string(),
+                recipient,
+                asset.amount,
+                signer,
+            )
+            .unwrap();
+        }
+        AssetInfo::Native(denom) => {
+            bank_send(
+                runner,
+                signer,
+                &recipient,
+                coins(asset.amount.u128(), denom),
+            )
+            .unwrap();
+        }
+    }
 }
 
 /// Query the balance of a cw20 token
