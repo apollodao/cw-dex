@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use apollo_cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use apollo_utils::iterators::IntoElementwise;
-use astroport::liquidity_manager;
+use astroport_v2::liquidity_manager;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     coins, to_json_binary, wasm_execute, Addr, CosmosMsg, Decimal, Deps, Env, Event,
@@ -14,7 +14,7 @@ use cw20::Cw20ExecuteMsg;
 use cw_utils::Expiration;
 
 use apollo_utils::assets::separate_natives_and_cw20s;
-use astroport::asset::Asset as AstroAsset;
+use astroport::asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo, PairInfo};
 use astroport::factory::PairType;
 use astroport::pair::{
     Cw20HookMsg as PairCw20HookMsg, ExecuteMsg as PairExecuteMsg, PoolResponse,
@@ -47,14 +47,11 @@ impl AstroportPool {
     pub fn new(deps: Deps, pair_addr: Addr, liquidity_manager: Option<Addr>) -> StdResult<Self> {
         let pair_info = deps
             .querier
-            .query_wasm_smart::<astroport_v5::asset::PairInfo>(
-                pair_addr.clone(),
-                &PairQueryMsg::Pair {},
-            )?;
+            .query_wasm_smart::<PairInfo>(pair_addr.clone(), &PairQueryMsg::Pair {})?;
 
         // Validate pair type. We only support XYK, stable swap, and PCL pools
         match &pair_info.pair_type {
-            astroport_v5::factory::PairType::Custom(t) => match t.as_str() {
+            PairType::Custom(t) => match t.as_str() {
                 "concentrated" => Ok(()),
 
                 "astroport-pair-xyk-sale-tax" => Ok(()),
@@ -86,7 +83,7 @@ impl AstroportPool {
                 .into_iter()
                 .map(astroport_v5_assetinfo_to_assetinfo)
                 .collect(),
-            pair_type: astroport_v5_pairtype_to_astroport_v2_pairtype(pair_info.pair_type),
+            pair_type: pair_info.pair_type,
             liquidity_manager,
         })
     }
@@ -218,7 +215,7 @@ impl Pool for AstroportPool {
                 msg: to_json_binary(&liquidity_manager::ExecuteMsg::ProvideLiquidity {
                     pair_addr: self.pair_addr.to_string(),
                     min_lp_to_receive: Some(min_out),
-                    pair_msg: astroport::pair::ExecuteMsg::ProvideLiquidity {
+                    pair_msg: astroport_v2::pair::ExecuteMsg::ProvideLiquidity {
                         assets: assets_vec.into_elementwise(),
                         slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
                         auto_stake: Some(false),
@@ -229,7 +226,7 @@ impl Pool for AstroportPool {
             }),
             None => CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: self.pair_addr.to_string(),
-                msg: to_json_binary(&astroport_v5::pair::ExecuteMsg::ProvideLiquidity {
+                msg: to_json_binary(&PairExecuteMsg::ProvideLiquidity {
                     assets: assets_vec.iter().map(asset_to_astroport_v5_asset).collect(),
                     slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
                     auto_stake: Some(false),
@@ -274,7 +271,7 @@ impl Pool for AstroportPool {
                     contract: liquidity_manager.to_string(),
                     amount: asset.amount,
                     msg: to_json_binary(&liquidity_manager::Cw20HookMsg::WithdrawLiquidity {
-                        pair_msg: astroport::pair::Cw20HookMsg::WithdrawLiquidity {
+                        pair_msg: astroport_v2::pair::Cw20HookMsg::WithdrawLiquidity {
                             // This field is currently not used...
                             assets: vec![],
                         },
@@ -306,7 +303,7 @@ impl Pool for AstroportPool {
             }
 
             let min_assets_to_receive = if min_out.len() > 0 {
-                let mut min_assets: Vec<astroport_v5::asset::Asset> = vec![];
+                let mut min_assets: Vec<AstroAsset> = vec![];
                 // Astroport requires min_assets_to_receive to contain all assets in the pool
                 for asset_info in &self.pool_assets {
                     match min_out.find(asset_info) {
@@ -326,7 +323,7 @@ impl Pool for AstroportPool {
 
             let withdraw_liquidity = CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: self.pair_addr.to_string(),
-                msg: to_json_binary(&astroport_v5::pair::ExecuteMsg::WithdrawLiquidity {
+                msg: to_json_binary(&PairExecuteMsg::WithdrawLiquidity {
                     assets: vec![],
                     min_assets_to_receive,
                 })?,
@@ -359,20 +356,17 @@ impl Pool for AstroportPool {
         // returns at least `min_out`.
         let belief_price = Some(Decimal::from_ratio(offer_asset.amount, min_out));
         let swap_msg = match &offer_asset.info {
-            AssetInfo::Native(_) => {
-                let asset = offer_asset.clone().into();
-                wasm_execute(
-                    self.pair_addr.to_string(),
-                    &PairExecuteMsg::Swap {
-                        offer_asset: asset,
-                        belief_price,
-                        max_spread: Some(Decimal::zero()),
-                        to: Some(env.contract.address.to_string()),
-                        ask_asset_info: Some(ask_asset_info.to_owned().into()),
-                    },
-                    vec![offer_asset.clone().try_into()?],
-                )
-            }
+            AssetInfo::Native(_) => wasm_execute(
+                self.pair_addr.to_string(),
+                &PairExecuteMsg::Swap {
+                    offer_asset: asset_to_astroport_v5_asset(&offer_asset),
+                    belief_price,
+                    max_spread: Some(Decimal::zero()),
+                    to: Some(env.contract.address.to_string()),
+                    ask_asset_info: Some(asset_info_to_astroport_v5_assetinfo(&ask_asset_info)),
+                },
+                vec![offer_asset.clone().try_into()?],
+            ),
             AssetInfo::Cw20(addr) => wasm_execute(
                 addr.to_string(),
                 &Cw20ExecuteMsg::Send {
@@ -382,7 +376,7 @@ impl Pool for AstroportPool {
                         belief_price,
                         max_spread: Some(Decimal::zero()),
                         to: Some(env.contract.address.to_string()),
-                        ask_asset_info: Some(ask_asset_info.to_owned().into()),
+                        ask_asset_info: Some(asset_info_to_astroport_v5_assetinfo(&ask_asset_info)),
                     })?,
                 },
                 vec![],
@@ -398,7 +392,7 @@ impl Pool for AstroportPool {
 
     fn get_pool_liquidity(&self, deps: Deps) -> Result<AssetList, CwDexError> {
         let resp = self.query_pool_info(&deps.querier)?;
-        Ok(resp.assets.to_vec().into())
+        Ok(astroport_v5_vec_asset_to_assetlist(resp.assets))
     }
 
     fn simulate_provide_liquidity(
@@ -412,7 +406,7 @@ impl Pool for AstroportPool {
                 liquidity_manager.to_string(),
                 &liquidity_manager::QueryMsg::SimulateProvide {
                     pair_addr: self.pair_addr.to_string(),
-                    pair_msg: astroport::pair::ExecuteMsg::ProvideLiquidity {
+                    pair_msg: astroport_v2::pair::ExecuteMsg::ProvideLiquidity {
                         assets: assets.into(),
                         slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
                         auto_stake: Some(false),
@@ -430,7 +424,7 @@ impl Pool for AstroportPool {
         } else {
             let amount: Uint128 = deps.querier.query_wasm_smart(
                 self.pair_addr.to_string(),
-                &astroport_v5::pair::QueryMsg::SimulateProvide {
+                &PairQueryMsg::SimulateProvide {
                     assets: assets.iter().map(asset_to_astroport_v5_asset).collect(),
                     slippage_tolerance: Some(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?),
                 },
@@ -461,13 +455,13 @@ impl Pool for AstroportPool {
         } else {
             deps.querier.query_wasm_smart(
                 self.pair_addr.to_string(),
-                &astroport_v5::pair::QueryMsg::SimulateWithdraw {
+                &PairQueryMsg::SimulateWithdraw {
                     lp_amount: lp_token.amount,
                 },
             )?
         };
 
-        Ok(assets.into())
+        Ok(astroport_v5_vec_asset_to_assetlist(assets))
     }
 
     fn simulate_swap(
@@ -481,8 +475,8 @@ impl Pool for AstroportPool {
             .query::<SimulationResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
                 contract_addr: self.pair_addr.to_string(),
                 msg: to_json_binary(&PairQueryMsg::Simulation {
-                    offer_asset: offer_asset.into(),
-                    ask_asset_info: Some(ask_asset_info.into()),
+                    offer_asset: asset_to_astroport_v5_asset(&offer_asset),
+                    ask_asset_info: Some(asset_info_to_astroport_v5_assetinfo(&ask_asset_info)),
                 })?,
             }))?
             .return_amount)
@@ -497,30 +491,47 @@ impl Pool for AstroportPool {
     }
 }
 
-pub fn astroport_v5_assetinfo_to_assetinfo(asset: astroport_v5::asset::AssetInfo) -> AssetInfo {
+pub fn astroport_v5_assetinfo_to_assetinfo(asset: AstroAssetInfo) -> AssetInfo {
     match asset {
-        astroport_v5::asset::AssetInfo::NativeToken { denom } => AssetInfo::native(denom),
-        astroport_v5::asset::AssetInfo::Token { contract_addr } => AssetInfo::cw20(contract_addr),
+        AstroAssetInfo::NativeToken { denom } => AssetInfo::native(denom),
+        AstroAssetInfo::Token { contract_addr } => AssetInfo::cw20(contract_addr),
     }
 }
 
-pub fn asset_to_astroport_v5_asset(asset: &Asset) -> astroport_v5::asset::Asset {
-    match &asset.info {
-        AssetInfoBase::Native(denom) => astroport_v5::asset::Asset::native(denom, asset.amount),
-        AssetInfo::Cw20(contract_addr) => {
-            astroport_v5::asset::Asset::cw20(contract_addr.clone(), asset.amount)
+pub fn astroport_v5_asset_to_asset(asset: AstroAsset) -> Asset {
+    match asset.info {
+        AstroAssetInfo::NativeToken { denom } => Asset::new(AssetInfo::native(denom), asset.amount),
+        AstroAssetInfo::Token { contract_addr } => {
+            Asset::new(AssetInfo::cw20(contract_addr), asset.amount)
         }
     }
 }
 
-pub fn astroport_v5_pairtype_to_astroport_v2_pairtype(
-    pair_type: astroport_v5::factory::PairType,
-) -> PairType {
-    match pair_type {
-        astroport_v5::factory::PairType::Xyk {} => PairType::Xyk {},
-        astroport_v5::factory::PairType::Stable {} => PairType::Stable {},
-        astroport_v5::factory::PairType::Custom(pair_type) => PairType::Custom(pair_type),
+pub fn asset_to_astroport_v5_asset(asset: &Asset) -> AstroAsset {
+    match &asset.info {
+        AssetInfoBase::Native(denom) => AstroAsset::native(denom, asset.amount),
+        AssetInfo::Cw20(contract_addr) => AstroAsset::cw20(contract_addr.clone(), asset.amount),
     }
+}
+
+pub fn asset_info_to_astroport_v5_assetinfo(asset: &AssetInfo) -> AstroAssetInfo {
+    match asset {
+        AssetInfo::Native(denom) => AstroAssetInfo::NativeToken {
+            denom: denom.clone(),
+        },
+        AssetInfo::Cw20(contract_addr) => AstroAssetInfo::Token {
+            contract_addr: contract_addr.clone(),
+        },
+    }
+}
+
+pub fn astroport_v5_vec_asset_to_assetlist(assets: Vec<AstroAsset>) -> AssetList {
+    AssetList::from(
+        assets
+            .into_iter()
+            .map(astroport_v5_asset_to_asset)
+            .collect::<Vec<Asset>>(),
+    )
 }
 
 fn parse_address(input_string: &str) -> Result<String, CwDexError> {

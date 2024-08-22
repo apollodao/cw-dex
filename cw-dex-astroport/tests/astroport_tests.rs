@@ -3,9 +3,9 @@ mod tests {
     use apollo_utils::assets::separate_natives_and_cw20s;
     use apollo_utils::coins::coin_from_str;
     use apollo_utils::submessages::{find_event, parse_attribute_value};
+    use astroport::asset::{Asset as AstroportAsset, PairInfo};
     use astroport::factory::PairType;
-    use astroport_v5::asset::{Asset as AstroportAsset, PairInfo};
-    use astroport_v5::pair::{PoolResponse, QueryMsg as PairQueryMsg};
+    use astroport::pair::{PoolResponse, QueryMsg as PairQueryMsg};
     use cosmwasm_std::{assert_approx_eq, coin, coins, Addr, Coin, Empty, SubMsgResponse, Uint128};
     use cw_dex_astroport::AstroportPool;
     use cw_dex_test_contract::msg::{AstroportExecuteMsg, ExecuteMsg, QueryMsg};
@@ -612,7 +612,7 @@ mod tests {
         for (incentive, periods) in incentives.clone() {
             // Increase allowance for cw20 incentives and construct funds
             let funds = match incentive.info.clone() {
-                astroport_v5::asset::AssetInfo::Token { contract_addr } => {
+                astroport::asset::AssetInfo::Token { contract_addr } => {
                     // Increase allowance for incentives contract
                     wasm.execute(
                         contract_addr.as_str(),
@@ -627,15 +627,15 @@ mod tests {
                     .unwrap();
                     vec![]
                 }
-                astroport_v5::asset::AssetInfo::NativeToken { denom } => {
+                astroport::asset::AssetInfo::NativeToken { denom } => {
                     vec![coin(incentive.amount.u128(), &denom)]
                 }
             };
             wasm.execute(
                 &astroport_contracts.incentives.address,
-                &astroport_v5::incentives::ExecuteMsg::Incentivize {
+                &astroport::incentives::ExecuteMsg::Incentivize {
                     lp_token: lp_token_denom.clone(),
-                    schedule: astroport_v5::incentives::InputSchedule {
+                    schedule: astroport::incentives::InputSchedule {
                         reward: incentive,
                         duration_periods: periods,
                     },
@@ -662,7 +662,7 @@ mod tests {
         let pending_rewards: Vec<AstroportAsset> = wasm
             .query(
                 &astroport_contracts.incentives.address,
-                &astroport_v5::incentives::QueryMsg::PendingRewards {
+                &astroport::incentives::QueryMsg::PendingRewards {
                     lp_token: lp_token_denom.clone(),
                     user: testing_contract_addr.clone(),
                 },
@@ -681,10 +681,10 @@ mod tests {
         for asset in pending_rewards.clone() {
             // Convert astroport asset info to asset info
             let asset_info = match asset.info {
-                astroport_v5::asset::AssetInfo::Token { contract_addr } => {
+                astroport::asset::AssetInfo::Token { contract_addr } => {
                     AssetInfo::Cw20(contract_addr)
                 }
-                astroport_v5::asset::AssetInfo::NativeToken { denom } => AssetInfo::Native(denom),
+                astroport::asset::AssetInfo::NativeToken { denom } => AssetInfo::Native(denom),
             };
 
             let amount = cw_dex_pending_rewards.find(&asset_info).unwrap().amount;

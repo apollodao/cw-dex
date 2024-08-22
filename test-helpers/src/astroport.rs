@@ -3,7 +3,6 @@ use apollo_utils::assets::separate_natives_and_cw20s;
 use astroport::asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo};
 use astroport::factory::PairType;
 use astroport::pair::{ExecuteMsg as PairExecuteMsg, StablePoolParams};
-use astroport_v5::factory::PairType as AstroportV5PairType;
 use cosmwasm_std::{to_json_binary, Addr, Coin, Decimal, Uint128};
 use cw20::{Cw20ExecuteMsg, MinterResponse};
 use cw20_base::msg::InstantiateMsg as Cw20InstantiateMsg;
@@ -214,16 +213,11 @@ pub fn setup_pool_and_test_contract<'a>(
         },
         _ => None,
     };
-    let astroport_v5_pair_type = match &pool_type {
-        PairType::Xyk {} => AstroportV5PairType::Xyk {},
-        PairType::Stable {} => AstroportV5PairType::Stable {},
-        PairType::Custom(t) => AstroportV5PairType::Custom(t.to_string()),
-    };
 
     let (pair_addr, lp_token) = create_astroport_pair(
         runner,
         &astroport_contracts.factory.address,
-        astroport_v5_pair_type,
+        pool_type,
         [astro_asset_infos[0].clone(), astro_asset_infos[1].clone()],
         init_params,
         admin,
@@ -251,6 +245,7 @@ pub fn setup_pool_and_test_contract<'a>(
         slippage_tolerance: Some(Decimal::from_str("0.02").unwrap()),
         auto_stake: Some(false),
         receiver: None,
+        min_lp_to_receive: None,
     };
     let (native_coins, _) = separate_natives_and_cw20s(&asset_list);
     let res = wasm

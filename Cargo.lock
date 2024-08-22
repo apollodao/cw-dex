@@ -155,9 +155,9 @@ dependencies = [
 
 [[package]]
 name = "astroport"
-version = "5.2.0"
+version = "5.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c4af74ada17a13fe7b75d0d529367eb5dcb15e06fd7e744892191856eedc742"
+checksum = "0b3b225e86694e2fd1adbf230581bce1690a871585aec9edd64b022a313a8493"
 dependencies = [
  "astroport-circular-buffer 0.2.0",
  "cosmos-sdk-proto 0.19.0",
@@ -202,7 +202,7 @@ version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68abcc896255acba2f4aa39f239a1e8361a6035d7bc712442da122dc31f6f959"
 dependencies = [
- "astroport 5.2.0",
+ "astroport 5.3.0",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-storage-plus 1.2.0",
@@ -315,7 +315,7 @@ version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a5e6cd4508d45d89f9f44b607eb482aa614fa54274c46746d6f251bf10b27ae"
 dependencies = [
- "astroport 5.2.0",
+ "astroport 5.3.0",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-storage-plus 1.2.0",
@@ -328,11 +328,11 @@ dependencies = [
 
 [[package]]
 name = "astroport-pair-concentrated"
-version = "4.0.1"
+version = "4.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a32d9cadee60182935879a465d7bff7733b917e814ce29d97d6903f7336119a"
+checksum = "a85a79c523843d180a7ca3c1607c12f9d6146ab332fc7209dee3907c191ebb04"
 dependencies = [
- "astroport 5.2.0",
+ "astroport 5.3.0",
  "astroport-circular-buffer 0.2.0",
  "astroport-factory",
  "astroport-pcl-common",
@@ -370,7 +370,7 @@ version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3386d5771faedd33fc7741cb0a7082cbdc0416d42f1bd051d4f1a0b987248e3c"
 dependencies = [
- "astroport 5.2.0",
+ "astroport 5.3.0",
  "astroport-circular-buffer 0.2.0",
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -388,7 +388,7 @@ version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a810d9ff3459d62a6288314c01201b4270e96fa518bfa36ef759a4c76b87334f"
 dependencies = [
- "astroport 5.2.0",
+ "astroport 5.3.0",
  "astroport-factory",
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1020,7 +1020,7 @@ version = "0.5.4-rc.1"
 dependencies = [
  "apollo-cw-asset",
  "apollo-utils",
- "astroport 2.9.5",
+ "astroport 5.3.0",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-dex-test-contract",
@@ -1038,13 +1038,13 @@ dependencies = [
 
 [[package]]
 name = "cw-dex-astroport"
-version = "0.2.0-rc.2"
+version = "0.2.0-rc.3"
 dependencies = [
  "apollo-cw-asset",
  "apollo-cw-multi-test",
  "apollo-utils",
  "astroport 2.9.5",
- "astroport 5.2.0",
+ "astroport 5.3.0",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-dex",
@@ -1062,7 +1062,7 @@ dependencies = [
 
 [[package]]
 name = "cw-dex-osmosis"
-version = "0.1.1"
+version = "0.1.1-rc.1"
 dependencies = [
  "apollo-cw-asset",
  "apollo-utils",
@@ -1096,7 +1096,7 @@ dependencies = [
  "apollo-cw-asset",
  "apollo-utils",
  "astroport 2.9.5",
- "astroport 5.2.0",
+ "astroport 5.3.0",
  "astroport-test-contract",
  "cosmwasm-std",
  "cw-dex-test-contract",
@@ -1107,15 +1107,15 @@ dependencies = [
 
 [[package]]
 name = "cw-it"
-version = "0.4.0-rc.6"
+version = "0.4.0-rc.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed8f3a9a26df6e91a693259b0964cd38b9697a0d28b2ece1abc25de9104b54f0"
+checksum = "f21068abf1b4e3835127f170ab5d0c20c543eab14c8472ffa1e1ba5fd9a541e4"
 dependencies = [
  "anyhow",
  "apollo-cw-multi-test",
  "apollo-utils",
  "astroport 2.9.5",
- "astroport 5.2.0",
+ "astroport 5.3.0",
  "astroport-factory",
  "astroport-incentives",
  "astroport-liquidity-manager",

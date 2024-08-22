@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use apollo_cw_asset::{Asset, AssetInfo, AssetInfoBase, AssetList};
 use apollo_utils::iterators::IntoElementwise;
-use astroport::liquidity_manager;
+use astroport_v2::liquidity_manager;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_json_binary, wasm_execute, Addr, CosmosMsg, Decimal, Deps, Env, Event, QuerierWrapper,
@@ -16,13 +16,13 @@ use cw_utils::Expiration;
 use crate::traits::Pool;
 use crate::CwDexError;
 use apollo_utils::assets::separate_natives_and_cw20s;
-use astroport::asset::{Asset as AstroAsset, PairInfo};
-use astroport::factory::PairType;
-use astroport::pair::{
+use astroport_v2::asset::{Asset as AstroAsset, PairInfo};
+use astroport_v2::factory::PairType;
+use astroport_v2::pair::{
     Cw20HookMsg as PairCw20HookMsg, ExecuteMsg as PairExecuteMsg, PoolResponse,
     QueryMsg as PairQueryMsg, SimulationResponse, MAX_ALLOWED_SLIPPAGE,
 };
-use astroport::querier::query_supply;
+use astroport_v2::querier::query_supply;
 
 /// Represents an AMM pool on Astroport
 #[cw_serde]

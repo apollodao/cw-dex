@@ -5,12 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-# [0.2.0-rc.2] - 2024-05-01
+# [0.2.0-rc.3] - 2024-08-22
 
 ### Changed
 
 - Added support for Astroport native LP tokens.
-- Bumped `astroport_v3` dependency alias of `astroport` package to `5.0.0-rc.1-tokenfactory` and renamed it to `astroport_v5`.
+- Bumped `astroport_v3` dependency alias of `astroport` package to `5.0.0-rc.1-tokenfactory` and renamed it to `astroport`. Renamed `astroport` to `astroport_v2`.
 - Changed `AstroportStaking` field `lp_token_addr: Addr` to `lp_token: AssetInfo`.
 - Changed `AstroportPool` field `lp_token_addr: Addr` to `lp_token: AssetInfo`.
 - Changed `AstroportPool` field `liquidity_manager: Addr` to `liquidity_manager: Option<Addr>`.
