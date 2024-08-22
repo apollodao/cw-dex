@@ -49,33 +49,9 @@ impl AstroportPool {
             .querier
             .query_wasm_smart::<PairInfo>(pair_addr.clone(), &PairQueryMsg::Pair {})?;
 
-        // Validate pair type. We only support XYK, stable swap, and PCL pools
-        match &pair_info.pair_type {
-            PairType::Custom(t) => match t.as_str() {
-                "concentrated" => Ok(()),
-
-                "astroport-pair-xyk-sale-tax" => Ok(()),
-                _ => Err(StdError::generic_err("Custom pair type is not supported")),
-            },
-            _ => Ok(()),
-        }?;
-
         let lp_token = AssetInfo::from_str(deps.api, &pair_info.liquidity_token);
 
-        // Only allow using liquidity manager if LP token is a CW20 token
-        if lp_token.is_native() && liquidity_manager.is_some() {
-            return Err(StdError::generic_err(
-                "Liquidity manager is not supported for native LP tokens",
-            ));
-        }
-        // Require liquidity manager to be set if LP token is a CW20 token
-        if !lp_token.is_native() && liquidity_manager.is_none() {
-            return Err(StdError::generic_err(
-                "Liquidity manager must be set for CW20 LP tokens",
-            ));
-        }
-
-        Ok(Self {
+        Self {
             pair_addr,
             lp_token,
             pool_assets: pair_info
@@ -85,7 +61,42 @@ impl AstroportPool {
                 .collect(),
             pair_type: pair_info.pair_type,
             liquidity_manager,
-        })
+        }
+        .validate(deps)
+    }
+
+    pub fn validate(&self, deps: Deps) -> StdResult<Self> {
+        let pair_info = deps
+            .querier
+            .query_wasm_smart::<astroport::asset::PairInfo>(
+                self.pair_addr.clone(),
+                &PairQueryMsg::Pair {},
+            )?;
+
+        // Validate pair type. We only support XYK, stable swap, and PCL pools
+        match &pair_info.pair_type {
+            astroport::factory::PairType::Custom(t) => match t.as_str() {
+                "concentrated" => Ok(()),
+                "astroport-pair-xyk-sale-tax" => Ok(()),
+                _ => Err(StdError::generic_err("Custom pair type is not supported")),
+            },
+            _ => Ok(()),
+        }?;
+
+        // Only allow using liquidity manager if LP token is a CW20 token
+        if self.lp_token.is_native() && self.liquidity_manager.is_some() {
+            return Err(StdError::generic_err(
+                "Liquidity manager is not supported for native LP tokens",
+            ));
+        }
+        // Require liquidity manager to be set if LP token is a CW20 token
+        if !self.lp_token.is_native() && self.liquidity_manager.is_none() {
+            return Err(StdError::generic_err(
+                "Liquidity manager must be set for CW20 LP tokens",
+            ));
+        }
+
+        Ok(self.clone())
     }
 
     /// Returns the matching pool given a LP token.
@@ -160,11 +171,13 @@ impl AstroportPool {
 impl Pool for AstroportPool {
     fn provide_liquidity(
         &self,
-        _deps: Deps,
+        deps: Deps,
         env: &Env,
         assets: AssetList,
         min_out: Uint128,
     ) -> Result<Response, CwDexError> {
+        self.validate(deps)?;
+
         let (funds, cw20s) = separate_natives_and_cw20s(&assets);
 
         let contract_address = if let Some(liquidity_manager) = &self.liquidity_manager {
@@ -250,11 +263,13 @@ impl Pool for AstroportPool {
 
     fn withdraw_liquidity(
         &self,
-        _deps: Deps,
+        deps: Deps,
         _env: &Env,
         asset: Asset,
         mut min_out: AssetList,
     ) -> Result<Response, CwDexError> {
+        self.validate(deps)?;
+
         if let Some(liquidity_manager) = &self.liquidity_manager {
             // Liquidity manager requires min_out to contain all assets in the pool
             for asset in &self.pool_assets {
@@ -345,12 +360,14 @@ impl Pool for AstroportPool {
 
     fn swap(
         &self,
-        _deps: Deps,
+        deps: Deps,
         env: &Env,
         offer_asset: Asset,
         ask_asset_info: AssetInfo,
         min_out: Uint128,
     ) -> Result<Response, CwDexError> {
+        self.validate(deps)?;
+
         // Setting belief price to the minimium acceptable return and max spread to zero
         // simplifies things Astroport will make the best possible swap that
         // returns at least `min_out`.
@@ -401,6 +418,8 @@ impl Pool for AstroportPool {
         _env: &Env,
         assets: AssetList,
     ) -> Result<Asset, CwDexError> {
+        self.validate(deps)?;
+
         if let Some(liquidity_manager) = &self.liquidity_manager {
             let amount: Uint128 = deps.querier.query_wasm_smart(
                 liquidity_manager.to_string(),
@@ -444,6 +463,8 @@ impl Pool for AstroportPool {
         deps: Deps,
         lp_token: &Asset,
     ) -> Result<AssetList, CwDexError> {
+        self.validate(deps)?;
+
         let assets: Vec<AstroAsset> = if let Some(liquidity_manager) = &self.liquidity_manager {
             deps.querier.query_wasm_smart(
                 liquidity_manager.to_string(),
@@ -470,6 +491,8 @@ impl Pool for AstroportPool {
         offer_asset: Asset,
         ask_asset_info: AssetInfo,
     ) -> StdResult<Uint128> {
+        self.validate(deps)?;
+
         Ok(deps
             .querier
             .query::<SimulationResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
