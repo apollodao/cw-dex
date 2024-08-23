@@ -1019,18 +1019,12 @@ name = "cw-dex"
 version = "0.5.4-rc.1"
 dependencies = [
  "apollo-cw-asset",
- "apollo-utils",
- "astroport 5.3.0",
- "cosmwasm-schema",
  "cosmwasm-std",
  "cw-dex-test-contract",
- "cw-dex-test-helpers",
  "cw-it",
  "cw-utils 1.0.3",
- "cw2 1.1.2",
  "cw20 1.1.2",
  "cw20-base 1.1.2",
- "osmosis-std 0.19.2",
  "proptest",
  "test-case",
  "thiserror",
@@ -1095,7 +1089,6 @@ version = "0.1.0"
 dependencies = [
  "apollo-cw-asset",
  "apollo-utils",
- "astroport 2.9.5",
  "astroport 5.3.0",
  "astroport-test-contract",
  "cosmwasm-std",
@@ -2220,29 +2213,13 @@ dependencies = [
 
 [[package]]
 name = "osmosis-std"
-version = "0.19.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "798fade51443a0e07eb25b59a11b320b9e8f03e6e8fbe14c520258f04742fe13"
-dependencies = [
- "chrono",
- "cosmwasm-std",
- "osmosis-std-derive 0.16.2",
- "prost 0.11.9",
- "prost-types 0.11.9",
- "schemars",
- "serde",
- "serde-cw-value",
-]
-
-[[package]]
-name = "osmosis-std"
 version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e87adf61f03306474ce79ab322d52dfff6b0bcf3aed1e12d8864ac0400dec1bf"
 dependencies = [
  "chrono",
  "cosmwasm-std",
- "osmosis-std-derive 0.20.1",
+ "osmosis-std-derive",
  "prost 0.12.6",
  "prost-types 0.12.3",
  "schemars",
@@ -2258,7 +2235,7 @@ checksum = "8641c376f01f5af329dc2a34e4f5527eaeb0bde18cda8d86fed958d04c86159c"
 dependencies = [
  "chrono",
  "cosmwasm-std",
- "osmosis-std-derive 0.20.1",
+ "osmosis-std-derive",
  "prost 0.12.6",
  "prost-types 0.12.3",
  "schemars",
@@ -2274,25 +2251,12 @@ checksum = "ca66dca7e8c9b11b995cd41a44c038134ccca4469894d663d8a9452d6e716241"
 dependencies = [
  "chrono",
  "cosmwasm-std",
- "osmosis-std-derive 0.20.1",
+ "osmosis-std-derive",
  "prost 0.12.6",
  "prost-types 0.12.3",
  "schemars",
  "serde",
  "serde-cw-value",
-]
-
-[[package]]
-name = "osmosis-std-derive"
-version = "0.16.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f47f0b2f22adb341bb59e5a3a1b464dde033181954bd055b9ae86d6511ba465b"
-dependencies = [
- "itertools 0.10.5",
- "proc-macro2",
- "prost-types 0.11.9",
- "quote",
- "syn 1.0.109",
 ]
 
 [[package]]
