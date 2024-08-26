@@ -305,8 +305,7 @@ impl Pool for AstroportPool {
             // do not support min_out
             match &self.pair_type {
                 PairType::Custom(custom) if custom == "concentrated" => {
-                    if min_out.len() > 0 || min_out.into_iter().any(|x| x.amount > Uint128::zero())
-                    {
+                    if min_out.into_iter().any(|x| x.amount > Uint128::zero()) {
                         return Err(CwDexError::MinOutNotSupported {});
                     }
                 }
@@ -317,15 +316,11 @@ impl Pool for AstroportPool {
                 let mut min_assets: Vec<AstroAsset> = vec![];
                 // Astroport requires min_assets_to_receive to contain all assets in the pool
                 for asset_info in &self.pool_assets {
-                    match min_out.find(asset_info) {
-                        Some(asset) => {
-                            min_assets.push(asset_to_astroport_v5_asset(asset));
-                        }
-                        None => {
-                            let asset = Asset::new(asset_info.clone(), Uint128::zero());
-                            min_assets.push(asset_to_astroport_v5_asset(&asset));
-                        }
-                    }
+                    let asset = match min_out.find(asset_info) {
+                        Some(asset) => asset.clone(),
+                        None => Asset::new(asset_info.clone(), Uint128::zero()),
+                    };
+                    min_assets.push(asset_to_astroport_v5_asset(&asset));
                 }
                 Some(min_assets)
             } else {
