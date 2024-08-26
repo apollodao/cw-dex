@@ -5,7 +5,7 @@ mod tests {
     use apollo_utils::submessages::{find_event, parse_attribute_value};
     use astroport::asset::{Asset as AstroportAsset, PairInfo};
     use astroport::factory::PairType;
-    use astroport::pair::{PoolResponse, QueryMsg as PairQueryMsg};
+    use astroport::pair::QueryMsg as PairQueryMsg;
     use cosmwasm_std::{assert_approx_eq, coin, coins, Addr, Coin, Empty, SubMsgResponse, Uint128};
     use cw_dex_astroport::AstroportPool;
     use cw_dex_test_contract::msg::{AstroportExecuteMsg, ExecuteMsg, QueryMsg};
@@ -211,7 +211,7 @@ mod tests {
     ) {
         let owned_runner = get_test_runner();
         let runner = owned_runner.as_ref();
-        let (accs, lp_token, pair_addr, contract_addr, asset_list, _) =
+        let (accs, lp_token, _pair_addr, contract_addr, asset_list, _) =
             setup_pool_and_testing_contract(
                 &runner,
                 pool_type.clone(),
