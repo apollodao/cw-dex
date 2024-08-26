@@ -575,7 +575,7 @@ mod tests {
 
         // Create Cw20 tokens for each Cw20 incentive, mint incentive amount to
         // incentives_provider and add to incentives
-        let cw20_code_id = astroport_contracts.astro_token.code_id;
+        let cw20_code_id = astroport_contracts.astro_cw20_token.code_id;
         for (i, (amount, duration)) in cw20_incentives.iter().enumerate() {
             // Instantiate Cw20 token
             let cw20_addr = wasm

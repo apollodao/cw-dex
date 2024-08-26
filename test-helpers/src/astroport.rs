@@ -96,7 +96,7 @@ pub fn setup_pool_and_test_contract<'a>(
     // Instantiate Apollo token (to have second CW20 to test CW20-CW20 pools)
     let apollo_token = instantiate_cw20(
         runner,
-        astroport_contracts.astro_token.code_id,
+        astroport_contracts.astro_cw20_token.code_id,
         &Cw20InstantiateMsg {
             name: "APOLLO".to_string(),
             symbol: "APOLLO".to_string(),
@@ -117,7 +117,7 @@ pub fn setup_pool_and_test_contract<'a>(
         // Mint Astro tokens
         cw20_mint(
             runner,
-            astroport_contracts.clone().astro_token.address,
+            astroport_contracts.clone().astro_cw20_token.address,
             account.address().clone(),
             Uint128::from(1_000_000_000_000_000_000u128),
             admin,
@@ -141,7 +141,7 @@ pub fn setup_pool_and_test_contract<'a>(
             asset_list
                 .add(&Asset::new(
                     AssetInfo::Cw20(Addr::unchecked(
-                        astroport_contracts.clone().astro_token.address,
+                        astroport_contracts.clone().astro_cw20_token.address,
                     )),
                     Uint128::new(amount.into()),
                 ))
@@ -283,7 +283,7 @@ pub fn setup_pool_and_test_contract<'a>(
         pair_addr.clone(),
         astroport_contracts.incentives.address.clone(),
         AssetInfo::cw20(Addr::unchecked(
-            astroport_contracts.astro_token.address.clone(),
+            astroport_contracts.astro_cw20_token.address.clone(),
         )),
         lp_token.clone(),
         liquidity_manager,
