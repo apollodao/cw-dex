@@ -6,17 +6,14 @@ mod tests {
     use astroport::asset::{Asset as AstroportAsset, PairInfo};
     use astroport::factory::PairType;
     use astroport::pair::QueryMsg as PairQueryMsg;
-    use cosmwasm_std::{assert_approx_eq, coin, coins, Addr, Coin, Empty, SubMsgResponse, Uint128};
+    use cosmwasm_std::{assert_approx_eq, coin, coins, Addr, Coin, SubMsgResponse, Uint128};
     use cw_dex_astroport::AstroportPool;
     use cw_dex_test_contract::msg::{AstroportExecuteMsg, ExecuteMsg, QueryMsg};
     use cw_dex_test_helpers::astroport::setup_pool_and_test_contract;
     use cw_dex_test_helpers::{cw20_transfer, query_asset_balance, send_asset};
     use cw_it::astroport::utils::AstroportContracts;
-    use cw_it::cw_multi_test::{
-        BasicAppBuilder, MockAddressGenerator, StargateKeeper, StargateMessageHandler, WasmKeeper,
-    };
+    use cw_it::cw_multi_test::{StargateKeeper, StargateMessageHandler};
     use cw_it::helpers::{bank_balance_query, Unwrap};
-    use cw_it::multi_test::api::MockApiBech32;
     use cw_it::multi_test::modules::TokenFactory;
     use cw_it::multi_test::MultiTestRunner;
     use cw_it::test_tube::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
@@ -317,7 +314,7 @@ mod tests {
         assert_eq!(lp_token_balance_after, Uint128::zero());
     }
 
-    fn stake_all_lp_tokens<'a, R: Runner<'a>>(
+    fn stake_all_native_lp_tokens<'a, R: Runner<'a>>(
         runner: &'a R,
         contract_addr: String,
         lp_token_denom: String,
@@ -352,7 +349,7 @@ mod tests {
     #[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("astro", 1_000_000)]; "stake_and_unstake: concentrated native-cw20")]
     #[test_case(PairType::Custom("concentrated".to_string()), vec![("apollo",1_000_000), ("astro", 1_000_000)]; "stake_and_unstake: concentrated cw20-cw20")]
     #[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "stake_and_unstake: concentrated native-native")]
-    fn test_stake_and_unstake(
+    fn test_stake_and_unstake_native_lp_tokens(
         pool_type: PairType,
         initial_liquidity: Vec<(&str, u64)>,
     ) -> RunnerResult<()> {
@@ -368,7 +365,7 @@ mod tests {
             bank_balance_query(&runner, admin.address().clone(), lp_token_denom.clone()).unwrap();
 
         // Stake LP tokens
-        let events = stake_all_lp_tokens(
+        let events = stake_all_native_lp_tokens(
             &runner,
             contract_addr.clone(),
             lp_token_denom.clone(),
@@ -432,7 +429,7 @@ mod tests {
     #[test_case(PairType::Custom("concentrated".to_string()),vec![("uluna",1_000_000), ("uatom", 1_000_000)], Uint128::new(1_000_000); "swap_and_simulate_swap: concentrated pool, native-native")]
     #[test_case(PairType::Custom("concentrated".to_string()),vec![("uluna",1_000_000), ("uatom", 1_000_000)], Uint128::new(100_000_000); "swap_and_simulate_swap: concentrated pool, high slippage, native-native")]
     #[test_case(PairType::Custom("concentrated".to_string()),vec![("uluna",68_582_147), ("uatom", 3_467_256)], Uint128::new(1_000_000); "swap_and_simulate_swap: concentrated pool, random prices, native-native")]
-    fn test_swap_and_simulate_swap(
+    fn test_swap_and_simulate_swap_native_lp_tokens(
         pool_type: PairType,
         initial_liquidity: Vec<(&str, u64)>,
         amount: Uint128,
@@ -634,7 +631,7 @@ mod tests {
         }
 
         // Stake LP tokens
-        let _events = stake_all_lp_tokens(
+        let _events = stake_all_native_lp_tokens(
             &runner,
             testing_contract_addr.clone(),
             lp_token_denom.clone(),
