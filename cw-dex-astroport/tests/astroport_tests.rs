@@ -40,21 +40,10 @@ mod tests {
                 let mut stargate_keeper = StargateKeeper::new();
                 TOKEN_FACTORY.register_msgs(&mut stargate_keeper);
 
-                let wasm_keeper: WasmKeeper<Empty, Empty> =
-                    WasmKeeper::new_with_custom_address_generator(MockAddressGenerator);
-
-                let app = BasicAppBuilder::<Empty, Empty>::new()
-                    .with_api(MockApiBech32::new("osmo"))
-                    .with_stargate(stargate_keeper)
-                    .with_wasm(wasm_keeper)
-                    .build(|_, _, _| {});
-
-                let multi_test_runner = MultiTestRunner {
-                    app,
-                    address_prefix: "osmo",
-                };
-
-                OwnedTestRunner::MultiTest(multi_test_runner)
+                OwnedTestRunner::MultiTest(MultiTestRunner::new_with_stargate(
+                    "osmo",
+                    stargate_keeper,
+                ))
             }
             #[cfg(feature = "osmosis-test-tube")]
             "osmosis-test-tube" => OwnedTestRunner::OsmosisTestApp(OsmosisTestApp::new()),
