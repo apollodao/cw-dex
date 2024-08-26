@@ -132,7 +132,7 @@ impl AstroportPool {
                 // To figure out if the native denom is a LP token, we need to check which
                 // address created the native denom and check if that address is
                 // an Astroport pair contract.
-                let denom_authority_metadata = parse_address(native_denom)?;
+                let pair_addr = parse_pair_address_from_lp_denom(deps, native_denom)?;
 
                 // Try to create an `AstroportPool` object with the creator address. This will
                 // query the contract and assume that it is an Astroport pair
@@ -140,11 +140,7 @@ impl AstroportPool {
                 //
                 // NB: This does NOT validate that the pool is registered with the Astroport
                 // factory, and that it is an "official" Astroport pool.
-                let pool = AstroportPool::new(
-                    deps,
-                    Addr::unchecked(denom_authority_metadata),
-                    astroport_liquidity_manager,
-                )?;
+                let pool = AstroportPool::new(deps, pair_addr, astroport_liquidity_manager)?;
 
                 Ok(pool)
             }
@@ -557,7 +553,7 @@ pub fn astroport_v5_vec_asset_to_assetlist(assets: Vec<AstroAsset>) -> AssetList
     )
 }
 
-fn parse_address(input_string: &str) -> Result<String, CwDexError> {
+fn parse_pair_address_from_lp_denom(deps: Deps, input_string: &str) -> Result<Addr, CwDexError> {
     let parts: Vec<&str> = input_string.split('/').collect();
 
     if parts.len() < 3 {
@@ -566,5 +562,5 @@ fn parse_address(input_string: &str) -> Result<String, CwDexError> {
         });
     }
 
-    Ok(parts[1].to_string())
+    Ok(deps.api.addr_validate(&parts[1].to_string())?)
 }
