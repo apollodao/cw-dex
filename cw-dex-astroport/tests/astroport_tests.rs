@@ -276,8 +276,6 @@ mod tests {
             admin,
         ));
 
-        let _pool_res: PoolResponse = wasm.query(&pair_addr, &PairQueryMsg::Pool {}).unwrap();
-
         let min_out = match &pool_type {
             PairType::Custom(t) if t == "concentrated" => AssetList::new(),
             _ => expected_out.clone(),
