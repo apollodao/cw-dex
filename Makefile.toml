@@ -42,12 +42,12 @@ docker run --rm -v "$(pwd)":/code \
 """
 
 [tasks.format]
-toolchain = "${RUST_VERSION}"
+toolchain = "${NIGHTLY_VERSION}"
 install_crate = { crate_name = "rustfmt-nightly", rustup_component_name = "rustfmt-preview", binary = "rustfmt", test_arg = "--help" }
 command = "cargo"
 args = ["fmt", "--all", "--", "--emit=files","--verbose"]
 [tasks.format-check]
-toolchain = "${RUST_VERSION}"
+toolchain = "${NIGHTLY_VERSION}"
 install_crate = { crate_name = "rustfmt-nightly", rustup_component_name = "rustfmt-preview", binary = "rustfmt", test_arg = "--help" }
 command = "cargo"
 args = ["fmt", "--all", "--","--verbose", "--check"]
