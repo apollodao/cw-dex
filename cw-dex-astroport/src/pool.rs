@@ -184,7 +184,10 @@ impl Pool for AstroportPool {
             match &self.pair_type {
                 PairType::Custom(custom) if custom == "concentrated" => {
                     if min_out != Uint128::zero() {
-                        return Err(CwDexError::MinOutNotSupported {});
+                        return Err(CwDexError::UnsupportedArguments {
+                            reason: "Min out is not supported for concentrated liquidity pools"
+                                .to_string(),
+                        });
                     }
                 }
                 _ => {}
@@ -306,7 +309,10 @@ impl Pool for AstroportPool {
             match &self.pair_type {
                 PairType::Custom(custom) if custom == "concentrated" => {
                     if min_out.into_iter().any(|x| x.amount > Uint128::zero()) {
-                        return Err(CwDexError::MinOutNotSupported {});
+                        return Err(CwDexError::UnsupportedArguments {
+                            reason: "Min out is not supported for concentrated liquidity pools"
+                                .to_string(),
+                        });
                     }
                 }
                 _ => {}

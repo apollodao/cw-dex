@@ -94,8 +94,11 @@ pub enum CwDexError {
 
     /// For when min_out is set for concentrated liquidity pools, as they do not
     /// support min_out
-    #[error("Min out is not supported for concentrated liquidity pools")]
-    MinOutNotSupported {},
+    #[error("Unsupported arguments. Reason: {reason}")]
+    UnsupportedArguments {
+        /// The reason that explains why the arguments are unsupported
+        reason: String,
+    },
 }
 
 impl From<CwDexError> for StdError {
