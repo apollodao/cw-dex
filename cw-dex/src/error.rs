@@ -84,6 +84,21 @@ pub enum CwDexError {
         /// The actual amount of tokens received
         received: Uint128,
     },
+
+    /// For when the token_denom can't be parsed
+    #[error("Could not parse address: {token_denom}")]
+    AddressParsingErrors {
+        /// The token_denom that couldn't be parsed
+        token_denom: String,
+    },
+
+    /// For when min_out is set for concentrated liquidity pools, as they do not
+    /// support min_out
+    #[error("Unsupported arguments. Reason: {reason}")]
+    UnsupportedArguments {
+        /// The reason that explains why the arguments are unsupported
+        reason: String,
+    },
 }
 
 impl From<CwDexError> for StdError {

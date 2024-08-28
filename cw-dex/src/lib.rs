@@ -18,12 +18,4 @@
 pub mod error;
 pub mod traits;
 
-#[deprecated(
-    since = "0.5.2",
-    note = "Please use separate implementation crates such as `cw-dex-astroport`, and `cw-dex-osmosis` instead"
-)]
-pub mod implementations;
-
 pub use error::*;
-#[allow(deprecated)]
-pub use implementations::*;

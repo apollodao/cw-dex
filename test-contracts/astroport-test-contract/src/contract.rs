@@ -21,14 +21,17 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     let pair_addr = deps.api.addr_validate(&msg.pair_addr)?;
-    let liquidity_manager = deps.api.addr_validate(&msg.liquidity_manager_addr)?;
+    let liquidity_manager = msg
+        .liquidity_manager_addr
+        .map(|addr| deps.api.addr_validate(&addr))
+        .transpose()?;
     let pool = AstroportPool::new(deps.as_ref(), pair_addr, liquidity_manager)?;
     POOL.save(deps.storage, &pool)?;
 
     STAKING.save(
         deps.storage,
         &AstroportStaking {
-            lp_token_addr: Addr::unchecked(msg.lp_token_addr),
+            lp_token: AssetInfo::from_str(deps.api, &msg.lp_token),
             incentives: Addr::unchecked(msg.incentives_addr),
         },
     )?;
