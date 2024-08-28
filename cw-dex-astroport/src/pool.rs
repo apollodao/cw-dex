@@ -563,5 +563,5 @@ fn parse_pair_address_from_lp_denom(deps: Deps, input_string: &str) -> Result<Ad
         });
     }
 
-    Ok(deps.api.addr_validate(&parts[1].to_string())?)
+    Ok(deps.api.addr_validate(parts[1])?)
 }
