@@ -3,15 +3,18 @@ mod tests {
     use apollo_utils::assets::separate_natives_and_cw20s;
     use apollo_utils::coins::coin_from_str;
     use apollo_utils::submessages::{find_event, parse_attribute_value};
+    use astroport::asset::{Asset as AstroportAsset, PairInfo};
     use astroport::factory::PairType;
-    use astroport_v3::asset::Asset as AstroportAsset;
+    use astroport::pair::QueryMsg as PairQueryMsg;
     use cosmwasm_std::{assert_approx_eq, coin, coins, Addr, Coin, SubMsgResponse, Uint128};
-
+    use cw_dex_astroport::AstroportPool;
     use cw_dex_test_contract::msg::{AstroportExecuteMsg, ExecuteMsg, QueryMsg};
     use cw_dex_test_helpers::astroport::setup_pool_and_test_contract;
-    use cw_dex_test_helpers::{cw20_balance_query, cw20_transfer, query_asset_balance};
+    use cw_dex_test_helpers::{cw20_transfer, query_asset_balance, send_asset};
     use cw_it::astroport::utils::AstroportContracts;
-    use cw_it::helpers::Unwrap;
+    use cw_it::cw_multi_test::{StargateKeeper, StargateMessageHandler};
+    use cw_it::helpers::{bank_balance_query, Unwrap};
+    use cw_it::multi_test::modules::TokenFactory;
     use cw_it::multi_test::MultiTestRunner;
     use cw_it::test_tube::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
     use cw_it::test_tube::{
@@ -19,16 +22,26 @@ mod tests {
     };
     use cw_it::traits::CwItRunner;
     use cw_it::{OwnedTestRunner, TestRunner};
+    use std::str::FromStr;
     use test_case::test_case;
-
-    use cw_dex_astroport::AstroportPool;
 
     #[cfg(feature = "osmosis-test-tube")]
     use cw_it::osmosis_test_tube::OsmosisTestApp;
 
+    pub const DENOM_CREATION_FEE: &str = "10000000uosmo";
+    const TOKEN_FACTORY: &TokenFactory =
+        &TokenFactory::new("factory", 32, 16, 59 + 16, DENOM_CREATION_FEE);
     pub fn get_test_runner<'a>() -> OwnedTestRunner<'a> {
         match option_env!("TEST_RUNNER").unwrap_or("multi-test") {
-            "multi-test" => OwnedTestRunner::MultiTest(MultiTestRunner::new("osmo")),
+            "multi-test" => {
+                let mut stargate_keeper = StargateKeeper::new();
+                TOKEN_FACTORY.register_msgs(&mut stargate_keeper);
+
+                OwnedTestRunner::MultiTest(MultiTestRunner::new_with_stargate(
+                    "osmo",
+                    stargate_keeper,
+                ))
+            }
             #[cfg(feature = "osmosis-test-tube")]
             "osmosis-test-tube" => OwnedTestRunner::OsmosisTestApp(OsmosisTestApp::new()),
             _ => panic!("Unsupported test runner type"),
@@ -40,6 +53,7 @@ mod tests {
     fn setup_pool_and_testing_contract<'a>(
         runner: &'a TestRunner<'a>,
         pool_type: PairType,
+        use_liquidity_manager: bool,
         initial_liquidity: Vec<(&str, u64)>,
     ) -> RunnerResult<(
         Vec<SigningAccount>,
@@ -52,44 +66,60 @@ mod tests {
         setup_pool_and_test_contract(
             runner,
             pool_type,
+            use_liquidity_manager,
             initial_liquidity,
             2,
             TEST_CONTRACT_WASM_FILE_PATH,
+            &[Coin::from_str(DENOM_CREATION_FEE).unwrap()],
         )
     }
 
-    #[test_case(PairType::Xyk { }, vec![("uluna",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: native-cw20")]
-    #[test_case(PairType::Xyk { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: cw20-cw20")]
-    #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: stableswap native-cw20")]
-    #[test_case(PairType::Stable { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: stableswap cw20-cw20")]
-    #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "provide_liquidity: stableswap native-native")]
-    #[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: concentrated native-cw20")]
-    #[test_case(PairType::Custom("concentrated".to_string()), vec![("apollo",1_000_000), ("astro", 1_000_000)]; "provide_liquidity: concentrated cw20-cw20")]
-    #[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "provide_liquidity: concentrated native-native")]
-    pub fn test_provide_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str, u64)>) {
+    #[test_case(PairType::Xyk { }, vec![("uluna",1_000_000), ("astro", 1_000_000)], false; "provide_liquidity: native-cw20, no liq manager")]
+    #[test_case(PairType::Xyk { }, vec![("apollo",1_000_000), ("astro", 1_000_000)], false; "provide_liquidity: cw20-cw20, no liq manager")]
+    #[test_case(PairType::Xyk { }, vec![("uluna",1_000_000), ("uatom", 1_000_000)], false; "provide_liquidity: native-native, no liq manager")]
+    #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("astro", 1_000_000)], false; "provide_liquidity: stableswap native-cw20, no liq manager")]
+    #[test_case(PairType::Stable { }, vec![("apollo",1_000_000), ("astro", 1_000_000)], false; "provide_liquidity: stableswap cw20-cw20, no liq manager")]
+    #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("uatom", 1_000_000)], false; "provide_liquidity: stableswap native-native, no liq manager")]
+    #[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("astro", 1_000_000)], false; "provide_liquidity: concentrated native-cw20, no liq manager")]
+    #[test_case(PairType::Custom("concentrated".to_string()), vec![("apollo",1_000_000), ("astro", 1_000_000)], false; "provide_liquidity: concentrated cw20-cw20, no liq manager")]
+    #[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("uatom", 1_000_000)], false; "provide_liquidity: concentrated native-native, no liq manager")]
+    pub fn test_provide_liquidity(
+        pool_type: PairType,
+        initial_liquidity: Vec<(&str, u64)>,
+        use_liquidity_manager: bool,
+    ) {
         let owned_runner = get_test_runner();
         let runner = owned_runner.as_ref();
-        let (accs, lp_token_addr, _pair_addr, contract_addr, asset_list, _) =
-            setup_pool_and_testing_contract(&runner, pool_type.clone(), initial_liquidity).unwrap();
+        let (accs, lp_token, pair_addr, contract_addr, asset_list, _) =
+            setup_pool_and_testing_contract(
+                &runner,
+                pool_type.clone(),
+                use_liquidity_manager,
+                initial_liquidity,
+            )
+            .unwrap();
         let admin = &accs[0];
         let wasm = Wasm::new(&runner);
+        let _pair_config_res: PairInfo = wasm.query(&pair_addr, &PairQueryMsg::Pair {}).unwrap();
 
+        let lp_token = if lp_token.starts_with(admin.prefix()) || lp_token.starts_with("contract") {
+            AssetInfo::cw20(Addr::unchecked(&lp_token))
+        } else {
+            AssetInfo::native(lp_token.clone())
+        };
         // Check contract's LP token balance before providing liquidity
-        let lp_token_before =
-            cw20_balance_query(&runner, lp_token_addr.clone(), contract_addr.clone()).unwrap();
+        let lp_token_before = query_asset_balance(&runner, &lp_token, &contract_addr);
+
         assert_eq!(lp_token_before, Uint128::zero());
 
-        // Simulate Provide Liquidity. Not supported for concentrated liquidity, so we
-        // just make sure to use the right amounts of input assets
-        let expected_out = match &pool_type {
-            PairType::Custom(_) => Uint128::new(1000000),
-            _ => {
-                let simulate_query = QueryMsg::SimulateProvideLiquidity {
+        let expected_out = wasm
+            .query(
+                &contract_addr,
+                &QueryMsg::SimulateProvideLiquidity {
                     assets: asset_list.clone(),
-                };
-                wasm.query(&contract_addr, &simulate_query).unwrap()
-            }
-        };
+                },
+            )
+            .unwrap();
 
         let (funds, cw20s) = separate_natives_and_cw20s(&asset_list);
 
@@ -105,9 +135,16 @@ mod tests {
             .unwrap();
         }
 
+        let error_msg = match &pool_type {
+            PairType::Custom(t) if t == "concentrated" => {
+                "Min out is not supported for concentrated liquidity pools"
+            }
+            _ => "Slippage is more than expected",
+        };
+
         // Provide liquidity with min_out one more than expected_out. Should fail.
-        let unwrap = Unwrap::Err("Slippage is more than expected");
-        let min_out = expected_out + Uint128::one();
+        let unwrap = Unwrap::Err(error_msg);
+        let min_out = expected_out + Uint128::new(1);
         let provide_msg = ExecuteMsg::ProvideLiquidity {
             assets: asset_list.clone(),
             min_out,
@@ -117,10 +154,15 @@ mod tests {
             admin,
         ));
 
+        let min_out = match &pool_type {
+            PairType::Custom(t) if t == "concentrated" => Uint128::zero(),
+            _ => expected_out,
+        };
+
         // Provide liquidity with expected_out as min_out. Should succeed.
         let provide_msg = ExecuteMsg::ProvideLiquidity {
             assets: asset_list.clone(),
-            min_out: expected_out,
+            min_out,
         };
         let _res = runner
             .execute_cosmos_msgs::<MsgExecuteContractResponse>(
@@ -130,8 +172,7 @@ mod tests {
             .unwrap();
 
         // Query LP token balance after
-        let lp_token_after =
-            cw20_balance_query(&runner, lp_token_addr, contract_addr.clone()).unwrap();
+        let lp_token_after = query_asset_balance(&runner, &lp_token, &contract_addr);
         assert_eq!(lp_token_after, expected_out);
 
         // Query asset balances in contract, assert that all were used
@@ -141,48 +182,68 @@ mod tests {
         }
     }
 
-    #[test_case(PairType::Xyk { }, vec![("uluna",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: xyk native-cw20")]
-    #[test_case(PairType::Xyk { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: xyk cw20-cw20")]
-    #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: stableswap native-cw20")]
-    #[test_case(PairType::Stable { }, vec![("apollo",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: stableswap cw20-cw20")]
-    #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "withdraw_liquidity: stableswap native-native")]
-    #[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: concentrated native-cw20")]
-    #[test_case(PairType::Custom("concentrated".to_string()), vec![("apollo",1_000_000), ("astro", 1_000_000)]; "withdraw_liquidity: concentrated cw20-cw20")]
-    #[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "withdraw_liquidity: concentrated native-native")]
-    fn test_withdraw_liquidity(pool_type: PairType, initial_liquidity: Vec<(&str, u64)>) {
+    #[test_case(PairType::Xyk { }, vec![("uluna",1_000_000), ("astro", 1_000_000)], false; "withdraw_liquidity: xyk native-cw20")]
+    #[test_case(PairType::Xyk { }, vec![("apollo",1_000_000), ("astro", 1_000_000)], false; "withdraw_liquidity: xyk cw20-cw20")]
+    #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("astro", 1_000_000)], false; "withdraw_liquidity: stableswap native-cw20")]
+    #[test_case(PairType::Stable { }, vec![("apollo",1_000_000), ("astro", 1_000_000)], false; "withdraw_liquidity: stableswap cw20-cw20")]
+    #[test_case(PairType::Stable { }, vec![("uluna",1_000_000), ("uatom", 1_000_000)], false; "withdraw_liquidity: stableswap native-native")]
+    #[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("astro", 1_000_000)], false; "withdraw_liquidity: concentrated native-cw20")]
+    #[test_case(PairType::Custom("concentrated".to_string()), vec![("apollo",1_000_000), ("astro", 1_000_000)], false; "withdraw_liquidity: concentrated cw20-cw20")]
+    #[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("uatom", 1_000_000)], false; "withdraw_liquidity: concentrated native-native")]
+    fn test_withdraw_liquidity(
+        pool_type: PairType,
+        initial_liquidity: Vec<(&str, u64)>,
+        use_liquidity_manager: bool,
+    ) {
         let owned_runner = get_test_runner();
         let runner = owned_runner.as_ref();
-        let (accs, lp_token_addr, _pair_addr, contract_addr, asset_list, _) =
-            setup_pool_and_testing_contract(&runner, pool_type, initial_liquidity).unwrap();
+        let (accs, lp_token, _pair_addr, contract_addr, asset_list, _) =
+            setup_pool_and_testing_contract(
+                &runner,
+                pool_type.clone(),
+                use_liquidity_manager,
+                initial_liquidity,
+            )
+            .unwrap();
         let admin = &accs[0];
         let wasm = Wasm::new(&runner);
 
-        //Query admin LP token balance
-        let admin_lp_token_balance =
-            cw20_balance_query(&runner, lp_token_addr.clone(), admin.address()).unwrap();
-        let amount_to_send = admin_lp_token_balance / Uint128::from(2u128);
+        let lp_token = if lp_token.starts_with(admin.prefix()) || lp_token.starts_with("contract") {
+            AssetInfo::cw20(Addr::unchecked(&lp_token))
+        } else {
+            AssetInfo::native(lp_token.clone())
+        };
 
+        let admin_lp_token_balance = query_asset_balance(&runner, &lp_token, &admin.address());
+
+        let amount_to_send = admin_lp_token_balance / Uint128::from(2u128);
         // Send LP tokens to contract
-        cw20_transfer(
+        send_asset(
             &runner,
-            lp_token_addr.clone(),
+            Asset::new(lp_token.clone(), amount_to_send),
             contract_addr.clone(),
-            amount_to_send,
             admin,
-        )
-        .unwrap();
-        let contract_lp_token_balance =
-            cw20_balance_query(&runner, lp_token_addr.clone(), contract_addr.clone()).unwrap();
+        );
+
+        let contract_lp_token_balance = query_asset_balance(&runner, &lp_token, &contract_addr);
         assert_eq!(contract_lp_token_balance, amount_to_send);
+
+        let withdraw_amount = contract_lp_token_balance / Uint128::from(2u128);
 
         // Simulate withdraw liquidity to get expected out assets
         let simulate_query = QueryMsg::SimulateWithdrawLiquidty {
-            amount: contract_lp_token_balance,
+            amount: withdraw_amount,
         };
         let expected_out: AssetList = wasm.query(&contract_addr, &simulate_query).unwrap();
 
         // Withdraw liquidity with min_out one more than expected_out. Should fail.
-        let unwrap = Unwrap::Err("but expected");
+        let error_msg = match &pool_type {
+            PairType::Custom(t) if t == "concentrated" => {
+                "Min out is not supported for concentrated liquidity pools"
+            }
+            _ => "but expected",
+        };
+        let unwrap = Unwrap::Err(error_msg);
         let min_out: AssetList = expected_out
             .to_vec()
             .into_iter()
@@ -193,7 +254,7 @@ mod tests {
             .collect::<Vec<_>>()
             .into();
         let withdraw_msg = ExecuteMsg::WithdrawLiquidity {
-            amount: contract_lp_token_balance,
+            amount: withdraw_amount,
             min_out,
         };
         unwrap.unwrap(runner.execute_cosmos_msgs::<MsgExecuteContractResponse>(
@@ -201,10 +262,15 @@ mod tests {
             admin,
         ));
 
+        let min_out = match &pool_type {
+            PairType::Custom(t) if t == "concentrated" => AssetList::new(),
+            _ => expected_out.clone(),
+        };
+
         // Withdraw liquidity with expected_out as min_out. Should succeed.
         let withdraw_msg = ExecuteMsg::WithdrawLiquidity {
-            amount: contract_lp_token_balance,
-            min_out: expected_out.clone(),
+            amount: withdraw_amount,
+            min_out,
         };
         runner
             .execute_cosmos_msgs::<MsgExecuteContractResponse>(
@@ -214,11 +280,13 @@ mod tests {
             .unwrap();
 
         // Query LP token balance after
-        let lp_token_balance_after =
-            cw20_balance_query(&runner, lp_token_addr, contract_addr.clone()).unwrap();
+        let lp_token_balance_after = query_asset_balance(&runner, &lp_token, &contract_addr);
 
-        // Assert that LP token balance is zero after withdrawing all liquidity
-        assert_eq!(lp_token_balance_after, Uint128::zero());
+        // Assert that LP token balance is correct
+        assert_eq!(
+            lp_token_balance_after,
+            contract_lp_token_balance - withdraw_amount
+        );
 
         // Query contract asset balances, assert that all were returned
         for asset in asset_list.into_iter() {
@@ -226,17 +294,35 @@ mod tests {
             let expected_balance = expected_out.find(&asset.info).unwrap().amount;
             assert_eq!(asset_balance, expected_balance);
         }
+
+        // Withdraw liquidity with min_out equal to zero. Should succeed.
+        let withdraw_msg = ExecuteMsg::WithdrawLiquidity {
+            amount: withdraw_amount,
+            min_out: AssetList::new(),
+        };
+        runner
+            .execute_cosmos_msgs::<MsgExecuteContractResponse>(
+                &[withdraw_msg.into_cosmos_msg(contract_addr.clone(), vec![])],
+                admin,
+            )
+            .unwrap();
+
+        // Query LP token balance after
+        let lp_token_balance_after = query_asset_balance(&runner, &lp_token, &contract_addr);
+
+        // Assert that LP token balance is zero after withdrawing all liquidity
+        assert_eq!(lp_token_balance_after, Uint128::zero());
     }
 
-    fn stake_all_lp_tokens<'a, R: Runner<'a>>(
+    fn stake_all_native_lp_tokens<'a, R: Runner<'a>>(
         runner: &'a R,
         contract_addr: String,
-        lp_token_addr: String,
+        lp_token_denom: String,
         signer: &SigningAccount,
     ) -> ExecuteResponse<MsgExecuteContractResponse> {
         // Query LP token balance
         let lp_token_balance =
-            cw20_balance_query(runner, lp_token_addr, contract_addr.clone()).unwrap();
+            bank_balance_query(runner, signer.address().clone(), lp_token_denom.clone()).unwrap();
 
         // Stake LP tokens
         let stake_msg = ExecuteMsg::Stake {
@@ -245,7 +331,10 @@ mod tests {
 
         runner
             .execute_cosmos_msgs::<MsgExecuteContractResponse>(
-                &[stake_msg.into_cosmos_msg(contract_addr, vec![])],
+                &[stake_msg.into_cosmos_msg(
+                    contract_addr,
+                    coins(lp_token_balance.u128(), lp_token_denom),
+                )],
                 signer,
             )
             .unwrap()
@@ -260,35 +349,29 @@ mod tests {
     #[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("astro", 1_000_000)]; "stake_and_unstake: concentrated native-cw20")]
     #[test_case(PairType::Custom("concentrated".to_string()), vec![("apollo",1_000_000), ("astro", 1_000_000)]; "stake_and_unstake: concentrated cw20-cw20")]
     #[test_case(PairType::Custom("concentrated".to_string()), vec![("uluna",1_000_000), ("uatom", 1_000_000)]; "stake_and_unstake: concentrated native-native")]
-    fn test_stake_and_unstake(
+    fn test_stake_and_unstake_native_lp_tokens(
         pool_type: PairType,
         initial_liquidity: Vec<(&str, u64)>,
     ) -> RunnerResult<()> {
         let owned_runner = get_test_runner();
         let runner = owned_runner.as_ref();
-        let (accs, lp_token_addr, _pair_addr, contract_addr, _asset_list, _) =
-            setup_pool_and_testing_contract(&runner, pool_type, initial_liquidity).unwrap();
+        let (accs, lp_token_denom, _pair_addr, contract_addr, _asset_list, _) =
+            setup_pool_and_testing_contract(&runner, pool_type, false, initial_liquidity).unwrap();
 
         let admin = &accs[0];
 
         // Query LP token balance
         let lp_token_balance =
-            cw20_balance_query(&runner, lp_token_addr.clone(), admin.address()).unwrap();
-
-        // Send LP tokens to the test contract
-        cw20_transfer(
-            &runner,
-            lp_token_addr.clone(),
-            contract_addr.clone(),
-            lp_token_balance,
-            admin,
-        )
-        .unwrap();
+            bank_balance_query(&runner, admin.address().clone(), lp_token_denom.clone()).unwrap();
 
         // Stake LP tokens
-        let events =
-            stake_all_lp_tokens(&runner, contract_addr.clone(), lp_token_addr.clone(), admin)
-                .events;
+        let events = stake_all_native_lp_tokens(
+            &runner,
+            contract_addr.clone(),
+            lp_token_denom.clone(),
+            admin,
+        )
+        .events;
 
         // Parse the event data
         let response = SubMsgResponse { events, data: None };
@@ -301,7 +384,7 @@ mod tests {
 
         // Query LP token balance after
         let lp_token_balance_after =
-            cw20_balance_query(&runner, lp_token_addr.clone(), contract_addr.to_string()).unwrap();
+            bank_balance_query(&runner, contract_addr.clone(), lp_token_denom.clone()).unwrap();
 
         // Assert that LP token balance is 0
         assert_eq!(lp_token_balance_after, Uint128::zero());
@@ -319,7 +402,7 @@ mod tests {
 
         // Query LP token balance
         let lp_token_balance_after_unstake =
-            cw20_balance_query(&runner, lp_token_addr, contract_addr).unwrap();
+            bank_balance_query(&runner, contract_addr.clone(), lp_token_denom).unwrap();
 
         // Assert that LP tokens have been unstakeed
         assert_eq!(lp_token_balance_after_unstake, lp_token_balance);
@@ -346,7 +429,7 @@ mod tests {
     #[test_case(PairType::Custom("concentrated".to_string()),vec![("uluna",1_000_000), ("uatom", 1_000_000)], Uint128::new(1_000_000); "swap_and_simulate_swap: concentrated pool, native-native")]
     #[test_case(PairType::Custom("concentrated".to_string()),vec![("uluna",1_000_000), ("uatom", 1_000_000)], Uint128::new(100_000_000); "swap_and_simulate_swap: concentrated pool, high slippage, native-native")]
     #[test_case(PairType::Custom("concentrated".to_string()),vec![("uluna",68_582_147), ("uatom", 3_467_256)], Uint128::new(1_000_000); "swap_and_simulate_swap: concentrated pool, random prices, native-native")]
-    fn test_swap_and_simulate_swap(
+    fn test_swap_and_simulate_swap_native_lp_tokens(
         pool_type: PairType,
         initial_liquidity: Vec<(&str, u64)>,
         amount: Uint128,
@@ -354,7 +437,7 @@ mod tests {
         let owned_runner = get_test_runner();
         let runner = owned_runner.as_ref();
         let (accs, _lp_token_addr, _pair_addr, contract_addr, asset_list, _) =
-            setup_pool_and_testing_contract(&runner, pool_type, initial_liquidity).unwrap();
+            setup_pool_and_testing_contract(&runner, pool_type, false, initial_liquidity).unwrap();
 
         let admin = &accs[0];
         let wasm = Wasm::new(&runner);
@@ -431,12 +514,12 @@ mod tests {
         let runner = owned_runner.as_ref();
         let (
             accs,
-            lp_token_addr,
+            lp_token_denom,
             _pair_addr,
             testing_contract_addr,
             _asset_list,
             astroport_contracts,
-        ) = setup_pool_and_testing_contract(&runner, pool_type, initial_liquidity).unwrap();
+        ) = setup_pool_and_testing_contract(&runner, pool_type, false, initial_liquidity).unwrap();
 
         let admin = &accs[0];
 
@@ -476,7 +559,7 @@ mod tests {
 
         // Create Cw20 tokens for each Cw20 incentive, mint incentive amount to
         // incentives_provider and add to incentives
-        let cw20_code_id = astroport_contracts.astro_token.code_id;
+        let cw20_code_id = astroport_contracts.astro_cw20_token.code_id;
         for (i, (amount, duration)) in cw20_incentives.iter().enumerate() {
             // Instantiate Cw20 token
             let cw20_addr = wasm
@@ -513,7 +596,7 @@ mod tests {
         for (incentive, periods) in incentives.clone() {
             // Increase allowance for cw20 incentives and construct funds
             let funds = match incentive.info.clone() {
-                astroport_v3::asset::AssetInfo::Token { contract_addr } => {
+                astroport::asset::AssetInfo::Token { contract_addr } => {
                     // Increase allowance for incentives contract
                     wasm.execute(
                         contract_addr.as_str(),
@@ -528,15 +611,15 @@ mod tests {
                     .unwrap();
                     vec![]
                 }
-                astroport_v3::asset::AssetInfo::NativeToken { denom } => {
+                astroport::asset::AssetInfo::NativeToken { denom } => {
                     vec![coin(incentive.amount.u128(), &denom)]
                 }
             };
             wasm.execute(
                 &astroport_contracts.incentives.address,
-                &astroport_v3::incentives::ExecuteMsg::Incentivize {
-                    lp_token: lp_token_addr.clone(),
-                    schedule: astroport_v3::incentives::InputSchedule {
+                &astroport::incentives::ExecuteMsg::Incentivize {
+                    lp_token: lp_token_denom.clone(),
+                    schedule: astroport::incentives::InputSchedule {
                         reward: incentive,
                         duration_periods: periods,
                     },
@@ -547,25 +630,11 @@ mod tests {
             .unwrap();
         }
 
-        // Query LP token balance
-        let lp_token_balance =
-            cw20_balance_query(&runner, lp_token_addr.clone(), admin.address()).unwrap();
-
-        // Send LP tokens to the test contract
-        cw20_transfer(
-            &runner,
-            lp_token_addr.clone(),
-            testing_contract_addr.clone(),
-            lp_token_balance,
-            admin,
-        )
-        .unwrap();
-
         // Stake LP tokens
-        let _events = stake_all_lp_tokens(
+        let _events = stake_all_native_lp_tokens(
             &runner,
             testing_contract_addr.clone(),
-            lp_token_addr.clone(),
+            lp_token_denom.clone(),
             admin,
         )
         .events;
@@ -577,8 +646,8 @@ mod tests {
         let pending_rewards: Vec<AstroportAsset> = wasm
             .query(
                 &astroport_contracts.incentives.address,
-                &astroport_v3::incentives::QueryMsg::PendingRewards {
-                    lp_token: lp_token_addr.clone(),
+                &astroport::incentives::QueryMsg::PendingRewards {
+                    lp_token: lp_token_denom.clone(),
                     user: testing_contract_addr.clone(),
                 },
             )
@@ -596,10 +665,10 @@ mod tests {
         for asset in pending_rewards.clone() {
             // Convert astroport asset info to asset info
             let asset_info = match asset.info {
-                astroport_v3::asset::AssetInfo::Token { contract_addr } => {
+                astroport::asset::AssetInfo::Token { contract_addr } => {
                     AssetInfo::Cw20(contract_addr)
                 }
-                astroport_v3::asset::AssetInfo::NativeToken { denom } => AssetInfo::Native(denom),
+                astroport::asset::AssetInfo::NativeToken { denom } => AssetInfo::Native(denom),
             };
 
             let amount = cw_dex_pending_rewards.find(&asset_info).unwrap().amount;
@@ -629,10 +698,11 @@ mod tests {
     fn test_get_pool_for_lp_token() {
         let owned_runner = get_test_runner();
         let runner = owned_runner.as_ref();
-        let (_accs, lp_token_addr, pair_addr, contract_addr, asset_list, _) =
+        let (_accs, lp_token_denom, pair_addr, contract_addr, asset_list, _) =
             setup_pool_and_testing_contract(
                 &runner,
                 PairType::Xyk {},
+                false,
                 vec![("uluna", 1_000_000), ("uatom", 1_000_000)],
             )
             .unwrap();
@@ -640,13 +710,13 @@ mod tests {
         let wasm = Wasm::new(&runner);
 
         let query = QueryMsg::GetPoolForLpToken {
-            lp_token: AssetInfo::Cw20(Addr::unchecked(lp_token_addr.clone())),
+            lp_token: AssetInfo::Native(lp_token_denom.clone()),
         };
         let pool = wasm
             .query::<_, AstroportPool>(&contract_addr, &query)
             .unwrap();
 
-        assert_eq!(pool.lp_token_addr, Addr::unchecked(lp_token_addr));
+        assert_eq!(pool.lp_token, AssetInfo::native(lp_token_denom));
         assert_eq!(pool.pair_addr, Addr::unchecked(pair_addr));
         assert_eq!(
             pool.pool_assets,

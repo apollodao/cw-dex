@@ -62,11 +62,11 @@ command = "cargo"
 args = ["check"]
 
 [tasks.clippy-check]
-toolchain = "${NIGHTLY_VERSION}"
+toolchain = "${RUST_VERSION}"
 command = "cargo"
 args = ["clippy","--all-features","--","-D","warnings"]
 [tasks.clippy-fix]
-toolchain = "${NIGHTLY_VERSION}"
+toolchain = "${RUST_VERSION}"
 command = "cargo"
 args = ["clippy","--all-features", "--fix","--allow-staged", "--allow-dirty", "--","-D","warnings"]
 
@@ -106,7 +106,7 @@ args = [
 
 # This task requires the `cargo-machete` package: https://crates.io/crates/cargo-machete
 [tasks.machete-check]
-toolchain = "${NIGHTLY_VERSION}"
+toolchain = "${RUST_VERSION}"
 command = "cargo"
 args = ["machete"]
 [tasks.machete-fix]

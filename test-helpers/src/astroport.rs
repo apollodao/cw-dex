@@ -27,9 +27,11 @@ use crate::{common_pcl_params, cw20_mint, instantiate_cw20};
 pub fn setup_pool_and_test_contract<'a>(
     runner: &'a TestRunner<'a>,
     pool_type: PairType,
+    use_liquidity_manager: bool,
     initial_liquidity: Vec<(&str, u64)>,
     native_denom_count: usize,
     wasm_file_path: &str,
+    denom_creation_fee: &[Coin],
 ) -> RunnerResult<(
     Vec<SigningAccount>,
     String,
@@ -94,7 +96,7 @@ pub fn setup_pool_and_test_contract<'a>(
     // Instantiate Apollo token (to have second CW20 to test CW20-CW20 pools)
     let apollo_token = instantiate_cw20(
         runner,
-        astroport_contracts.astro_token.code_id,
+        astroport_contracts.astro_cw20_token.code_id,
         &Cw20InstantiateMsg {
             name: "APOLLO".to_string(),
             symbol: "APOLLO".to_string(),
@@ -115,7 +117,7 @@ pub fn setup_pool_and_test_contract<'a>(
         // Mint Astro tokens
         cw20_mint(
             runner,
-            astroport_contracts.clone().astro_token.address,
+            astroport_contracts.clone().astro_cw20_token.address,
             account.address().clone(),
             Uint128::from(1_000_000_000_000_000_000u128),
             admin,
@@ -139,7 +141,7 @@ pub fn setup_pool_and_test_contract<'a>(
             asset_list
                 .add(&Asset::new(
                     AssetInfo::Cw20(Addr::unchecked(
-                        astroport_contracts.clone().astro_token.address,
+                        astroport_contracts.clone().astro_cw20_token.address,
                     )),
                     Uint128::new(amount.into()),
                 ))
@@ -211,7 +213,8 @@ pub fn setup_pool_and_test_contract<'a>(
         },
         _ => None,
     };
-    let (pair_addr, lp_token_addr) = create_astroport_pair(
+
+    let (pair_addr, lp_token) = create_astroport_pair(
         runner,
         &astroport_contracts.factory.address,
         pool_type,
@@ -219,6 +222,7 @@ pub fn setup_pool_and_test_contract<'a>(
         init_params,
         admin,
         None,
+        denom_creation_fee,
     );
 
     // Increase allowance of CW20's for Pair contract
@@ -241,9 +245,10 @@ pub fn setup_pool_and_test_contract<'a>(
         slippage_tolerance: Some(Decimal::from_str("0.02").unwrap()),
         auto_stake: Some(false),
         receiver: None,
+        min_lp_to_receive: None,
     };
     let (native_coins, _) = separate_natives_and_cw20s(&asset_list);
-    let _res = wasm
+    let res = wasm
         .execute(&pair_addr, &provide_liq_msg, &native_coins, admin)
         .unwrap();
 
@@ -265,6 +270,12 @@ pub fn setup_pool_and_test_contract<'a>(
     };
     let code_id = upload_wasm_file(runner, &accs[0], contract).unwrap();
 
+    let liquidity_manager = if use_liquidity_manager {
+        Some(astroport_contracts.liquidity_manager.address.clone())
+    } else {
+        None
+    };
+
     // Instantiate the test contract
     let contract_addr = instantiate_test_astroport_contract(
         runner,
@@ -272,16 +283,16 @@ pub fn setup_pool_and_test_contract<'a>(
         pair_addr.clone(),
         astroport_contracts.incentives.address.clone(),
         AssetInfo::cw20(Addr::unchecked(
-            astroport_contracts.astro_token.address.clone(),
+            astroport_contracts.astro_cw20_token.address.clone(),
         )),
-        lp_token_addr.clone(),
-        astroport_contracts.liquidity_manager.address.clone(),
+        lp_token.clone(),
+        liquidity_manager,
         &accs[0],
     )?;
 
     Ok((
         accs,
-        lp_token_addr,
+        lp_token,
         pair_addr,
         contract_addr,
         asset_list,
@@ -296,13 +307,13 @@ pub fn instantiate_test_astroport_contract<'a, R: Runner<'a>>(
     pair_addr: String,
     incentives_addr: String,
     astro_token: AssetInfo,
-    lp_token_addr: String,
-    liquidity_manager_addr: String,
+    lp_token: String,
+    liquidity_manager_addr: Option<String>,
     signer: &SigningAccount,
 ) -> RunnerResult<String> {
     let init_msg = AstroportContractInstantiateMsg {
         pair_addr,
-        lp_token_addr,
+        lp_token,
         incentives_addr,
         astro_token,
         liquidity_manager_addr,

@@ -5,7 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-# [0.5.2] - 2024-02-13
+# [0.6.0] - 2024-08-28
+
+### Changed
+
+- Removed `implementations` module in favor of new crates `cw-dex-astroport` and `cw-dex-osmosis`.
+- Added two variants to `CwDexError` that are needed in `cw-dex-astroport`.
+
+# [0.5.3] - 2024-02-13
 
 ### Changed
 
